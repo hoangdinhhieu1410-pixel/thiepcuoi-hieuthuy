@@ -352,8 +352,8 @@ export function EnvelopeModal({
       {/* STYLE 2: RED VELVET ENVELOPE (Ảnh 4 - LoveCard 26) */}
       {activeStyle === 'style2' && (
         <div
-          style={{ backgroundColor: isColorDark(style2Bg) ? style2Bg : '#faf8f4' }}
-          className="relative w-full max-w-sm sm:max-w-md rounded-[32px] p-6 sm:p-7 shadow-2xl border border-stone-200/80 text-center animate-fade-in flex flex-col items-center overflow-hidden transition-colors duration-500"
+          style={{ backgroundColor: style2Bg || '#faf8f4' }}
+          className={`relative w-full max-w-sm sm:max-w-md rounded-[32px] p-6 sm:p-7 shadow-2xl border border-stone-200/80 text-center animate-fade-in flex flex-col items-center overflow-hidden transition-colors duration-500 ${isColorDark(style2Bg) ? 'text-white' : 'text-stone-800'}`}
         >
           {/* Botanical gingko leaves at bottom corners */}
           <img

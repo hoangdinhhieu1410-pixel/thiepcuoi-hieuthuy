@@ -21,6 +21,11 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // CRITICAL: Strictly forbid any caching on Edge / CDN / Browser so updates sync in 0.01s
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -62,17 +67,29 @@ export default async function handler(req, res) {
         updatedAt: Date.now()
       };
 
-      // Sanitize dead blob urls in music
+      // Sanitize dead blob urls in music to point to permanent track files
       const cleanMusic = (m) => {
         if (!m) return m;
-        if (m.customTrackUrl && m.customTrackUrl.startsWith('blob:')) {
-          m.customTrackUrl = '/templates/007/music.m4a';
+        const activeId = m.activeTrackId;
+        if (!m.customTrackUrl || m.customTrackUrl.startsWith('blob:')) {
+          if (activeId && activeId.startsWith('track-')) {
+            m.customTrackUrl = `/templates/007/tracks/${activeId}.m4a`;
+          } else {
+            m.customTrackUrl = '/templates/007/music.m4a';
+          }
         }
         if (Array.isArray(m.presetTracks)) {
-          m.presetTracks = m.presetTracks.map(t => ({
-            ...t,
-            url: (t.url && t.url.startsWith('blob:')) ? '/templates/007/music.m4a' : t.url
-          }));
+          m.presetTracks = m.presetTracks.map(t => {
+            const trackUrl = (t.url && !t.url.startsWith('blob:') && t.url !== '/templates/007/music.m4a')
+              ? t.url
+              : (t.id && t.id.startsWith('track-'))
+                ? `/templates/007/tracks/${t.id}.m4a`
+                : '/templates/007/music.m4a';
+            return {
+              ...t,
+              url: trackUrl
+            };
+          });
         }
         return m;
       };

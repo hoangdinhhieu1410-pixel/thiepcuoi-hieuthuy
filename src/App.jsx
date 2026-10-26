@@ -179,6 +179,7 @@ const sanitizeProfile = (profile, defaultData) => {
 
 export function App() {
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const lastCloudUpdatedAt = useRef(0);
   // Profiles store both groom (Mẫu 1: Nhà Trai) and bride (Mẫu 2: Nhà Gái)
   const [profiles, setProfiles] = useState(() => {
     try {
@@ -426,65 +427,18 @@ export function App() {
         saveProfilesToStorage(resetObj);
         setIsStorageReady(true);
       } else {
-        // Asynchronously load rich data (with uploaded images & music) from IndexedDB
+        // Asynchronously load rich data from IndexedDB (fallback, does not overwrite newer cloud data)
         loadProfilesFromStorage().then(dbProfiles => {
           if (dbProfiles && dbProfiles.groom && dbProfiles.bride) {
-            const sideKey = (side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') ? 'bride' : 'groom';
-            const curProfile = dbProfiles[sideKey] || dbProfiles.groom;
-            if (params.get('open') === '1' || params.get('open') === 'true' || params.get('ruot') === '1') {
-              setInitialEnvelopeOpen(true);
-            } else if (params.get('cover') === 'true' || params.get('cover') === '1' || params.get('bia') === '1') {
-              setInitialEnvelopeOpen(false);
-            } else {
-              setInitialEnvelopeOpen(false);
-            }
-            setProfiles(prev => ({
-              activeProfile: dbProfiles.activeProfile || prev?.activeProfile || 'groom',
-              groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...dbProfiles.groom }, DEFAULT_WEDDING_DATA),
-              bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...dbProfiles.bride }, DEFAULT_BRIDE_WEDDING_DATA)
-            }));
-
-            // Tự động sao chép toàn bộ ảnh và nhạc từ IndexedDB máy local sang server codebase để đẩy lên Vercel
-            if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-              (async () => {
-                try {
-                  let audioBase64 = null;
-                  let audioMime = 'audio/mp3';
-                  const activeTrackId = dbProfiles.groom?.music?.activeTrackId || dbProfiles.bride?.music?.activeTrackId;
-                  if (activeTrackId) {
-                    const audioUrl = await getAudioTrackUrl(activeTrackId);
-                    if (audioUrl) {
-                      try {
-                        const audioResp = await fetch(audioUrl);
-                        const audioBlob = await audioResp.blob();
-                        audioMime = audioBlob.type || 'audio/mp3';
-                        const reader = new FileReader();
-                        audioBase64 = await new Promise((res) => {
-                          reader.onloadend = () => res(reader.result);
-                          reader.readAsDataURL(audioBlob);
-                        });
-                      } catch (errAudio) {
-                        console.warn('Audio fetch error:', errAudio);
-                      }
-                    }
-                  }
-
-                  await fetch('/api/sync-local-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      profiles: dbProfiles,
-                      audio: {
-                        trackId: activeTrackId,
-                        mime: audioMime,
-                        dataUrl: audioBase64
-                      }
-                    })
-                  });
-                } catch (errSync) {
-                  console.warn('Sync to codebase error:', errSync);
-                }
-              })();
+            const dbTime = dbProfiles.updatedAt || 0;
+            // Only use dbProfiles if it is strictly NEWER than what cloud provided
+            if (dbTime > lastCloudUpdatedAt.current) {
+              lastCloudUpdatedAt.current = dbTime;
+              setProfiles(prev => ({
+                activeProfile: dbProfiles.activeProfile || prev?.activeProfile || 'groom',
+                groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...dbProfiles.groom }, DEFAULT_WEDDING_DATA),
+                bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...dbProfiles.bride }, DEFAULT_BRIDE_WEDDING_DATA)
+              }));
             }
           }
         }).catch(err => {
@@ -495,28 +449,62 @@ export function App() {
       console.warn('Error reading URL params:', e);
     }
 
-    // Load latest saved card configuration from Cloud Redis (eliminates 1-second cover flash)
-    const cloudConfigPromise = fetch('/api/card-config')
-      .then(r => r.json())
-      .then(d => {
+    // Function to fetch the absolute latest card configuration from Cloud Redis
+    const fetchLatestCloudConfig = async () => {
+      try {
+        const res = await fetch(`/api/card-config?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        const d = await res.json();
         if (d?.success && d?.config?.groom && d?.config?.bride) {
-          setProfiles(prev => ({
-            activeProfile: d.config.activeProfile || prev?.activeProfile || 'groom',
-            groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...d.config.groom }, DEFAULT_WEDDING_DATA),
-            bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...d.config.bride }, DEFAULT_BRIDE_WEDDING_DATA)
-          }));
-        }
-      })
-      .catch(() => {});
+          const cloudConfig = d.config;
+          const cloudTime = cloudConfig.updatedAt || 0;
+          if (cloudTime >= lastCloudUpdatedAt.current) {
+            lastCloudUpdatedAt.current = cloudTime;
+            setProfiles(prev => ({
+              activeProfile: cloudConfig.activeProfile || prev?.activeProfile || 'groom',
+              groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...cloudConfig.groom }, DEFAULT_WEDDING_DATA),
+              bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...cloudConfig.bride }, DEFAULT_BRIDE_WEDDING_DATA)
+            }));
 
-    // Ensure we wait for cloud config before revealing the card (timeout max 1.2s for slow networks)
-    const timeoutPromise = new Promise(res => setTimeout(res, 1200));
-    Promise.race([cloudConfigPromise, timeoutPromise]).finally(() => {
+            // If user did not pass ?side= in URL, follow the active profile saved by owner
+            const p = new URLSearchParams(window.location.search);
+            const sideParam = p.get('side') || p.get('profile') || p.get('mau') || p.get('thiep');
+            if (!sideParam && cloudConfig.activeProfile) {
+              setActiveProfileKey(cloudConfig.activeProfile);
+            }
+            saveProfilesToStorage(cloudConfig);
+          }
+          return cloudConfig;
+        }
+      } catch (e) {
+        console.warn('Cloud config fetch warning:', e);
+      }
+      return null;
+    };
+
+    // Initial immediate load from Cloud Redis
+    const cloudPromise = fetchLatestCloudConfig();
+    const timeoutPromise = new Promise(res => setTimeout(res, 600));
+    Promise.race([cloudPromise, timeoutPromise]).finally(() => {
       setIsStorageReady(true);
     });
 
+    // Real-time background sync: poll every 4s and revalidate on tab focus
+    const syncInterval = setInterval(fetchLatestCloudConfig, 4000);
+    const handleTabFocus = () => fetchLatestCloudConfig();
+    window.addEventListener('focus', handleTabFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchLatestCloudConfig();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     // Load initial cloud wishes from Redis server
-    fetch('/api/wishes')
+    fetch(`/api/wishes?_t=${Date.now()}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         if (d?.success && Array.isArray(d?.wishes) && d.wishes.length > 0) {
@@ -538,35 +526,68 @@ export function App() {
         }
       })
       .catch(() => {});
+
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener('focus', handleTabFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Save specific profile (Mẫu 1: Nhà Trai hoặc Mẫu 2: Nhà Gái)
-  const handleSaveProfile = (profileKey, profileData) => {
-    setProfiles(prev => {
-      const updated = {
-        ...prev,
-        activeProfile: profileKey,
-        [profileKey]: profileData
-      };
-      saveProfilesToStorage(updated);
-      fetch('/api/card-config', {
+  const handleSaveProfile = async (profileKey, profileData) => {
+    const now = Date.now();
+    lastCloudUpdatedAt.current = now;
+    const updated = {
+      ...profiles,
+      activeProfile: profileKey,
+      [profileKey]: profileData,
+      updatedAt: now
+    };
+    setProfiles(updated);
+    saveProfilesToStorage(updated);
+    try {
+      const res = await fetch('/api/card-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated)
-      }).catch(e => console.warn('Cloud save error:', e));
-      return updated;
-    });
+      });
+      const data = await res.json();
+      if (data?.updatedAt) {
+        lastCloudUpdatedAt.current = data.updatedAt;
+      }
+      return data;
+    } catch (e) {
+      console.warn('Cloud save error:', e);
+      return null;
+    }
   };
 
   // Save both profiles simultaneously
-  const handleSaveAllProfiles = (updatedProfiles) => {
-    setProfiles(updatedProfiles);
-    saveProfilesToStorage(updatedProfiles);
-    fetch('/api/card-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedProfiles)
-    }).catch(e => console.warn('Cloud save error:', e));
+  const handleSaveAllProfiles = async (updatedProfiles) => {
+    const now = Date.now();
+    lastCloudUpdatedAt.current = now;
+    const enriched = {
+      ...updatedProfiles,
+      updatedAt: now
+    };
+    setProfiles(enriched);
+    saveProfilesToStorage(enriched);
+    try {
+      const res = await fetch('/api/card-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(enriched)
+      });
+      const data = await res.json();
+      if (data?.updatedAt) {
+        lastCloudUpdatedAt.current = data.updatedAt;
+      }
+      return data;
+    } catch (e) {
+      console.warn('Cloud save error:', e);
+      return null;
+    }
   };
 
   // Switch active profile

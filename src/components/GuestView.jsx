@@ -353,39 +353,47 @@ export function GuestView({
   // Audio track URL with support for custom IndexedDB Blobs (MP3 & MP4)
   const [resolvedAudioUrl, setResolvedAudioUrl] = useState('');
 
+  const getStaticTrackUrl = (music) => {
+    if (!music) return '/templates/007/music.m4a';
+    const activeId = music.activeTrackId;
+    if (activeId && activeId.startsWith('track-')) {
+      return `/templates/007/tracks/${activeId}.m4a`;
+    }
+    if (music.customTrackUrl && !music.customTrackUrl.startsWith('blob:') && music.customTrackUrl !== '/templates/007/music.m4a') {
+      return music.customTrackUrl;
+    }
+    const preset = music.presetTracks?.find(t => t.id === activeId);
+    if (preset?.url && !preset.url.startsWith('blob:') && preset.url !== '/templates/007/music.m4a') {
+      return preset.url;
+    }
+    return '/templates/007/music.m4a';
+  };
+
   useEffect(() => {
     let isMounted = true;
     const resolveAudio = async () => {
       const activeId = cardData.music?.activeTrackId;
-      const activeTrack = cardData.music?.presetTracks?.find(t => t.id === activeId);
-
-      // 1. Try to load live blob from IndexedDB if running on device that has it
-      if (activeTrack?.isCustom || (activeId && activeId.startsWith('track-'))) {
-        try {
-          const blobUrl = await getAudioTrackUrl(activeId);
-          if (blobUrl && isMounted) {
-            setResolvedAudioUrl(blobUrl);
-            return;
-          }
-        } catch (e) {
-          console.warn('Audio blob load error:', e);
-        }
+      // 1. If server has static track matching ID, use it immediately
+      if (activeId && activeId.startsWith('track-')) {
+        if (isMounted) setResolvedAudioUrl(`/templates/007/tracks/${activeId}.m4a`);
+        return;
       }
-
-      // 2. If track has a static valid URL (NOT a dead blob: url from another session/device)
+      // 2. If track has a static valid URL
       const customUrl = cardData.music?.customTrackUrl;
-      if (customUrl && !customUrl.startsWith('blob:') && isMounted) {
-        setResolvedAudioUrl(customUrl);
+      if (customUrl && !customUrl.startsWith('blob:')) {
+        if (isMounted) setResolvedAudioUrl(customUrl);
         return;
       }
-
-      const presetUrl = activeTrack?.url;
-      if (presetUrl && !presetUrl.startsWith('blob:') && isMounted) {
-        setResolvedAudioUrl(presetUrl);
-        return;
+      // 3. Try to load live blob from IndexedDB if running on device that has it
+      try {
+        const blobUrl = await getAudioTrackUrl(activeId);
+        if (blobUrl && isMounted) {
+          setResolvedAudioUrl(blobUrl);
+          return;
+        }
+      } catch (e) {
+        console.warn('Audio blob load error:', e);
       }
-
-      // 3. Always fallback to the active remix audio track bundled on server
       if (isMounted) {
         setResolvedAudioUrl('/templates/007/music.m4a');
       }
@@ -394,12 +402,9 @@ export function GuestView({
     return () => { isMounted = false; };
   }, [cardData.music?.activeTrackId, cardData.music?.customTrackUrl, cardData.music?.presetTracks]);
 
-  // Ensure activeMusicUrl is NEVER a dead blob URL
+  // Ensure activeMusicUrl is ALWAYS the user's selected track
   const activeMusicUrl = (resolvedAudioUrl && !resolvedAudioUrl.startsWith('blob:') ? resolvedAudioUrl : null) ||
-    (resolvedAudioUrl && resolvedAudioUrl.startsWith('blob:') ? resolvedAudioUrl : null) ||
-    (cardData.music?.customTrackUrl && !cardData.music.customTrackUrl.startsWith('blob:') ? cardData.music.customTrackUrl : null) ||
-    (cardData.music?.presetTracks?.find(t => t.id === cardData.music.activeTrackId)?.url && !cardData.music.presetTracks.find(t => t.id === cardData.music.activeTrackId).url.startsWith('blob:') ? cardData.music.presetTracks.find(t => t.id === cardData.music.activeTrackId).url : null) ||
-    '/templates/007/music.m4a';
+    getStaticTrackUrl(cardData.music);
 
   // Autoplay on envelope open
   useEffect(() => {

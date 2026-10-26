@@ -558,7 +558,7 @@ export function StudioEditor({
   };
 
   // Select Cover Style (Nút chọn làm bìa chính)
-  const handleSelectCover = (styleId) => {
+  const handleSelectCover = async (styleId) => {
     const updatedForm = {
       ...formData,
       templateStyle: styleId,
@@ -574,16 +574,29 @@ export function StudioEditor({
       previewScrollRef.current.scrollTo({ top: 0, behavior: 'instant' });
     }
 
+    const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
     // Persist immediately to all profiles and sync to Cloud Redis
     const updatedAll = {
       ...allProfiles,
-      [currentProfileKey]: updatedForm
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updatedForm,
+      ...(autoSyncMedia && allProfiles[otherKey] ? {
+        [otherKey]: {
+          ...allProfiles[otherKey],
+          templateStyle: styleId,
+          coverConfig: {
+            ...(allProfiles[otherKey].coverConfig || {}),
+            activeStyle: styleId
+          }
+        }
+      } : {})
     };
     setAllProfiles(updatedAll);
+    setSaveStatus(`Đang đồng bộ mẫu bìa [${styleId}] lên đám mây... ⏳`);
     if (onSaveAllProfiles) {
-      onSaveAllProfiles(updatedAll);
+      await onSaveAllProfiles(updatedAll);
     } else if (onSaveProfile) {
-      onSaveProfile(currentProfileKey, updatedForm);
+      await onSaveProfile(currentProfileKey, updatedForm);
     }
     broadcastProfileUpdate(updatedAll, 'studio_cover_changed');
 
@@ -593,7 +606,7 @@ export function StudioEditor({
       style3: 'Mẫu 3: Cổng Xanh Ngọc & Ấn Triện (27BigGroup A9)',
       style4: 'Mẫu 4: Khung Ảnh Vòm & Sáp Hoàng Gia (Ảnh 2 & 4)'
     };
-    setSaveStatus(`Đã lưu và đồng bộ [${names[styleId] || styleId}] lên hệ thống!`);
+    setSaveStatus(`✅ Đã chọn và đồng bộ: ${names[styleId] || styleId} lên link thiệp mời!`);
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
@@ -946,9 +959,11 @@ export function StudioEditor({
   };
 
   // Save currently active profile
-  const handleSaveCurrent = () => {
+  const handleSaveCurrent = async () => {
+    setSaveStatus('Đang đồng bộ lên máy chủ đám mây... ⏳');
     let updatedAll = {
       ...allProfiles,
+      activeProfile: currentProfileKey,
       [currentProfileKey]: formData
     };
     if (autoSyncMedia) {
@@ -963,6 +978,11 @@ export function StudioEditor({
           gallery: formData.gallery,
           music: formData.music,
           bgColor: formData.bgColor,
+          templateStyle: formData.templateStyle,
+          coverConfig: {
+            ...(updatedAll[otherKey].coverConfig || {}),
+            activeStyle: formData.templateStyle || formData.coverConfig?.activeStyle || 'style1'
+          },
           photoTransitionEffect: formData.photoTransitionEffect,
           textTransitionEffect: formData.textTransitionEffect
         };
@@ -972,35 +992,37 @@ export function StudioEditor({
     setLastSavedData(JSON.parse(JSON.stringify(formData)));
     broadcastProfileUpdate(updatedAll, 'studio_manual_save');
     if (onSaveAllProfiles) {
-      onSaveAllProfiles(updatedAll);
+      await onSaveAllProfiles(updatedAll);
     } else if (onSaveProfile) {
-      onSaveProfile(currentProfileKey, formData);
+      await onSaveProfile(currentProfileKey, formData);
     } else if (onUpdateData) {
-      onUpdateData(formData);
+      await onUpdateData(formData);
     }
-    setSaveStatus(`Đã lưu [${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}] thành công!`);
-    setTimeout(() => setSaveStatus(''), 2500);
+    setSaveStatus(`✅ Đã lưu & đồng bộ tức thì lên link mời (${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'})!`);
+    setTimeout(() => setSaveStatus(''), 3000);
   };
 
   const handleSave = handleSaveCurrent;
 
   // Save both profiles simultaneously
-  const handleSaveBoth = () => {
+  const handleSaveBoth = async () => {
+    setSaveStatus('Đang đồng bộ cả 2 mẫu thiệp lên máy chủ đám mây... ⏳');
     const updatedAll = {
       ...allProfiles,
+      activeProfile: currentProfileKey,
       [currentProfileKey]: formData
     };
     setAllProfiles(updatedAll);
     setLastSavedData(JSON.parse(JSON.stringify(formData)));
     broadcastProfileUpdate(updatedAll, 'studio_manual_save');
     if (onSaveAllProfiles) {
-      onSaveAllProfiles(updatedAll);
+      await onSaveAllProfiles(updatedAll);
     } else if (onSaveProfile) {
-      onSaveProfile('groom', updatedAll.groom);
-      onSaveProfile('bride', updatedAll.bride);
+      await onSaveProfile('groom', updatedAll.groom);
+      await onSaveProfile('bride', updatedAll.bride);
     }
-    setSaveStatus('Đã lưu thành công cả 2 mẫu thiệp!');
-    setTimeout(() => setSaveStatus(''), 2500);
+    setSaveStatus('✅ Đã lưu & đồng bộ thành công cả 2 mẫu thiệp!');
+    setTimeout(() => setSaveStatus(''), 3000);
   };
 
   // Copy data between profiles
@@ -1307,8 +1329,8 @@ export function StudioEditor({
   };
 
   // Copy full Zalo message
-  const copyGuestZaloMessage = (guest) => {
-    handleSaveCurrent();
+  const copyGuestZaloMessage = async (guest) => {
+    await handleSaveCurrent();
     const msg = getGuestZaloMessage(guest);
     navigator.clipboard.writeText(msg);
     setCopiedZaloId(guest.id);
@@ -1316,8 +1338,8 @@ export function StudioEditor({
   };
 
   // Copy Guest Link
-  const copyGuestLink = (guest) => {
-    handleSaveCurrent();
+  const copyGuestLink = async (guest) => {
+    await handleSaveCurrent();
     const link = getGuestLink(guest);
     navigator.clipboard.writeText(link);
     setCopiedLink(guest.id);
@@ -4806,7 +4828,7 @@ export function StudioEditor({
                     return (
                       <div
                         key={track.id}
-                        onClick={() => {
+                        onClick={async () => {
                           const staticTrackUrl = `/templates/007/tracks/${track.id}.m4a`;
                           const updatedMusic = {
                             ...(formData.music || {}),
@@ -4825,6 +4847,7 @@ export function StudioEditor({
                           const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
                           const updatedAll = {
                             ...allProfiles,
+                            activeProfile: currentProfileKey,
                             [currentProfileKey]: updated,
                             ...(allProfiles[otherKey] ? {
                               [otherKey]: {
@@ -4834,13 +4857,14 @@ export function StudioEditor({
                             } : {})
                           };
                           setAllProfiles(updatedAll);
+                          setSaveStatus(`Đang đồng bộ bài hát [${track.title}] lên link thiệp... ⏳`);
                           if (onSaveAllProfiles) {
-                            onSaveAllProfiles(updatedAll);
+                            await onSaveAllProfiles(updatedAll);
                           } else if (onSaveProfile) {
-                            onSaveProfile(currentProfileKey, updated);
+                            await onSaveProfile(currentProfileKey, updated);
                           }
                           broadcastProfileUpdate(updatedAll, 'studio_music_changed');
-                          setSaveStatus(`Đã chọn và đồng bộ bài hát: ${track.title}!`);
+                          setSaveStatus(`✅ Đã đồng bộ bài hát: ${track.title} lên toàn bộ link thiệp!`);
                           setTimeout(() => setSaveStatus(''), 3000);
                         }}
                         className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 text-xs ${
@@ -5956,7 +5980,7 @@ export function StudioEditor({
                   (formData.coverConfig?.[targetStyleId]?.bgColor || '#faf7f2')
                 );
 
-                const handleApplyColor = (colorHex, colorLabel) => {
+                const handleApplyColor = async (colorHex, colorLabel) => {
                   const updatedForm = {
                     ...formData,
                     coverConfig: {
@@ -5970,23 +5994,25 @@ export function StudioEditor({
                   };
                   setFormData(updatedForm);
                   setPreviewEnvelopeOpen(false);
-                  setSaveStatus(`Đã áp dụng màu ${colorLabel || colorHex} riêng cho ${currentStyleName}`);
-                  setTimeout(() => setSaveStatus(''), 2500);
+                  setSaveStatus(`Đang đồng bộ màu cho ${currentStyleName}... ⏳`);
 
                   // Persist to all profiles and sync to Cloud Redis
                   const updatedAll = {
                     ...allProfiles,
+                    activeProfile: currentProfileKey,
                     [currentProfileKey]: updatedForm
                   };
                   setAllProfiles(updatedAll);
                   if (onSaveAllProfiles) {
-                    onSaveAllProfiles(updatedAll);
+                    await onSaveAllProfiles(updatedAll);
                   } else if (onSaveProfile) {
-                    onSaveProfile(currentProfileKey, updatedForm);
+                    await onSaveProfile(currentProfileKey, updatedForm);
                   }
                   if (typeof broadcastProfileUpdate === 'function') {
                     broadcastProfileUpdate(updatedAll, 'studio_color_changed');
                   }
+                  setSaveStatus(`✅ Đã áp dụng màu ${colorLabel || colorHex} & đồng bộ lên link thiệp!`);
+                  setTimeout(() => setSaveStatus(''), 2500);
                 };
 
                 return (
