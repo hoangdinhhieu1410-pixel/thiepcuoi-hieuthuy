@@ -99,6 +99,7 @@ export function GuestView({
   onOpenStudio,
   onStyleChange,
   onUpdateData,
+  onReorderGallery,
   onResetData,
   initialEnvelopeOpen = false,
   onEnvelopeToggle,
@@ -113,6 +114,24 @@ export function GuestView({
   const [textAnimKey, setTextAnimKey] = useState(0);
   const [activePhotoTestNotice, setActivePhotoTestNotice] = useState('');
   const [activeTextTestNotice, setActiveTextTestNotice] = useState('');
+
+  // Reorder gallery photos directly on card
+  const handleMoveGalleryPhoto = (fromIndex, toIndex) => {
+    const list = [...(cardData.gallery || [])];
+    if (toIndex < 0 || toIndex >= list.length || fromIndex === toIndex) return;
+    const item = list.splice(fromIndex, 1)[0];
+    list.splice(toIndex, 0, item);
+    const updated = { ...cardData, gallery: list };
+    setCardData(updated);
+    if (onUpdateData) {
+      onUpdateData(updated);
+    }
+    if (onReorderGallery) {
+      onReorderGallery(list);
+    }
+    setSaveToast(`Đã chuyển ảnh sang vị trí #${toIndex + 1}!`);
+    setTimeout(() => setSaveToast(''), 2500);
+  };
 
   useEffect(() => {
     setEnvelopeOpen(initialEnvelopeOpen);
@@ -1663,6 +1682,15 @@ export function GuestView({
             <div className="w-12 h-[2px] bg-[#928362] mx-auto mt-2"></div>
           </div>
 
+          {/* Quick guide in preview/admin mode */}
+          {(isPreview || isAdmin) && (
+            <div className="relative z-20 mb-3 text-center">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-900 bg-amber-100/90 border border-amber-300 py-1 px-3 rounded-full shadow-xs">
+                <span>💡 Bấm mũi tên ◀ ▶ trên từng ảnh để đổi thứ tự ảnh</span>
+              </span>
+            </div>
+          )}
+
           {/* Photos Masonry - Natural full view with ZERO blank space */}
           <div className="relative z-10 columns-2 gap-3">
             {(cardData.gallery || []).map((photo, index) => {
@@ -1682,9 +1710,55 @@ export function GuestView({
                     alt={photo.caption || ''}
                     className={`w-full h-auto block rounded-xl group-hover:scale-[1.03] transition-transform duration-500 ${galleryAnimClass}`}
                   />
-                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl pointer-events-none">
                     <Maximize2 className="w-5 h-5 text-white drop-shadow" />
                   </div>
+
+                  {/* Reorder controls on each photo in preview / admin mode */}
+                  {(isPreview || isAdmin) && (
+                    <div
+                      className="absolute top-1.5 inset-x-1.5 z-20 flex items-center justify-between"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md border border-white/20 select-none">
+                        #{index + 1}
+                      </span>
+                      <div className="flex items-center gap-1 bg-black/75 backdrop-blur-xs p-0.5 rounded-full shadow-md border border-white/20">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveGalleryPhoto(index, index - 1);
+                          }}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                            index === 0
+                              ? 'opacity-25 text-stone-400 cursor-not-allowed'
+                              : 'bg-white hover:bg-amber-100 text-stone-900 cursor-pointer shadow-xs active:scale-90'
+                          }`}
+                          title="Chuyển ảnh này lên trước"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5 text-amber-800" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === (cardData.gallery || []).length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveGalleryPhoto(index, index + 1);
+                          }}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                            index === (cardData.gallery || []).length - 1
+                              ? 'opacity-25 text-stone-400 cursor-not-allowed'
+                              : 'bg-white hover:bg-amber-100 text-stone-900 cursor-pointer shadow-xs active:scale-90'
+                          }`}
+                          title="Chuyển ảnh này xuống sau"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5 text-amber-800" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

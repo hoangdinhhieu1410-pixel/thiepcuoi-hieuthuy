@@ -4,7 +4,7 @@ import {
   Save, Plus, Trash2, Edit2, Copy, Check, ExternalLink, Play, Pause,
   Upload, Search, Heart, Sparkles, MessageSquare, MessageCircle, MessageSquareHeart, ArrowLeft, RefreshCw,
   Type, Clock, MapPin, Smartphone, X, CheckCircle2, ArrowRightLeft,
-  ChevronRight, Sparkle, RotateCcw, Sliders, Image as ImageIcon,
+  ChevronRight, ChevronLeft, GripVertical, Sparkle, RotateCcw, Sliders, Image as ImageIcon,
   Mail, FileText, EyeOff, Film, Layers, Volume2, VolumeX, Link as LinkIcon,
   Gift, QrCode
 } from 'lucide-react';
@@ -712,6 +712,45 @@ export function StudioEditor({
       });
       return updated;
     });
+  };
+
+  // Gallery photo drag-and-drop & reorder state
+  const [galleryDragIdx, setGalleryDragIdx] = useState(null);
+  const [galleryDragOverIdx, setGalleryDragOverIdx] = useState(null);
+
+  const moveGalleryPhoto = (fromIndex, toIndex) => {
+    const list = [...(formData.gallery || [])];
+    if (toIndex < 0 || toIndex >= list.length || fromIndex === toIndex) return;
+    const item = list.splice(fromIndex, 1)[0];
+    list.splice(toIndex, 0, item);
+    updateMediaField('gallery', list);
+    setSaveStatus(`🎉 Đã chuyển ảnh #${fromIndex + 1} sang vị trí #${toIndex + 1}!`);
+    setTimeout(() => setSaveStatus(''), 2500);
+  };
+
+  const handleGalleryDragStart = (e, index) => {
+    setGalleryDragIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleGalleryDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (galleryDragOverIdx !== index) {
+      setGalleryDragOverIdx(index);
+    }
+  };
+
+  const handleGalleryDrop = (e, targetIndex) => {
+    e.preventDefault();
+    setGalleryDragOverIdx(null);
+    if (galleryDragIdx === null || galleryDragIdx === targetIndex) {
+      setGalleryDragIdx(null);
+      return;
+    }
+    moveGalleryPhoto(galleryDragIdx, targetIndex);
+    setGalleryDragIdx(null);
   };
 
   // Helper to update avatar and auto-sync
@@ -3363,11 +3402,11 @@ export function StudioEditor({
                       <span>4. Album Ảnh Kỷ Niệm (Our Memories)</span>
                     </h3>
                     <p className="text-[11px] text-stone-500 mt-0.5">
-                      Đang có {formData.gallery?.length || 0} ảnh trong album cưới của bạn. Khách mời có thể bấm xem phóng to toàn màn hình.
+                      Đang có {formData.gallery?.length || 0} ảnh trong album cưới. Kéo thả chuột hoặc bấm các nút mũi tên [◀] [▶] để di chuyển, sắp xếp thứ tự ảnh trong thiệp cưới.
                     </p>
                   </div>
 
-                  <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#70561f] hover:bg-[#5a4417] text-white text-xs font-semibold cursor-pointer shadow-sm transition-all hover:scale-102 self-start">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#70561f] hover:bg-[#5a4417] text-white text-xs font-semibold cursor-pointer shadow-sm transition-all hover:scale-102 self-start shrink-0">
                     <Upload className="w-3.5 h-3.5 text-amber-300" />
                     <span>+ Tải thêm ảnh từ máy</span>
                     <input
@@ -3401,44 +3440,123 @@ export function StudioEditor({
                   </label>
                 </div>
 
-                {/* Photo Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2">
-                  {(formData.gallery || []).map((photo, index) => (
-                    <div key={photo.id || index} className="group relative bg-stone-50 rounded-2xl overflow-hidden border border-stone-200 shadow-sm flex flex-col">
-                      <div className="aspect-[4/3] w-full overflow-hidden bg-stone-900 relative">
-                        <img
-                          src={photo.url}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = (formData.gallery || []).filter((_, i) => i !== index);
-                            updateMediaField('gallery', updated);
-                          }}
-                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 hover:bg-rose-700 text-white transition-colors"
-                          title="Xóa ảnh này khỏi album"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                {/* Helpful Instruction Tip for Reordering */}
+                <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2 text-xs text-amber-950 flex items-center gap-2 shadow-xs">
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    <strong>Hướng dẫn sắp xếp thứ tự:</strong> Bạn có thể <strong>kéo thả trực tiếp</strong> từng thẻ ảnh hoặc bấm các nút <strong>[◀ Lên trước] [Xuống sau ▶]</strong> trên từng ảnh (hoặc bấm nút mũi tên ngay trên thiệp điện thoại bên phải) để thay đổi vị trí ảnh theo ý muốn.
+                  </span>
+                </div>
 
-                      <div className="p-1.5">
-                        <input
-                          type="text"
-                          placeholder="Chú thích ảnh..."
-                          value={photo.caption || ''}
-                          onChange={(e) => {
-                            const newGallery = [...formData.gallery];
-                            newGallery[index].caption = e.target.value;
-                            setFormData({ ...formData, gallery: newGallery });
-                          }}
-                          className="w-full px-2 py-1 text-[11px] border border-stone-200 rounded-lg bg-white"
-                        />
+                {/* Photo Grid with Drag and Drop & Order Buttons */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2">
+                  {(formData.gallery || []).map((photo, index) => {
+                    const isDragging = galleryDragIdx === index;
+                    const isOver = galleryDragOverIdx === index;
+
+                    return (
+                      <div
+                        key={photo.id || index}
+                        draggable
+                        onDragStart={(e) => handleGalleryDragStart(e, index)}
+                        onDragOver={(e) => handleGalleryDragOver(e, index)}
+                        onDragEnd={() => { setGalleryDragIdx(null); setGalleryDragOverIdx(null); }}
+                        onDrop={(e) => handleGalleryDrop(e, index)}
+                        className={`group relative bg-stone-50 rounded-2xl overflow-hidden border transition-all duration-200 shadow-sm flex flex-col cursor-grab active:cursor-grabbing ${
+                          isDragging
+                            ? 'opacity-40 scale-95 border-amber-500 border-dashed ring-2 ring-amber-400'
+                            : isOver
+                            ? 'ring-2 ring-amber-600 border-amber-600 scale-102 shadow-lg bg-amber-50'
+                            : 'border-stone-200 hover:border-amber-400 hover:shadow-md'
+                        }`}
+                      >
+                        {/* Photo Image Container */}
+                        <div className="aspect-[4/3] w-full overflow-hidden bg-stone-900 relative">
+                          <img
+                            src={photo.url}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
+                          />
+
+                          {/* Order Badge at Top-Left */}
+                          <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-black/75 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-md border border-white/20 select-none">
+                            <GripVertical className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>#{index + 1}</span>
+                          </div>
+
+                          {/* Delete Button at Top-Right */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const updated = (formData.gallery || []).filter((_, i) => i !== index);
+                              updateMediaField('gallery', updated);
+                              setSaveStatus(`Đã xóa ảnh #${index + 1} khỏi album`);
+                              setTimeout(() => setSaveStatus(''), 2500);
+                            }}
+                            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/70 hover:bg-rose-700 text-white transition-colors shadow-md border border-white/20"
+                            title="Xóa ảnh này khỏi album"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Quick Move Overlay Buttons at Bottom of Image */}
+                          <div className="absolute bottom-1.5 inset-x-1.5 z-10 flex items-center justify-between gap-1 bg-black/75 backdrop-blur-xs p-1 rounded-xl border border-white/10 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveGalleryPhoto(index, index - 1);
+                              }}
+                              className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-bold flex items-center justify-center gap-0.5 transition-all ${
+                                index === 0
+                                  ? 'opacity-30 text-stone-400 cursor-not-allowed'
+                                  : 'bg-white/90 hover:bg-white text-stone-900 shadow-xs cursor-pointer active:scale-95'
+                              }`}
+                              title="Di chuyển ảnh lên trước"
+                            >
+                              <ChevronLeft className="w-3 h-3 text-amber-700 shrink-0" />
+                              <span>Lên trước</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={index === (formData.gallery || []).length - 1}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveGalleryPhoto(index, index + 1);
+                              }}
+                              className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-bold flex items-center justify-center gap-0.5 transition-all ${
+                                index === (formData.gallery || []).length - 1
+                                  ? 'opacity-30 text-stone-400 cursor-not-allowed'
+                                  : 'bg-white/90 hover:bg-white text-stone-900 shadow-xs cursor-pointer active:scale-95'
+                              }`}
+                              title="Di chuyển ảnh xuống sau"
+                            >
+                              <span>Xuống sau</span>
+                              <ChevronRight className="w-3 h-3 text-amber-700 shrink-0" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Caption input */}
+                        <div className="p-2 bg-white">
+                          <input
+                            type="text"
+                            placeholder="Chú thích ảnh..."
+                            value={photo.caption || ''}
+                            onChange={(e) => {
+                              const newGallery = [...(formData.gallery || [])];
+                              newGallery[index].caption = e.target.value;
+                              setFormData({ ...formData, gallery: newGallery });
+                            }}
+                            className="w-full px-2 py-1 text-[11px] border border-stone-200 rounded-lg bg-stone-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -6504,6 +6622,15 @@ export function StudioEditor({
               testAnimationTrigger={testAnimationCount}
               testPhotoAnimTrigger={testPhotoAnimCount}
               testTextAnimTrigger={testTextAnimCount}
+              onUpdateData={(updated) => {
+                setFormData(updated);
+                if (updated.gallery) {
+                  updateMediaField('gallery', updated.gallery);
+                }
+              }}
+              onReorderGallery={(newGallery) => {
+                updateMediaField('gallery', newGallery);
+              }}
               onAddWish={(newWish) => {
                 const enriched = {
                   id: 'wish-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
