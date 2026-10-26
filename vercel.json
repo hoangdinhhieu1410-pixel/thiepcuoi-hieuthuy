@@ -1,0 +1,49 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js",
+      "has": [
+        {
+          "type": "query",
+          "key": "to"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js",
+      "has": [
+        {
+          "type": "query",
+          "key": "guest"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js",
+      "has": [
+        {
+          "type": "query",
+          "key": "name"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Zalo|Twitterbot|Pinterest|Google.*snippet|WhatsApp|TelegramBot|Discordbot).*"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

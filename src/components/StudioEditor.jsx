@@ -1028,21 +1028,35 @@ export function StudioEditor({
     }
   };
 
-  // Generate Personalized Link for a guest (automatically points to currently active side)
+  // Generate Personalized Link for a guest (Tối ưu siêu ngắn gọn, thẩm mỹ khi gửi Zalo / SMS)
   const getGuestLink = (guest) => {
     const configuredDomain = (formData.socialShare?.customDomain || '').trim();
     let baseUrl;
     if (configuredDomain) {
       baseUrl = configuredDomain.replace(/\/+$/, '');
     } else {
-      baseUrl = window.location.origin + window.location.pathname;
+      baseUrl = window.location.origin + window.location.pathname.replace(/\/+$/, '');
     }
+
     const params = new URLSearchParams();
-    const side = (currentProfileKey === 'bride' || guest?.invitedSide === 'Nhà Gái') ? 'bride' : 'groom';
-    params.set('side', side);
-    if (guest?.name) params.set('to', guest.name);
-    if (guest?.salutation) params.set('salutation', guest.salutation);
-    return `${baseUrl}?${params.toString()}`;
+    const isBride = (currentProfileKey === 'bride' || guest?.invitedSide === 'Nhà Gái');
+    // Chỉ thêm side nếu là Nhà Gái (vì Nhà Trai là mặc định, rút gọn link)
+    if (isBride) {
+      params.set('side', 'bride');
+    }
+
+    if (guest?.name) {
+      params.set('to', guest.name.trim());
+    }
+
+    // Chỉ thêm lời xưng hô nếu khác với mặc định "Trân trọng kính mời" để link siêu ngắn
+    const sal = (guest?.salutation || '').trim();
+    if (sal && sal !== 'Trân trọng kính mời') {
+      params.set('salutation', sal);
+    }
+
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
@@ -4686,13 +4700,17 @@ export function StudioEditor({
                   <div className="bg-white rounded-2xl shadow-md border border-stone-200/80 overflow-hidden max-w-sm mx-auto">
                     <div className="px-3.5 pt-3 pb-1 text-blue-600 text-xs font-mono break-all hover:underline">
                       {formData.socialShare?.customDomain 
-                        ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=${currentProfileKey}&to=fdff`
-                        : `https://thiepcuoi-online.vercel.app/?side=${currentProfileKey}&to=fdff`}
+                        ? (currentProfileKey === 'bride' 
+                            ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga`
+                            : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?to=Mẹ+Nga`)
+                        : (currentProfileKey === 'bride'
+                            ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga`
+                            : `https://thiepcuoi-hieuthuy-web.vercel.app/?to=Mẹ+Nga`)}
                     </div>
 
-                    <div className="aspect-[1.91/1] w-full bg-stone-200 overflow-hidden">
+                    <div className="aspect-[1.91/1] w-full bg-stone-900 overflow-hidden flex items-center justify-center">
                       <img
-                        src={formData.socialShare?.thumbnail || '/templates/007/images/cover_social.jpg'}
+                        src="/templates/007/images/og_banner.jpg"
                         alt="OG Preview"
                         className="w-full h-full object-cover"
                       />
