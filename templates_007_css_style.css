@@ -1,0 +1,163 @@
+@font-face {
+  font-family: "utm-avo";
+  src: url(../font/utm-avo.ttf);
+}
+
+@font-face {
+  font-family: "Blackmango-Medium";
+  src: url(../font/blackmango-medium.otf);
+}
+
+@font-face {
+  font-family: "NVN-Motherland-Signature";
+  src: url(../font/nvn-motherland-signature.ttf);
+}
+
+@font-face {
+  font-family: "VL-Brown-Sugar";
+  src: url(../font/vl-brown-sugar.ttf);
+}
+
+@font-face {
+  font-family: "High Spirited";
+  src: url(../font/high-spirited.otf);
+}
+
+@font-face {
+  font-family: "Dancing Script";
+  src: url(/assets/font/DancingScript-Regular.ttf);
+}
+
+@font-face {
+  font-family: "Ergisa";
+  src: url(/assets/font/ergisa-regular.otf);
+}
+
+body {
+  background-color: #333;
+  font-family: "utm-avo";
+  font-size: 16px;
+  --color-primary: rgb(0, 50, 100);
+  --text-color-primary: rgb(0, 50, 100);
+  --color-primary-raw: 0, 50, 100;
+}
+
+body a {
+  text-decoration: none;
+  color: inherit;
+}
+
+body .btn-link {
+  text-decoration: none;
+  color: inherit;
+  color: #3f51b5;
+}
+
+body img {
+  max-width: 100%;
+}
+
+.card-wrapper {
+  max-width: 480px;
+  margin: auto;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+
+#card-dresscode {
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+#card-dresscode .dresscode-inner {
+    position: relative;
+    text-align: center;
+    padding: 50px 12px;
+    text-align: center;
+}
+
+#card-dresscode .dresscode-title {
+    font-size: 42px;
+    line-height: 1.6;
+    color: inherit;
+    margin-bottom: 0;
+    color: var(--text-color-primary);
+    font-family: "nvn-motherland-signature";
+    text-align: center;
+}
+
+#card-dresscode .dresscode-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top:12px;
+    gap:24px;
+}
+
+#card-dresscode .dresscode-wrapper .code-box {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    box-shadow: rgb(0, 0, 0) 0px 15px 20px -15px;
+    background-color: var(--color);
+    border-radius: 40px;
+    margin:auto;
+    border: 1px solid #ffff;
+}
+
+#card-dresscode p{
+    margin-top: 12px;
+    margin-bottom: 24px;
+}
+
+#card-dresscode .dresscode-wrapper .code-box-wrapper {
+    color: var(--color);
+}
+
+
+.shuttle-register-wrapper {
+    text-align: center;
+    margin-top: 50px;
+    border-top: 1px solid rgba(var(--color-primary-raw), .3);
+    padding-top: 32px;
+}
+
+.shuttle-register-wrapper .title{
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 23px;
+    color:var(--color-primary);
+}
+
+.shuttle-register-wrapper .link-qr{
+    margin: 16px 0;
+}
+
+.shuttle-register-wrapper .link-qr img {
+    width: 240px;
+}
+
+.shuttle-register-wrapper .btn{
+    border: 1px solid var(--color-primary);
+    margin-top: 0;
+    font-size: 14px;
+    display: inline-block;
+    font-weight: bold;
+    /* text-transform: uppercase; */
+    background-color: rgba(var(--color-primary-raw), 0.7);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 18px;
+    border-radius: 50px;
+    min-width:140px;
+}
+
+#card-gift{
+    padding-bottom:0;
+}

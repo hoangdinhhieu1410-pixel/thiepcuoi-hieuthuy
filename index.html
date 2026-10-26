@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e11d48'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Thư Mời Cưới Online - Wedding Invitation</title>
+    
+    <!-- OpenGraph Default Meta Tags -->
+    <meta property="og:title" content="Thư Mời Cưới - Trân Trọng Kính Mời" />
+    <meta property="og:description" content="Thiệp cưới online nơi gửi gắm lời mời trân trọng và câu chuyện tình yêu đong đầy ý nghĩa." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&h=630&q=80" />
+    <meta property="og:type" content="website" />
+
+    <!-- Google Fonts for Elegant Wedding Invitation -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-stone-100 text-stone-800 antialiased selection:bg-rose-200 selection:text-rose-900 overflow-x-hidden">
+    <div id="root"></div>
+    <script>
+      window.addEventListener('error', function(e) {
+        var root = document.getElementById('root');
+        if (root && root.innerHTML.trim() === '') {
+          root.innerHTML = '<div style="min-height:100vh;background:#1c1917;color:#f5f5f4;display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;text-align:center;">' +
+            '<div style="max-width:440px;background:#292524;padding:24px;border-radius:24px;border:1px solid #44403c;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">' +
+            '<div style="font-size:36px;margin-bottom:12px;">⚠️</div>' +
+            '<h2 style="font-size:18px;margin-bottom:8px;color:#fff;font-weight:bold;">Đang nạp lại trang thiệp cưới</h2>' +
+            '<p style="font-size:12px;color:#d6d3d1;margin-bottom:16px;">' + (e.message || 'Trình duyệt đang đồng bộ tệp mã nguồn mới...') + '</p>' +
+            '<button onclick="localStorage.clear();window.location.reload();" style="padding:10px 20px;background:#d97706;color:#fff;border:none;border-radius:12px;font-weight:bold;cursor:pointer;">Khôi phục & Tải lại ngay</button>' +
+            '</div></div>';
+        }
+      });
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,2104 @@
+﻿@font-face {
+    font-family: "Lora";
+    src: url(../font/lora-regular.ttf);
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lora";
+    src: url(../font/lora-semibold.ttf);
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Ergisa";
+    src: url(../font/ergisa-regular.otf);
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "High Spirited";
+    src: url(../font/high-spirited.otf);
+}
+
+@font-face {
+    font-family: "NTN-V2";
+    src: url(../font/ntn-v2.ttf);
+}
+
+@font-face {
+    font-family: "UTM-Wedding-KT";
+    src: url(../font/utm-wedding-kt.ttf);
+}
+
+@font-face {
+    font-family: "DancingScript";
+    src: url(../font/DancingScript-SemiBold.ttf);
+    font-weight:600;
+}
+
+@font-face {
+    font-family: "DancingScript";
+    src: url(../font/DancingScript-Medium.ttf);
+    font-weight: 500;
+}
+
+.card-editing .image-placeholder {
+    display: inline-block;
+    position: relative;
+}
+
+.card-editing [data-img-placeholder]::after {
+    content: "⚠️" attr(data-img-placeholder);
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: white;
+    font-size: var(--img-placeholder-fontsize, 1.2rem);
+    font-weight: 600;
+    pointer-events: none;
+    width: var(--img-placeholder-width, 100%);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(83 83 83 / 90%);
+    opacity: 1;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ffca2c;
+    box-shadow: 0 0 0 2px #ffca2c inset;
+}
+
+#guestConfimationBtn {
+    position: fixed;
+    bottom: 150px;
+    right: 15px;
+}
+
+#audioToggleBtn {
+    position: fixed;
+    bottom: 20px;
+    right: 15px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    transition: background-color 0.3s ease;
+    opacity: 0.4;
+}
+
+#audioToggleBtn.playing {
+  animation-name: spin;
+  animation-duration: 5000ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+#audioToggleBtn.playing::after {
+  content: none;
+}
+#audioToggleBtn::after {
+  content: "";
+  border-left: 3px solid #fff;
+  height: 36px;
+  display: block;
+  width: 0;
+  left: 25px;
+  top: 7px;
+  position: absolute;
+  transform: rotate(45deg);
+  z-index: 1;
+}
+#audioToggleBtn::before {
+  content: "\f49e";
+  font-family: bootstrap-icons !important;
+  display: inline-block;
+  position: absolute;
+  z-index: 1;
+  font-size: 24px;
+  /* height: 100%; */
+  /* width: 100%; */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+#audioToggleBtn:hover {
+  opacity: 1;
+}
+
+
+#giftToggleBtn {
+    position: fixed;
+    bottom: 85px;
+    right: 15px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background-color: #ff4767;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    transition: background-color 0.3s ease;
+    color:#fff;
+    padding:0;
+    text-align:center;
+}
+
+.comment-form {
+    background-color: rgba(var(--color-primary-raw, 216, 216, 216), 0.2);
+    padding: 16px;
+}
+.comment-form .form-group {
+  margin-bottom: 16px;
+}
+.comment-form .group-btns .btn {
+  width: 100%;
+}
+.comment-form .group-btns .btn + .btn {
+  margin-top: 12px;
+}
+.comment-form .group-btns .comment-guest {
+  border-left: 1px dashed var(--color-primary, #333);
+  border-bottom: 1px dashed var(--color-primary, #333);
+  text-align: right;
+  padding-top: 12px;
+}
+.comment-form .group-btns .comment-guest .comment-guest-inner {
+  display: inline-block;
+  margin-left: auto;
+}
+.comment-form .group-btns .comment-guest .comment-guest-inner small {
+  font-weight: 500;
+  color:gray;
+}
+.comment-form .group-btns .comment-guest .comment-guest-inner strong {
+  color: var(--color-primary, #333);
+}
+.comment-form .btn {
+  background-color: var(--color-primary, #5c636a);
+  color: white;
+  text-transform: uppercase;
+  font-size: 14px;
+  min-width: 160px;
+  margin: auto;
+}
+.comment-form .btn.confirm-attending {
+  border: 2px solid var(--color-primary, #5c636a);
+  color: var(--color-primary, #5c636a);
+  font-weight: 600;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 4px;
+  background-color: #fff !important;
+}
+.comment-form .btn.confirm-attending i {
+  margin-right: 5px;
+}
+
+.comment-list {
+  border: 1px solid #d8d8d8;
+  padding: 0 16px;
+  padding-top: 16px;
+}
+
+.comment-list .no-comments{
+    padding-bottom: 16px;
+    text-align: center;
+    font-size: 14px;
+    color: gray;
+}
+
+.comment-list .private-message{
+    padding-bottom: 16px;
+    text-align: center;
+    font-size: 16px;
+    color: var(--color-primary, gray);
+    opacity: .9;
+    font-style: italic;
+}
+
+.comment-list .comment-box {
+  border-bottom: 1px dashed #d8d8d8;
+  padding: 12px 8px;
+  border-bottom: 1px dashed #d8d8d8;
+}
+.comment-list .comment-box + .comment-box {
+  margin-top: 12px;
+}
+.comment-list .comment-box .fullname {
+  font-weight: 600;
+}
+.comment-list .comment-box .timestamp {
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+.comment-list .comment-box .content {
+  font-weight: 300;
+  font-size: 14px;
+}
+.comment-list .view-more {
+  text-align: center;
+}
+.comment-list .view-more .btn-link {
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #3f51b5;
+  text-decoration: none;
+}
+.comment-list .view-more a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.rsvp-form{
+    color: var(--text-color-primary);
+}
+
+.rsvp-form .form-check {
+    min-height: 1.5rem;
+    padding-left: 1.5em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.rsvp-form .form-check:has(input[type="radio"]:checked),
+.rsvp-form .form-check:has(input[type="checkbox"]:checked) {
+    background-color: rgba(var(--color-primary-raw), .15);
+}
+
+.rsvp-form .rsvp-event-info {
+    font-weight: 400;
+    opacity: .75;
+}
+
+.rsvp-form .form-check .form-check-input {
+    margin-left: 0;
+    width: 1.2rem;
+    height: 1.2rem;
+    --bs-border-width: 2px;
+    --bs-border-color: #d45432;
+    margin-top: 0;
+    cursor: pointer;
+}
+
+.rsvp-form .form-check .form-check-label {
+    cursor: pointer;
+}
+
+.rsvp-form .form-check .form-check-input:checked {
+    background-color: #d45432;
+    border-color: #d45432;
+}
+
+.rsvp-form .form-check .form-check-input:checked + .form-check-label {
+    /*color: #d45432;*/
+}
+
+.rsvp-form .form-control, .rsvp-form .form-select {
+    background: transparent;
+    border-color: var(--color-primary);
+    color:inherit;
+}
+
+.rsvp-form .form-control::placeholder {
+   font-size:14px;
+   font-style: italic;
+   color: inherit;
+   opacity: .4;
+}
+
+.rsvp-form .form-select option {
+    color: var(--text-color-primary);
+}
+
+.rsvp-form .btn {
+    background-color: var(--color-primary, #5c636a);
+    color: white;
+    text-transform: uppercase;
+    font-size: 16px;
+    min-width: 160px;
+    margin: auto;
+    font-weight:600;
+}
+
+.rsvp-form.submitted .rsvp-submitted-message {
+    display:block;
+    color: green;
+    background: rgba(255, 255, 255, .7);
+    text-align: center;
+    padding: 5px 16px;
+    font-size: 14px;
+}
+
+.rsvp-form.submitted .submit-btn {
+    display: none;
+}
+
+.rsvp-form .rsvp-submitted-message {
+    display: none
+}
+
+.rsvp-form.submitted::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 1;
+    background: rgba(0, 0, 0, .05);
+    top: 0;
+    left: 0;
+}
+
+.add-to-calendar-wrapper {
+    text-align: center;
+    margin-top: 24px;
+}
+
+.add-to-calendar-wrapper .add-to-calendar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border: 1px solid var(--color-primary);
+    border-radius: 999px;
+    color: var(--color-primary);
+    background: transparent;
+    font-size: 15px;
+    line-height: 1;
+    text-decoration: none;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.add-to-calendar-wrapper .add-to-calendar-btn:hover,
+.add-to-calendar-wrapper .add-to-calendar-btn:focus {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.add-to-calendar-wrapper .add-to-calendar-btn:active{
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.add-to-calendar-wrapper .add-to-calendar-btn i {
+    font-size: 17px;
+}
+
+/* Chooser (Google / .ics) — a <details> disclosure so it needs no JS and works
+   inside in-app webviews (Zalo, Messenger) that block the .ics file download. */
+.add-to-calendar.add-to-calendar-wrapper > summary.add-to-calendar-btn {
+    list-style: none;
+    cursor: pointer;
+}
+.add-to-calendar.add-to-calendar-wrapper > summary.add-to-calendar-btn::-webkit-details-marker {
+    display: none;
+}
+.add-to-calendar.add-to-calendar-wrapper > summary.add-to-calendar-btn::marker {
+    content: "";
+}
+
+.add-to-calendar .add-to-calendar-menu {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    max-width: 320px;
+    margin: 10px auto 0;
+    padding: 8px;
+    border: 1px solid var(--color-primary);
+    border-radius: 12px;
+    background: #fff;
+    text-align: left;
+}
+
+.add-to-calendar .add-to-calendar-menu .atc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 13px;
+    font-family:"Lora";
+    line-height: 1.25;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.add-to-calendar .add-to-calendar-menu .atc-item:hover,
+.add-to-calendar .add-to-calendar-menu .atc-item:active {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.add-to-calendar .add-to-calendar-menu .atc-item i {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.add-to-calendar .add-to-calendar-menu .atc-hint {
+    padding: 8px 14px 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #888;
+    text-align: center;
+}
+
+#card-comments.inline-rsvp .card-section-subtitle{
+    font-size: 16px;
+}
+
+#photo-gallery .slick-prev,
+#photo-gallery .slick-next {
+    z-index: 1;
+}
+#photo-gallery .slick-next {
+  right: 10px;
+}
+#photo-gallery .slick-prev {
+  left: 10px;
+}
+#photo-gallery .slick-list {
+  background-color: rgba(var(--color-primary-raw), 0.03);
+}
+#photo-gallery .slick-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#photo-gallery-thumbnails {
+  margin-top: 10px;
+}
+#photo-gallery-thumbnails .slick-slide {
+  padding: 0 2px;
+  opacity: 0.8;
+  cursor: pointer;
+  transition: opacity 0.25s;
+}
+#photo-gallery-thumbnails .slick-slide.slick-current {
+  opacity: 1;
+}
+#photo-gallery-thumbnails .slick-slide.slick-current img {
+  border-color: #c8bfb0;
+}
+#photo-gallery-thumbnails .slick-slide img {
+  width: 100%;
+  aspect-ratio:1;
+  -o-object-fit: cover;
+     object-fit: cover;
+  border-radius: 2px;
+  border: 2px solid transparent;
+  transition: border-color 0.25s;
+}
+
+.container.container-md {
+  max-width: 768px;
+}
+
+#demo-ribbon {
+    font-weight: bold;
+    color: #fff;
+    font-size:18px;
+    --f: 0;
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 99;
+    line-height: 1.8;
+    padding-inline: 1lh;
+    padding-bottom: var(--f);
+    border-image: conic-gradient(#0008 0 0) 51%/var(--f);
+    clip-path: polygon( 100% calc(100% - var(--f)),100% 100%,calc(100% - var(--f)) calc(100% - var(--f)),var(--f) calc(100% - var(--f)), 0 100%,0 calc(100% - var(--f)),999px calc(100% - var(--f) - 999px),calc(100% - 999px) calc(100% - var(--f) - 999px));
+    transform: translate(calc((1 - cos(45deg))*100%), -100%) rotate(45deg);
+    transform-origin: 0% 100%;
+    background-color: #ff4767; /* the main color  */
+}
+
+#app-footer > div .en{
+    font-size:14px;
+    text-transform:none;
+}
+
+#app-footer > div{
+    max-width: 480px;
+    margin: auto;
+    color: #c5c5c5;
+    background: #fff;
+    text-transform: uppercase;
+    text-align: center;
+    height: 40px;
+    line-height: 40px;
+    letter-spacing: 1px;
+    font-size: 16px;
+    font-family: 'Lora';
+}
+
+/* Footer with links: text on the left, two quiet icons on the right (Facebook, homepage),
+   same grey as the text; each icon has a full 40px tap area. */
+#app-footer > div.has-links{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 16px 0 4px;
+    text-align: left;
+    font-size: 13px;
+    letter-spacing: .5px;
+    flex-direction:row-reverse;
+}
+#app-footer > div.has-links .footer-text{
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+#app-footer > div.has-links .footer-text.en{
+    font-size: 12px;
+}
+#app-footer .footer-links{
+    display: flex;
+    flex-shrink: 0;
+}
+#app-footer .footer-links a{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: inherit;
+    font-size: 15px;
+    text-decoration: none;
+    transition: color .2s;
+}
+#app-footer .footer-links a:hover,
+#app-footer .footer-links a:active{
+    color: #8a8a8a;
+}
+
+.no-scroll {
+    overflow: hidden;
+    height: 100vh; /* prevents mobile scroll bounce */
+}
+
+#guest-popup {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    bottom: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.75);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#guest-popup .guest-popup-max-width {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    max-width: 480px;
+    margin: auto;
+}
+
+#guest-popup .guest-popup-inner {
+    animation: slideUp 0.7s ease-out forwards;
+    animation-delay: 0.4s; /* wait until fade-in starts */
+    position: absolute;
+    bottom: -100%;
+    left: 0;
+    text-align: center;
+    width: 100%;
+    background: #fff;
+    border-top-left-radius: 50px;
+    border-top-right-radius: 50px;
+    padding-top: 30px;
+    border-top: 6px solid #d45432;
+    border-bottom: 6px solid #d45432;
+    padding-bottom: 30px;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper {
+    padding: 24px 12px;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .wedding-name {
+    font-size: 24px;
+    font-family: "Ergisa";
+    font-weight: 700;
+    color: #d45432;
+    padding: 8px 0;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .wedding-date {
+    font-family: "Lora";
+    font-weight: 600;
+    letter-spacing: 2px;
+    font-size: 20px;
+    color: #d45432;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .wedding-date > div {
+    display: inline-block;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    padding: 2px 6px;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .guest-label {
+    margin-top: 24px;
+    /* opacity: .6; */
+    text-transform: uppercase;
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: gray;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .guest-name {
+    font-size: 24px;
+    font-family: "Ergisa";
+    font-weight: 600;
+    border-bottom: 3px dotted #d9d9d9;
+    padding-bottom: 8px;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .host-message {
+    margin-top: 16px;
+    font-size: 14px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 5; /* number of lines to show */
+    line-clamp: 5;
+    -webkit-box-orient: vertical;
+}
+
+#guest-popup .guest-popup-image {
+    height: 250px;
+    margin-top: -80px;
+}
+
+#guest-popup .guest-open-button {
+    border: 0;
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px #d45432;
+    background: #fff;
+    color: #d45432;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#guest-popup .guest-open-button:hover {
+    transform: translateY(-2px);
+}
+
+#guest-popup.show {
+    opacity: 1;
+    pointer-events: auto;
+    animation: fadeIn 0.6s ease forwards;
+}
+
+/* Closing animation */
+#guest-popup.closing {
+    animation: fadeOut 0.5s ease forwards;
+}
+
+#guest-popup.closing .guest-popup-inner {
+    animation: slideDown 0.5s ease forwards;
+}
+
+#guest-popup.style2 .guest-popup-inner {
+    border-top: 6px solid #89795a;
+    border-bottom: 6px solid #89795a;
+    padding-top: 60px;
+    color: #5b432b;
+}
+
+#guest-popup.style2 .guest-popup-inner::before {
+  content: "";
+  display: block;
+  width: 110px;
+  height: 110px;
+  background-image: url(/assets/images/common/button.png);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -40px;
+}
+
+#guest-popup.style2 .guest-popup-inner .guest-popup-image {
+  display: none;
+}
+
+#guest-popup.style2 .guest-popup-inner .info-wrapper .wedding-name {
+  color: inherit;
+  font-weight: 400;
+}
+
+#guest-popup.style2 .guest-popup-inner .info-wrapper .wedding-date {
+  color: inherit;
+  font-weight: 400;
+  position: relative;
+  font-family: inherit;
+  font-size: 16px;
+  letter-spacing: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#guest-popup.style2 .guest-popup-inner .info-wrapper .wedding-date>div {
+  border: 0;
+  padding: 0;
+  margin-top: 15px;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .guest-label{
+    font-weight:400;
+}
+
+#guest-popup.style2 .guest-popup-inner .info-wrapper .wedding-date::before {
+  display: inline-block;
+  content: "";
+  background-image: url(/assets/images/common/leaf-left.png);
+  width: 100px;
+  aspect-ratio: 150/79;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+#guest-popup.style2 .guest-popup-inner .info-wrapper .wedding-date::after {
+  display: inline-block;
+  content: "";
+  background-image: url(/assets/images/common/leaf-right.png);
+  width: 100px;
+  aspect-ratio: 150/79;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+#guest-popup.style2 .guest-popup-inner .info-wrapper .guest-name {
+  color: inherit;
+  font-weight: 400;
+  border-bottom: 1px dotted currentColor;
+}
+
+#guest-popup .guest-popup-inner .info-wrapper .host-message{
+    font-family: "Ergisa";
+}
+
+#guest-popup.style2 .guest-open-button {
+  color: currentColor;
+  box-shadow: 0 4px currentColor;
+  background-color: transparent;
+  border-radius: 5px;
+  font-weight: 400;
+  font-size: 18px;
+  padding: 5px 16px;
+}
+
+/* ANIMATIONS */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        bottom: -100%;
+    }
+
+    to {
+        bottom: 0;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        bottom: 0;
+    }
+
+    to {
+        bottom: -100%;
+    }
+}
+
+/* Start card opening styles */
+
+#card-opening-sides {
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  z-index: 99;
+  max-width: var(--slide-card-max-width, 480px);
+  overflow: hidden;
+}
+#card-opening-sides._animating .card-side {
+  animation-play-state: running !important;
+}
+#card-opening-sides.default .card-side {
+  position: absolute;
+  width: 68%;
+  height: 100%;
+  top: 0;
+  animation-fill-mode: forwards;
+  --animate-duration: 4s;
+  animation-play-state: paused;
+}
+#card-opening-sides.default .card-side.right {
+  right: 0;
+  background-color: var(--slide-card-color);
+  z-index: 0;
+  width: 50%;
+  animation-name: cloudslideInRight;
+  animation-duration: 4s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-delay: 500ms;
+}
+#card-opening-sides.default .card-side.left {
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: cover;
+  background-attachment: scroll;
+  background-origin: content-box;
+  left: 0;
+  z-index: 1;
+  animation-name: cloudslideInLeft;
+  animation-duration: 4s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-delay: 500ms;
+}
+#card-opening-sides.default2 .card-side {
+  position: absolute;
+  width: 80%;
+  height: 100%;
+  top: 0;
+  animation-fill-mode: forwards;
+  --animate-duration: 4s;
+  animation-play-state: paused;
+}
+#card-opening-sides.default2 .card-side.right {
+  right: 0;
+  width: 30%;
+  z-index: 0;
+  background-image: url(/assets/images/side-card2-right.jpg);
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: cover;
+  background-attachment: scroll;
+  background-origin: content-box;
+  width: 50%;
+  animation-name: cloudslideInRight;
+  animation-duration: 4s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-delay: 500ms;
+}
+#card-opening-sides.default2 .card-side.left {
+  background-image: url(/assets/images/side-card2.png);
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: cover;
+  background-attachment: scroll;
+  background-origin: content-box;
+  left: 0;
+  z-index: 1;
+  animation-name: cloudslideInLeft;
+  animation-duration: 4s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-delay: 500ms;
+}
+#card-opening-sides.center .card-side {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  top: 0;
+  animation-fill-mode: forwards;
+  --animate-duration: 4s;
+  animation-play-state: paused;
+  background-color: var(--slide-card-color);
+  animation-duration: var(--animate-duration, 4s);
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-delay: 500ms;
+}
+#card-opening-sides.center .card-side > div {
+  width: 100%;
+  height: 100%;
+  background-position-y: center;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+  background-origin: content-box;
+  background-size: 80vw;
+  background-position-x: 10vw;
+}
+#card-opening-sides.center .card-side.right {
+  right: 0;
+  z-index: 1;
+  animation-name: cloudslideInRight;
+}
+#card-opening-sides.center .card-side.right > div {
+  transform: scaleX(-1);
+  transform-origin: center;
+}
+#card-opening-sides.center .card-side.left {
+  left: 0;
+  z-index: 1;
+  animation-name: cloudslideInLeft;
+}
+
+#card-opening-sides.two-halves .card-side {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  top: 0;
+  animation-fill-mode: forwards;
+  --animate-duration: 4s;
+  --opacity-end: 0.8;
+  animation-play-state: paused;
+  background-color: var(--slide-card-color);
+  animation-duration: var(--animate-duration, 4s);
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-delay: 500ms;
+}
+#card-opening-sides.two-halves .card-side > div {
+  width: 100%;
+  height: 100%;
+  background-size: 200% 100%;
+}
+#card-opening-sides.two-halves .card-side.right {
+  right: 0;
+  z-index: 1;
+  animation-name: cloudslideInRight;
+}
+#card-opening-sides.two-halves .card-side.right > div {
+  right: 0;
+  background-position: right center;
+}
+#card-opening-sides.two-halves .card-side.left {
+  left: 0;
+  z-index: 1;
+  animation-name: cloudslideInLeft;
+}
+#card-opening-sides.two-halves .card-side.left > div {
+  left: 0;
+  background-position: left center;
+}
+
+#card-opening-sides.envelope {
+  --seam: 54dvh;
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --envelope-text-color: #c9a24a;
+  --envelope-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+  --envelope-invite-font: "hepta-slab", serif;
+  --envelope-names-font: "hayollan";
+}
+#card-opening-sides.envelope.theme-pink {
+  --envelope-text-color: #660101;
+  --envelope-text-shadow: rgb(255, 255, 255) 1px 1px 3px;
+}
+
+#card-opening-sides.envelope.theme-pink .envelope-body{
+  background-image: url(/templates/016/images/envelope-body-pink.webp) !important;
+}
+
+#card-opening-sides.envelope.theme-pink .envelope-flap{
+     background-image: url(/templates/016/images/envelope-flap-pink.webp) !important;
+}
+
+#card-opening-sides.envelope.theme-pink .envelope-seal .envelope-seal-img {
+    background-image: url(/templates/016/images/envelope-seal-pink.png) !important;
+}
+
+#card-opening-sides.envelope.theme-red {
+  --envelope-text-color: #f0d6c8;
+  --envelope-text-shadow: rgb(255, 255, 255) 1px 1px 3px;
+}
+
+#card-opening-sides.envelope.theme-red .envelope-body{
+  background-image: url(/templates/016/images/envelope-body-red.webp) !important;
+}
+
+#card-opening-sides.envelope.theme-red .envelope-flap{
+     background-image: url(/templates/016/images/envelope-flap-red.webp) !important;
+}
+
+#card-opening-sides.envelope.theme-red .envelope-seal .envelope-seal-img {
+    background-image: url(/templates/016/images/envelope-seal-red.png) !important;
+}
+
+#card-opening-sides.envelope.theme-beige {
+ --envelope-text-color: #7d0307;
+ --envelope-text-shadow: rgb(255, 255, 255) 1px 1px 3px;
+}
+
+#card-opening-sides.envelope.theme-beige .envelope-body{
+  background-image: url(/templates/016/images/envelope-body-beige.webp) !important;
+}
+
+#card-opening-sides.envelope.theme-beige .envelope-flap{
+     background-image: url(/templates/016/images/envelope-flap-beige.webp) !important;
+}
+
+#card-opening-sides.envelope.theme-beige .envelope-seal .envelope-seal-img {
+    background-image: url(/templates/016/images/envelope-seal-beige.png) !important;
+}
+
+#card-opening-sides.envelope {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background-color: #0a0f0d;
+  z-index: 9999;
+  /* Backdrop fades out as the card is revealed behind it */
+  transition: background-color 900ms var(--ease-soft);
+  /* Subtle 3D hinge for the flap */
+  perspective: 1600px;
+  perspective-origin: 50% var(--seam);
+  -webkit-tap-highlight-color: transparent;
+  /* Drop the dark backdrop so the card can fade up through it */
+}
+#card-opening-sides.envelope.is-clearing {
+  background-color: transparent;
+}
+
+#card-opening-sides.envelope .envelope-body {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: transform 1500ms var(--ease-soft), opacity 1500ms var(--ease-soft);
+  will-change: transform, opacity;
+  z-index: 1;
+}
+
+#card-opening-sides.envelope .envelope-lower {
+  position: absolute;
+  left: 0;
+  top: calc(var(--seam) + 13svh);
+  width: 100%;
+  text-align: center;
+  color: var(--envelope-text-color);
+  text-shadow: var(--envelope-text-shadow);
+  pointer-events: none;
+  transition: transform 1500ms var(--ease-soft), opacity 1200ms var(--ease-soft);
+  z-index: 2;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 20px;
+}
+#card-opening-sides.envelope .envelope-lower .envelope-invite-to {
+  font-family: var(--envelope-invite-font);
+  font-size: 15px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+#card-opening-sides.envelope .envelope-lower .envelope-names {
+  margin-top: 8px;
+  font-family: var(--envelope-names-font);
+  font-size: 46px;
+  line-height: 1.1;
+}
+
+#card-opening-sides.envelope .envelope-flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--seam);
+  background-position: center bottom;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform-origin: center top;
+  transition: transform 1500ms var(--ease-soft), opacity 1500ms var(--ease-soft);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  z-index: 4;
+}
+
+#card-opening-sides.envelope .envelope-seal {
+  position: absolute;
+  top: calc(var(--seam) - 4dvh);
+  left: 50%;
+  width: 27vw;
+  max-width: 130px;
+  transform: translate(-50%, -50%);
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+  transition: transform 220ms var(--ease-spring), opacity 350ms var(--ease-soft);
+  will-change: transform, opacity;
+  z-index: 6;
+}
+
+#card-opening-sides.envelope .envelope-seal .envelope-seal-img {
+  width: 100%;
+  aspect-ratio: 1; /* seal art is ~square */
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  user-select: none;
+}
+
+#card-opening-sides.envelope .envelope-seal.hint {
+  animation: envelope-seal-hint 2200ms var(--ease-soft) infinite;
+}
+#card-opening-sides.envelope .envelope-seal:disabled {
+  cursor: default;
+}
+
+#card-opening-sides.envelope .envelope-seal.press-in {
+  animation: none;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+#card-opening-sides.envelope .envelope-seal.press-out {
+  animation: none;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+#card-opening-sides.envelope .envelope-seal.fly {
+  animation: none;
+  transform: translate(-50%, -50%) translateY(-46px) rotate(11deg) scale(0.9);
+  opacity: 0;
+  transition: transform 360ms var(--ease-soft), opacity 360ms var(--ease-soft);
+}
+
+#card-opening-sides.envelope .finger {
+  display: inline-block;
+  opacity: 0;
+  animation-name: fingerFadeIn;
+  animation-delay: 1s;
+  animation-duration: 0.75s;
+  animation-fill-mode: forwards;
+  z-index: 7;
+  position: absolute;
+  left: 50%;
+  top: var(--seam);
+  transform: translate(-50%, -50%);
+  pointer-events:none;
+}
+#card-opening-sides.envelope .finger img {
+  width: 80px;
+  margin-left: 34px;
+  animation-iteration-count: infinite;
+}
+@keyframes fingerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+#card-opening-sides.envelope.is-open {
+  pointer-events: none;
+}
+#card-opening-sides.envelope.is-open .envelope-body {
+  transform: translateY(100%);
+  opacity: 0;
+}
+#card-opening-sides.envelope.is-open .envelope-flap {
+  transform: translateY(-104%) rotateX(9deg);
+  opacity: 0;
+}
+#card-opening-sides.envelope.is-open .envelope-lower {
+  transform: translateY(60vh);
+  opacity: 0;
+}
+
+#card-opening-sides.envelope.is-open .finger {
+  opacity: 0 !important;
+}
+
+#card-opening-sides.love-letter {
+    --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ll-ink: #69421a; /* brown headline ink   */
+    --ll-gold: #e6b685; /* gold text on envelope */
+    --ll-seal-ink: #6b4a12; /* "Open" word on seal   */
+    --ll-hint: #7f7f7f;
+    --ll-invite-font: "hepta-slab", serif;
+    --ll-script-font: "ecatherina", cursive;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #efe7db;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 900ms var(--ease-soft);
+    background-image: url(/templates/019/images/bg.png);
+}
+#card-opening-sides.love-letter .ll-invited {
+  font-family: var(--ll-invite-font);
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ll-ink);
+  z-index: 2;
+}
+#card-opening-sides.love-letter .ll-guest {
+  margin-top: 8px;
+  font-family: var(--ll-script-font);
+  font-size: 34px;
+  line-height: 1;
+  color: var(--ll-ink);
+  z-index: 2;
+}
+#card-opening-sides.love-letter .ll-envelope {
+  position: relative;
+  width: 80%;
+  max-width: 340px;
+  margin: 90px 0 12px;
+  aspect-ratio: 872/601; /* pb.png ratio */
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  z-index: 2;
+  transition: transform 900ms var(--ease-soft), opacity 900ms var(--ease-soft);
+  will-change: transform, opacity;
+}
+#card-opening-sides.love-letter .ll-from {
+  position: absolute;
+  top: 2%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  color: var(--ll-gold);
+}
+#card-opening-sides.love-letter .ll-from .from-label {
+  font-family: var(--ll-invite-font);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ll-gold);
+  letter-spacing: 3px;
+  text-align: center;
+}
+#card-opening-sides.love-letter .ll-from .from-names {
+  margin-top: 2px;
+  font-family: var(--ll-script-font);
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--ll-gold);
+}
+#card-opening-sides.love-letter .ll-date {
+  position: absolute;
+  bottom: 5%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: var(--ll-invite-font);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ll-gold);
+  letter-spacing: 4px;
+  text-align: center;
+}
+#card-opening-sides.love-letter .ll-feather {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30%;
+  transform: rotate(120deg) translateY(-50%);
+  transform-origin: top center;
+  pointer-events: none;
+  z-index: 4;
+}
+#card-opening-sides.love-letter .envelope-seal {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  width: 100px;
+  max-width: 100px;
+  transform: translate(-50%, -50%);
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
+  transition: transform 220ms var(--ease-spring), opacity 350ms var(--ease-soft);
+  will-change: transform, opacity;
+  z-index: 6;
+}
+#card-opening-sides.love-letter .envelope-seal .envelope-seal-img {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+#card-opening-sides.love-letter .envelope-seal.hint {
+  animation: envelope-seal-hint 2200ms var(--ease-soft) infinite;
+}
+#card-opening-sides.love-letter .envelope-seal:disabled {
+  cursor: default;
+}
+#card-opening-sides.love-letter .envelope-seal.press-in {
+  animation: none;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+#card-opening-sides.love-letter .envelope-seal.press-out {
+  animation: none;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+#card-opening-sides.love-letter .envelope-seal.fly {
+  animation: none;
+  transform: translate(-50%, -50%) translateY(-40px) rotate(11deg) scale(0.9);
+  opacity: 0;
+  transition: transform 360ms var(--ease-soft), opacity 360ms var(--ease-soft);
+}
+#card-opening-sides.love-letter .ll-hint {
+  margin-top: 4px;
+  font-family: var(--ll-invite-font);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ll-hint);
+  z-index: 2;
+}
+#card-opening-sides.love-letter .ll-decor {
+  position: absolute;
+  pointer-events: none;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  z-index: 1;
+}
+#card-opening-sides.love-letter .ll-decor.d-topright {
+  top: 27%;
+  right: -15%;
+  width: 44%;
+  height: 34%;
+}
+#card-opening-sides.love-letter .ll-decor.d-botleft {
+  bottom: 4%;
+  left: -8%;
+  width: 40%;
+  height: 34%;
+  transform: scaleX(-1);
+}
+#card-opening-sides.love-letter .ll-decor.d-pine {
+  bottom: 12%;
+  right: 4%;
+  width: 16%;
+  height: 14%;
+}
+#card-opening-sides.love-letter.is-open {
+  pointer-events: none;
+  opacity: 0;
+}
+#card-opening-sides.love-letter.is-open .ll-envelope {
+  transform: translateY(24px) scale(0.96);
+  opacity: 0;
+}
+
+/* ---- ENVELOPE variant: scroll lock + card reveal (see #card-opening-sides.envelope) ---- */
+/* Lock scrolling while the sealed envelope is on screen */
+body.envelope-closed {
+  overflow: hidden;
+}
+
+body.envelope-closed #giftToggleBtn, body.envelope-closed #audioToggleBtn, body.envelope-closed #guestConfimationBtn{
+    display:none;
+}
+
+/* The card fades up gently once the envelope has opened. Anchor the scale to the
+   top edge so growing from 0.985 -> 1 doesn't shift the visible top of the card
+   down (the card is very tall; a centred origin would push the banner down). */
+#card-wrapper {
+  transition: opacity 900ms cubic-bezier(0.22, 0.61, 0.36, 1), transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+body.envelope-closed #card-wrapper {
+  opacity: 0;
+  transform: scale(0.985);
+}
+
+@keyframes envelope-seal-hint {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.045);
+  }
+}
+/* Reduced motion — no envelope animation, reveal instantly */
+@media (prefers-reduced-motion: reduce) {
+  #card-opening-sides.envelope,
+  #card-opening-sides.envelope * {
+    transition: none !important;
+    animation: none !important;
+  }
+  #card-wrapper {
+    transition: none !important;
+  }
+}
+
+
+@keyframes cloudslideInRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: var(--opacity-end, 1);
+  }
+}
+@keyframes cloudslideInLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: var(--opacity-end, 1);
+  }
+}
+
+@media screen and (min-width: 480px) {
+  #card-opening-sides.center .card-side > div {
+        background-size: 100%;
+        background-position-x: 120px;
+  }
+}
+
+
+/* ---- TAP-TO-OPEN slide covers (data-open-mode="slide"): the side panels wait for a
+   tap anywhere on the cover (see initSlideOpen in common.js) ---- */
+body.opening-closed {
+  overflow: hidden;
+}
+
+body.opening-closed #giftToggleBtn, body.opening-closed #audioToggleBtn, body.opening-closed #guestConfimationBtn {
+  display: none;
+}
+
+#card-opening-sides[data-open-mode="slide"][data-tap-to-open="true"] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The guest just tapped — start sliding right away and open faster than the
+   auto variant (4s), so they aren't left waiting */
+#card-opening-sides[data-open-mode="slide"][data-tap-to-open="true"] .card-side {
+  animation-delay: 0ms !important;
+  animation-duration: 2.5s !important;
+}
+
+#card-opening-sides .open-seal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 96px;
+  transform: translate(-50%, -50%);
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 350ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform, opacity;
+  z-index: 3;
+}
+
+#card-opening-sides .open-seal .open-seal-img {
+  width: 100%;
+  aspect-ratio: 1;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+#card-opening-sides .open-seal.hint {
+  animation: envelope-seal-hint 2200ms cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+#card-opening-sides .open-seal:disabled {
+  cursor: default;
+}
+
+#card-opening-sides .open-seal.press-in {
+  animation: none;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+#card-opening-sides .open-seal.press-out {
+  animation: none;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+#card-opening-sides .open-seal.fly {
+  animation: none;
+  transform: translate(-50%, -50%) translateY(-40px) rotate(11deg) scale(0.9);
+  opacity: 0;
+  transition: transform 360ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 360ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+#card-opening-sides .open-hint {
+  position: absolute;
+  top: calc(50% + 64px);
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: var(--open-hint-color, #7a5a3a);
+  pointer-events: none;
+  transition: opacity 300ms ease;
+  z-index: 3;
+}
+
+#card-opening-sides.is-opening .open-hint {
+  opacity: 0;
+}
+
+/* Panel artwork box with the image's aspect ratio, pinned to the panel's top-right at
+   full height — same crop as background-size: cover on phones, but deterministic, so the
+   split-out seal lines up with the paper edge on every screen. Each style passes its
+   artwork ratio and seal centre/size (percent of the artwork) as inline CSS variables
+   from _CardOpening.cshtml: --art-ratio, --seal-x, --seal-y, --seal-size, --seal-r-y
+   (seal radius as % of the height), optional --art-fill and --seal-shadow. */
+#card-opening-sides .card-side.left.has-art {
+  background-image: none !important;
+}
+
+#card-opening-sides .card-side .side-art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  aspect-ratio: var(--art-ratio, 553 / 1500);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Behave exactly like background-size: cover — when the panel is wider than the
+   height-fitted artwork (desktop / short landscape screens), scale the artwork up to
+   the panel's width instead (bottom gets cropped, top-right stays anchored).
+   --art-ratio-n is the same ratio as a number. Older browsers keep the height fit. */
+@supports (width: 1cqw) {
+  #card-opening-sides .card-side.left.has-art {
+    container-type: size;
+  }
+  #card-opening-sides .card-side .side-art {
+    height: auto;
+    width: max(100cqw, 100cqh * var(--art-ratio-n, 0.3687));
+  }
+}
+
+/* Wider-than-artwork panels (short landscape screens): continue the paper to the left */
+#card-opening-sides .card-side .side-art::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 100vw;
+  background-color: var(--art-fill, var(--slide-card-color));
+}
+
+#card-opening-sides .side-art .open-seal {
+  left: var(--seal-x);
+  top: var(--seal-y);
+  width: var(--seal-size);
+  filter: var(--seal-shadow, none);
+}
+
+/* Just under the seal */
+#card-opening-sides .side-art .open-hint {
+  left: var(--seal-x);
+  top: calc(var(--seal-y) + var(--seal-r-y) + 10px);
+  width: auto;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Bouncing finger pointing at the seal (same as the envelope's), centred on the seal
+   and fading in after 1s. finger.png is white, so a shadow keeps it visible on cream. */
+#card-opening-sides .open-finger {
+  position: absolute;
+  left: var(--seal-x, 50%);  /* centred on the cover unless inside a .side-art */
+  top: var(--seal-y, 50%);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: fingerFadeIn 0.75s 1s forwards;
+  pointer-events: none;
+  z-index: 4;
+}
+
+#card-opening-sides .open-finger img {
+  width: 80px;
+  margin-left: 34px;
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+#card-opening-sides.is-opening .open-finger {
+  animation: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+/* center (囍 emblem across the seam): white hint just below the emblem. The emblem is
+   80vw wide on phones (radius ≈ 42vw with its 525x551 ratio) and 240px wide from 480px. */
+#card-opening-sides.center {
+  --open-hint-color: #fff;
+}
+
+#card-opening-sides.center .open-hint {
+  top: calc(50% + 42vw + 12px);
+}
+
+@media screen and (min-width: 480px) {
+  #card-opening-sides.center .open-hint {
+    top: calc(50% + 126px + 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #card-opening-sides .open-seal.hint {
+    animation: none;
+  }
+}
+
+/* End card opening styles */
+
+.floating-btn {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    border: none;
+    padding: 0;
+    z-index: 999;
+}
+
+.floating-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+}
+
+.floating-btn:active {
+    transform: scale(0.95);
+}
+
+.floating-btn-icon {
+    color: white;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.floating-btn-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    white-space: nowrap;
+    color: white;
+    font-weight: 600;
+    font-size: 0;
+    text-align: center;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.floating-btn.expanded {
+    width: 220px;
+    border-radius: 30px;
+    animation: pulse-glow 2s infinite;
+}
+
+.floating-btn.expanded .floating-btn-icon {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+}
+
+.floating-btn.expanded .floating-btn-text {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    font-size: 0.9rem;
+    pointer-events: auto;
+}
+
+/* Pulsing animation for expanded state */
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    50% {
+        box-shadow: 0 4px 30px rgba(102, 126, 234, 0.9);
+    }
+
+    100% {
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6);
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .floating-btn.expanded {
+        width: 170px;
+    }
+
+    .floating-btn.expanded .floating-btn-text {
+        font-size: 0.8rem;
+    }
+}
+
+
+@media screen and (min-width:600px){
+    #card-opening-sides .card-side {
+        width: 62%;
+    }
+    .comment-form {
+     
+        padding: 24px;
+    }
+}
+
+body:has(#guestConfirmationModal.show) {
+    padding-right: 0 !important;
+}
+
+#guestConfirmationModal {
+    --bs-modal-width: 480px;
+}
+
+#guestConfirmationModal .modal-title {
+    font-family: "Ergisa";
+    font-weight: 700;
+    color: #d45432;
+}
+
+#guestConfirmationModal .modal-title {
+    font-family: "Ergisa";
+    font-weight: 700;
+    color: #d45432;
+}
+
+#guestConfirmationModal .modal-content {
+    border-radius: 16px;
+}
+
+#guestConfirmationModal form .form-check {
+    min-height: 1.5rem;
+    padding-left: 1.5em;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    font-weight:500;
+    cursor:pointer;
+}
+
+#guestConfirmationModal .dual-text {
+    font-size: 14px;
+    font-weight: 400;
+    font-style: italic;
+    display:none;
+}
+
+#guestConfirmationModal.dual-languages .dual-text {
+    display: block;
+}
+
+#guestConfirmationModal form .form-check:has(input[type="radio"]:checked) {
+    background: #ffece7;
+}
+
+#guestConfirmationModal form .form-check .form-check-input {
+   margin-left: 0;
+    width: 1.2rem;
+    height: 1.2rem;
+    --bs-border-width: 2px;
+    --bs-border-color: #d45432;
+    margin-top: 0;
+    cursor:pointer;
+}
+
+#guestConfirmationModal form .form-check .form-check-label{
+    cursor:pointer;
+}
+
+#guestConfirmationModal form .form-check .form-check-input:checked {
+    background-color: #d45432;
+    border-color: #d45432;
+}
+
+#guestConfirmationModal form .form-check .form-check-input:checked+.form-check-label{
+    color:#d45432;
+}
+
+#guestConfirmationModal form .form-select, #guestConfirmationModal form .form-control {
+    font-size: 1.1rem;
+}
+
+#guestConfirmationModal form textarea.form-control{
+    font-size:16px;
+}
+
+#guestConfirmationModal form .form-label {
+    font-weight: 500;
+}
+
+#guestConfirmationModal form .guestname {
+    color: #d45432;
+    display: inline-block;
+    font-size: 1.1rem;
+}
+
+#guestConfirmationModal .btn.submit-btn {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #d45432;
+    --bs-btn-border-color: #d45432;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #bb472b;
+    --bs-btn-hover-border-color: #bb472b;
+    --bs-btn-focus-shadow-rgb: 212, 84, 50;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #a93e26;
+    --bs-btn-active-border-color: #a93e26;
+}
+
+#guestConfirmationResponse{
+    padding:16px;
+}
+
+#weddingGiftModal .modal-dialog {
+    max-width: 480px;
+    margin: var(--bs-modal-margin,1.75rem) auto;
+}
+
+#weddingGiftModal .modal-title{
+    font-family: Lora;
+}
+
+#weddingGiftModal .bank-box-wrapper {
+    display: inline-block;
+    background: #e9e9e9;
+    padding: 5px 20px;
+    font-size: 110%;
+}
+
+#weddingGiftModal .qr-code-header {
+    display: block;
+    height: 40px;
+    line-height: 40px;
+    background-color: #f1f1f1;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 0;
+    font-family: 'Lora';
+}
+
+#weddingGiftModal .qr-code-img {
+    background: #f1f1f1;
+    padding: 5px;
+}
+
+#weddingGiftModal .qr-code-img img{
+    max-width:250px;
+}
+
+.video-thumbnail {
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.video-thumbnail::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 50px;
+    color: white;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    padding: 10px 18px;
+    width: 65px;
+    height: 65px;
+    padding: 0;
+    line-height: 65px;
+    text-align: center;
+    font-size: 30px;
+    z-index: 1;
+}
+
+.video-modal~.modal-backdrop {
+    --bs-backdrop-opacity: 0.9;
+}
+
+#video-player iframe {
+    width: 100%;
+    height: 100%;
+}
+
+.video-modal {
+    --bs-modal-bg: #000;
+}
+
+.video-modal .modal-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-modal .modal-body>div {
+    aspect-ratio: 16 / 9;
+    max-height: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.video-modal .modal-body>div .plyr--video {
+    height: 100%;
+}
+
+
+.guest-name-wrapper .guest-name {
+    margin-bottom: 12px;
+    margin-top: 8px;
+}
+
+.guest-name-wrapper .guest-name>div{
+    display: inline-block;
+    font-weight: 600;
+    line-height: 1.8;
+    color: #212529;
+    font-size: 24px;
+    position: relative;
+    font-family: "DancingScript";
+    text-transform:none;
+}
+
+.guest-name-wrapper .guest-name>div::after {
+    content: "";
+    display: inline-block;
+    border-bottom: 2px dotted var(--color-primary);
+    padding: 0 32px;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    left: -32px;
+    box-sizing: content-box;
+}
+
+@media screen and (min-width:600px) {
+    #weddingGiftModal .modal-dialog {
+        transform: translateX(-8px);
+    }
+}
+
+/* Gallery: a photo the admin marked as full-width spans the whole masonry row.
+   Shared across every theme (per-theme rules set .photo width to 50%). */
+.photo-grid[data-masonry] .photo.full {
+    width: 100%;
+}

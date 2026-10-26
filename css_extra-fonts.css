@@ -1,0 +1,43 @@
+/* Extra fonts — add @font-face declarations here for fonts beyond common.css.
+   This file is loaded on the invite page only when a wedding has FontFamily overrides.
+   NOTE: this file lives at /css/, not /assets/css/ like common.css, so font URLs
+   must be absolute (/assets/font/...) — a relative ../font/ resolves to /font/ (404). */
+@font-face {
+    font-family: "HLT-AphroditeSlimPro";
+    src: url(/assets/font/HLT-AphroditeSlimPro.ttf);
+}
+
+@font-face {
+    font-family: "SVN-Darleston";
+    src: url(/assets/font/SVN-Darleston.otf);
+}
+
+@font-face {
+    font-family: "Ftv Milton One";
+    src: url(/assets/font/1FTV-VIP-Milton-One-Bold.otf);
+}
+
+@font-face {
+    font-family: "HLT Burgues Script";
+    src: url(/assets/font/HLT-Burgues-Script.ttf);
+}
+
+@font-face {
+    font-family: "UTM Edwardian";
+    src: url(/assets/font/UTM-EdwardianKT.ttf);
+}
+
+@font-face {
+    font-family: "UTM ViceroyJF";
+    src: url(/assets/font/UTM-ViceroyJF.ttf);
+}
+
+@font-face {
+    font-family: "UVF Mussica Swash";
+    src: url(/assets/font/UVF-MussicaSwash.ttf);
+}
+
+@font-face {
+    font-family: "VL Bodega Script";
+    src: url(/assets/font/VL-Bodega-Script.otf);
+}
