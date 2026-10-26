@@ -253,31 +253,47 @@ export function GuestView({
     const resolveAudio = async () => {
       const activeId = cardData.music?.activeTrackId;
       const activeTrack = cardData.music?.presetTracks?.find(t => t.id === activeId);
+
+      // 1. Try to load live blob from IndexedDB if running on device that has it
       if (activeTrack?.isCustom || (activeId && activeId.startsWith('track-'))) {
-        const blobUrl = await getAudioTrackUrl(activeId);
-        if (blobUrl && isMounted) {
-          setResolvedAudioUrl(blobUrl);
-          return;
+        try {
+          const blobUrl = await getAudioTrackUrl(activeId);
+          if (blobUrl && isMounted) {
+            setResolvedAudioUrl(blobUrl);
+            return;
+          }
+        } catch (e) {
+          console.warn('Audio blob load error:', e);
         }
       }
-      if (cardData.music?.customTrackUrl && isMounted) {
-        setResolvedAudioUrl(cardData.music.customTrackUrl);
+
+      // 2. If track has a static valid URL (NOT a dead blob: url from another session/device)
+      const customUrl = cardData.music?.customTrackUrl;
+      if (customUrl && !customUrl.startsWith('blob:') && isMounted) {
+        setResolvedAudioUrl(customUrl);
         return;
       }
-      if (activeTrack?.url && isMounted) {
-        setResolvedAudioUrl(activeTrack.url);
+
+      const presetUrl = activeTrack?.url;
+      if (presetUrl && !presetUrl.startsWith('blob:') && isMounted) {
+        setResolvedAudioUrl(presetUrl);
         return;
       }
+
+      // 3. Always fallback to the active remix audio track bundled on server
       if (isMounted) {
-        setResolvedAudioUrl(cardData.music?.customTrackUrl || '/templates/007/music.m4a');
+        setResolvedAudioUrl('/templates/007/music.m4a');
       }
     };
     resolveAudio();
     return () => { isMounted = false; };
   }, [cardData.music?.activeTrackId, cardData.music?.customTrackUrl, cardData.music?.presetTracks]);
 
-  const activeMusicUrl = resolvedAudioUrl || cardData.music?.customTrackUrl ||
-    cardData.music?.presetTracks?.find(t => t.id === cardData.music.activeTrackId)?.url ||
+  // Ensure activeMusicUrl is NEVER a dead blob URL
+  const activeMusicUrl = (resolvedAudioUrl && !resolvedAudioUrl.startsWith('blob:') ? resolvedAudioUrl : null) ||
+    (resolvedAudioUrl && resolvedAudioUrl.startsWith('blob:') ? resolvedAudioUrl : null) ||
+    (cardData.music?.customTrackUrl && !cardData.music.customTrackUrl.startsWith('blob:') ? cardData.music.customTrackUrl : null) ||
+    (cardData.music?.presetTracks?.find(t => t.id === cardData.music.activeTrackId)?.url && !cardData.music.presetTracks.find(t => t.id === cardData.music.activeTrackId).url.startsWith('blob:') ? cardData.music.presetTracks.find(t => t.id === cardData.music.activeTrackId).url : null) ||
     '/templates/007/music.m4a';
 
   // Autoplay on envelope open
@@ -1656,8 +1672,8 @@ export function GuestView({
             <div className="w-12 h-[2px] bg-[#928362] mx-auto mt-2"></div>
           </div>
 
-          {/* Photos Grid - Full view layout for wedding portraits */}
-          <div className="relative z-10 grid grid-cols-2 gap-3">
+          {/* Photos Masonry - Natural full view with ZERO blank space */}
+          <div className="relative z-10 columns-2 gap-3">
             {(cardData.gallery || []).map((photo, index) => {
               const galleryAnimClass = isCocohappiiPhoto
                 ? (index % 2 === 0 ? 'animate-cocohappii-photo-left' : 'animate-cocohappii-photo-right')
@@ -1667,15 +1683,15 @@ export function GuestView({
                 <div
                   key={photo.id || index}
                   onClick={() => setLightboxIndex(index)}
-                  className="relative rounded-xl overflow-hidden cursor-pointer shadow-md group bg-white"
+                  className="break-inside-avoid mb-3 relative rounded-xl overflow-hidden cursor-pointer shadow-sm group"
                 >
                   <img
                     key={`gallery-img-${photoAnimKey}-${photoAnimClass}-${index}`}
                     src={photo.url}
                     alt={photo.caption || ''}
-                    className={`w-full h-auto object-contain group-hover:scale-[1.03] transition-transform duration-500 ${galleryAnimClass}`}
+                    className={`w-full h-auto block rounded-xl group-hover:scale-[1.03] transition-transform duration-500 ${galleryAnimClass}`}
                   />
-                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
                     <Maximize2 className="w-5 h-5 text-white drop-shadow" />
                   </div>
                 </div>

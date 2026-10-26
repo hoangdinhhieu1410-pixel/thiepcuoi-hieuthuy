@@ -498,6 +498,20 @@ export function App() {
       setIsStorageReady(true);
     }
 
+    // Load latest saved card configuration from Cloud Redis
+    fetch('/api/card-config')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success && d?.config?.groom && d?.config?.bride) {
+          setProfiles(prev => ({
+            activeProfile: d.config.activeProfile || prev?.activeProfile || 'groom',
+            groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...d.config.groom }, DEFAULT_WEDDING_DATA),
+            bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...d.config.bride }, DEFAULT_BRIDE_WEDDING_DATA)
+          }));
+        }
+      })
+      .catch(() => {});
+
     // Load initial cloud wishes from Redis server
     fetch('/api/wishes')
       .then(r => r.json())
@@ -532,6 +546,11 @@ export function App() {
         [profileKey]: profileData
       };
       saveProfilesToStorage(updated);
+      fetch('/api/card-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      }).catch(e => console.warn('Cloud save error:', e));
       return updated;
     });
   };
@@ -540,6 +559,11 @@ export function App() {
   const handleSaveAllProfiles = (updatedProfiles) => {
     setProfiles(updatedProfiles);
     saveProfilesToStorage(updatedProfiles);
+    fetch('/api/card-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedProfiles)
+    }).catch(e => console.warn('Cloud save error:', e));
   };
 
   // Switch active profile

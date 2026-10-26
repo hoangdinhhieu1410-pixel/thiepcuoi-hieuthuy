@@ -29,6 +29,44 @@ function syncLocalDataPlugin() {
   return {
     name: 'sync-local-data-plugin',
     configureServer(server) {
+      server.middlewares.use('/api/card-config', async (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        const redis = getRedis();
+        try {
+          if (req.method === 'GET') {
+            const raw = redis ? await redis.get('wedding_card_config') : null;
+            return res.end(JSON.stringify({ success: true, config: raw ? JSON.parse(raw) : null }));
+          }
+          if (req.method === 'POST') {
+            let chunks = [];
+            req.on('data', c => chunks.push(c));
+            req.on('end', async () => {
+              try {
+                const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+                if (redis) {
+                  await redis.set('wedding_card_config', JSON.stringify({
+                    activeProfile: body.activeProfile || body.profiles?.activeProfile || 'groom',
+                    groom: body.groom || body.profiles?.groom,
+                    bride: body.bride || body.profiles?.bride,
+                    updatedAt: Date.now()
+                  }));
+                }
+                res.writeHead(200);
+                res.end(JSON.stringify({ success: true }));
+              } catch (e) {
+                res.writeHead(500);
+                res.end(JSON.stringify({ success: false, error: e.message }));
+              }
+            });
+            return;
+          }
+          res.writeHead(405).end();
+        } catch (err) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ success: false, error: err.message }));
+        }
+      });
+
       server.middlewares.use('/api/wishes', async (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         const redis = getRedis();

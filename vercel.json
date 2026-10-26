@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/card-config",
+      "destination": "/api/card-config.js"
+    },
+    {
       "source": "/api/wishes",
       "destination": "/api/wishes.js"
     },
