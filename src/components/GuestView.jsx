@@ -616,7 +616,46 @@ export function GuestView({
   };
 
   return (
-    <div className={`${isPreview ? (envelopeOpen ? 'min-h-screen bg-[#18181b] pt-1 pb-8' : 'w-full h-full min-h-[580px] bg-[#18181b] flex items-center justify-center p-2') : 'min-h-screen bg-[#252525] pt-14 pb-8'} flex flex-col items-center text-stone-800 font-avo selection:bg-[#70561f]/20 w-full relative`}>
+    <div className={`${
+      isPreview
+        ? (envelopeOpen ? 'min-h-screen bg-[#18181b] pt-1 pb-8' : 'w-full h-full min-h-[580px] bg-[#18181b] flex items-center justify-center p-2')
+        : (adminToolbarVisible && isAdmin ? 'min-h-screen pt-14 pb-8' : 'min-h-screen pt-0 sm:pt-4 md:pt-6 pb-8')
+    } bg-gradient-to-b from-[#181512] via-[#12100e] to-[#0a0908] flex flex-col items-center text-stone-800 font-avo selection:bg-[#70561f]/20 w-full relative overflow-x-hidden`}>
+
+      {/* LUXURY DESKTOP SIDE ACCENTS (Only visible on wide desktop / laptop screens >= 1180px) */}
+      {!isPreview && (
+        <>
+          {/* Left Side Monogram Badge */}
+          <div className="hidden min-[1180px]:flex fixed left-6 2xl:left-12 top-1/2 -translate-y-1/2 flex-col items-center text-center z-30 pointer-events-none select-none p-5 rounded-3xl bg-black/40 backdrop-blur-md border border-amber-500/20 shadow-2xl max-w-[210px] animate-fade-in">
+            <span className="text-xl text-amber-400 mb-1">⚜️</span>
+            <span className="font-motherland text-2xl text-[#d4af67] block leading-tight">
+              {groomName} & {brideName}
+            </span>
+            <span className="font-avo text-[10px] uppercase tracking-[0.25em] text-amber-200/80 mt-1 block font-semibold">
+              Save The Date
+            </span>
+            <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2"></div>
+            <span className="font-mono text-xs text-stone-300 font-semibold">
+              {cardData.saveTheDateDay || '26.12.2026'}
+            </span>
+          </div>
+
+          {/* Right Side Plaque Badge */}
+          <div className="hidden min-[1180px]:flex fixed right-6 2xl:right-12 top-1/2 -translate-y-1/2 flex-col items-center text-center z-30 pointer-events-none select-none p-5 rounded-3xl bg-black/40 backdrop-blur-md border border-amber-500/20 shadow-2xl max-w-[210px] animate-fade-in">
+            <span className="text-lg text-amber-400 mb-1">💌</span>
+            <span className="font-serif-elegant font-bold text-xs uppercase tracking-[0.2em] text-[#d4af67] block">
+              Thiệp Cưới Online
+            </span>
+            <p className="text-[11px] text-stone-300 mt-2 leading-relaxed">
+              Trân trọng kính mời quý khách chung vui cùng hai bên gia đình
+            </p>
+            <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2"></div>
+            <span className="text-[10px] text-amber-300/80 italic font-serif">
+              Tối ưu hiển thị đa thiết bị
+            </span>
+          </div>
+        </>
+      )}
       
       {/* Live Indicator Pill for Photo Animation testing */}
       {activePhotoTestNotice && (
@@ -805,7 +844,7 @@ export function GuestView({
 
       {/* 2. ENVELOPE COVER OPENING MODAL */}
       {!envelopeOpen ? (
-        <div className={`w-full ${isPreview ? 'h-full min-h-[580px] flex items-center justify-center p-2' : ''}`}>
+        <div className={`w-full ${isPreview ? 'h-full min-h-[580px] flex items-center justify-center p-2' : 'min-h-screen flex items-center justify-center p-2 sm:p-4 md:p-6'}`}>
           <EnvelopeModal
             data={cardData}
             guestName={guestName}
@@ -827,38 +866,38 @@ export function GuestView({
           {/* 3. AUDIO ELEMENT & FLOATING CONTROLS */}
           <audio ref={audioRef} src={activeMusicUrl} loop preload={isPreview ? "none" : "auto"} />
 
-          {/* Floating Audio Button */}
-      <button
-        onClick={toggleMusic}
-        className={`${isPreview ? 'absolute' : 'fixed'} bottom-5 right-5 z-40 w-11 h-11 rounded-full shadow-2xl flex items-center justify-center border transition-all ${
-          isPlaying
-            ? 'bg-[#70561f] text-white border-[#e6b685] animate-spin-slow shadow-[#70561f]/50'
-            : 'bg-stone-900/80 text-stone-300 border-stone-700'
-        }`}
-        title={isPlaying ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
-      >
-        {isPlaying ? <Volume2 className="w-5 h-5 text-[#e6b685]" /> : <VolumeX className="w-5 h-5" />}
-      </button>
+          {/* Floating Audio Button (Docked near card on desktop, bottom-right on mobile) */}
+          <button
+            onClick={toggleMusic}
+            className={`${isPreview ? 'absolute bottom-5 right-5' : 'fixed bottom-5 right-4 sm:right-6 md:right-[max(1.5rem,calc(50%-270px))]'} z-40 w-11 h-11 rounded-full shadow-2xl flex items-center justify-center border transition-all ${
+              isPlaying
+                ? 'bg-[#70561f] text-white border-[#e6b685] animate-spin-slow shadow-[#70561f]/50'
+                : 'bg-stone-900/80 text-stone-300 border-stone-700'
+            }`}
+            title={isPlaying ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
+          >
+            {isPlaying ? <Volume2 className="w-5 h-5 text-[#e6b685]" /> : <VolumeX className="w-5 h-5" />}
+          </button>
 
-      {/* Floating Gift Button */}
-      <button
-        onClick={() => setGiftModalOpen(true)}
-        className={`${isPreview ? 'absolute' : 'fixed'} bottom-18 right-5 z-40 w-11 h-11 rounded-full bg-[#70561f] text-white border border-[#e6b685] shadow-2xl flex items-center justify-center hover:scale-110 transition-transform shadow-[#70561f]/50 animate-bounce`}
-        title="Hộp mừng cưới cho cô dâu chú rể"
-      >
-        <Gift className="w-5 h-5 text-[#e6b685]" />
-      </button>
+          {/* Floating Gift Button (Docked near card on desktop, bottom-right on mobile) */}
+          <button
+            onClick={() => setGiftModalOpen(true)}
+            className={`${isPreview ? 'absolute bottom-18 right-5' : 'fixed bottom-18 right-4 sm:right-6 md:right-[max(1.5rem,calc(50%-270px))]'} z-40 w-11 h-11 rounded-full bg-[#70561f] text-white border border-[#e6b685] shadow-2xl flex items-center justify-center hover:scale-110 transition-transform shadow-[#70561f]/50 animate-bounce`}
+            title="Hộp mừng cưới cho cô dâu chú rể"
+          >
+            <Gift className="w-5 h-5 text-[#e6b685]" />
+          </button>
 
-      {/* 4. FALLING PETALS EFFECT */}
-      <FallingPetals active={true} isAbsolute={isPreview} />
+          {/* 4. FALLING PETALS EFFECT */}
+          <FallingPetals active={true} isAbsolute={isPreview} />
 
-      {/* 5. MAIN INVITATION CARD (EXACT COCOHAPPII 007 FORM - 480PX MAX WIDTH) */}
-      <div 
-        key={`card-wrapper-${photoAnimKey}-${textAnimKey}`}
-        id="card-wrapper" 
-        style={{ backgroundColor: cardData.bgColor || '#fbf8f2' }}
-        className="w-full max-w-[480px] shadow-2xl overflow-hidden relative border-x border-stone-800/40 my-3 transition-colors duration-500 animate-card-entrance paper-bg"
-      >
+          {/* 5. MAIN INVITATION CARD (RESPONSIVE: FULL-BLEED ON MOBILE, ROYAL FRAMED CARD ON LAPTOP/DESKTOP) */}
+          <div 
+            key={`card-wrapper-${photoAnimKey}-${textAnimKey}`}
+            id="card-wrapper" 
+            style={{ backgroundColor: cardData.bgColor || '#fbf8f2' }}
+            className="w-full max-w-[480px] my-0 sm:my-3 rounded-none sm:rounded-3xl shadow-none sm:shadow-[0_25px_80px_rgba(0,0,0,0.85)] overflow-hidden relative border-0 sm:border sm:border-amber-400/30 transition-colors duration-500 animate-card-entrance paper-bg"
+          >
         {/* Top Header Bar with Cover Toggle */}
         <div className="w-full flex items-center justify-between px-4 py-2 bg-stone-900/60 backdrop-blur-xs text-[11px] text-amber-100/90 border-b border-amber-900/30">
           <span className="font-serif-elegant italic tracking-wide text-stone-200">💌 Thiệp Cưới Trân Trọng</span>
