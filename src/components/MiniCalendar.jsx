@@ -168,22 +168,6 @@ export function MiniCalendar({ targetDate = '2026-11-29', events = [] }) {
           );
         })}
       </div>
-
-      {/* Chú thích sự kiện ngày cưới dưới lịch */}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 text-[11px] sm:text-xs text-[#928362] font-medium">
-        {receptionEvent && (
-          <div className="flex items-center gap-1.5 bg-white/70 backdrop-blur-xs px-2.5 py-1 rounded-full border border-[#d8cdb4] shadow-2xs">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#70561f] inline-block shrink-0 shadow-xs"></span>
-            <span>Ngày {receptionDay}: {receptionEvent.title || 'Tiệc Cưới'}</span>
-          </div>
-        )}
-        {ceremonyEvent && ceremonyDay !== receptionDay && (
-          <div className="flex items-center gap-1.5 bg-white/70 backdrop-blur-xs px-2.5 py-1 rounded-full border border-rose-200 shadow-2xs">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shrink-0 shadow-xs"></span>
-            <span>Ngày {ceremonyDay}: {ceremonyEvent.title || 'Lễ Thành Hôn'}</span>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
