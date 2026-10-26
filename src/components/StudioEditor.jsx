@@ -384,9 +384,9 @@ export function StudioEditor({
             ...(prev.coverConfig || {}),
             activeStyle: 'style3',
             coverAnimationEffect: 'splitDoor', // Mở 2 cánh cửa cung điện 3D
-            coverBgColor: '#183120',
             style3: {
               ...(prev.coverConfig?.style3 || {}),
+              bgColor: '#183120',
               headerTitle: 'THIỆP MỜI CƯỚI',
               names: `${prev.groom?.nickname || prev.groom?.name || 'Đình Hiếu'} & ${prev.bride?.nickname || prev.bride?.name || 'Thanh Thúy'}`,
               hintText: 'Chạm vào ấn đỏ để mở cánh cửa',
@@ -415,9 +415,10 @@ export function StudioEditor({
             ...(prev.coverConfig || {}),
             activeStyle: 'style2',
             coverAnimationEffect: 'flowerBloom', // Cánh hoa rơi & nở bung rực rỡ
-            coverBgColor: '#faf7f2',
             style2: {
               ...(prev.coverConfig?.style2 || {}),
+              bgColor: '#faf7f2',
+              envelopeColor: '#8c111e',
               names: `${prev.groom?.nickname || prev.groom?.name || 'Đình Hiếu'} - ${prev.bride?.nickname || prev.bride?.name || 'Thanh Thúy'}`,
               subTitle: 'SAVE THE DATE',
               buttonText: 'Mở Thiệp Ngay',
@@ -446,9 +447,9 @@ export function StudioEditor({
             ...(prev.coverConfig || {}),
             activeStyle: 'style1',
             coverAnimationEffect: 'waxFlap', // Mở nắp sáp hoàng gia 3D
-            coverBgColor: '#faf7f2',
             style1: {
               ...(prev.coverConfig?.style1 || {}),
+              bgColor: '#fbe8ea',
               subTitle: 'THE WEDDING OF',
               names: `${prev.groom?.nickname || prev.groom?.name || 'Đình Hiếu'} ♥ ${prev.bride?.nickname || prev.bride?.name || 'Thanh Thúy'}`,
               date: prev.saveTheDateDay || '26.12.2026'
@@ -5107,7 +5108,7 @@ export function StudioEditor({
                     {/* FULL-SIZE COVER MOCKUP (CHUẨN THEO ẢNH 3 - COCOHAPPII) */}
                     <div className="p-4 sm:p-5">
                       <div
-                        style={{ backgroundColor: formData.coverConfig?.coverBgColor || '#1c1917' }}
+                        style={{ backgroundColor: formData.coverConfig?.style1?.bgColor || '#fbe8ea' }}
                         className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-4 relative flex flex-col justify-between p-2.5 border border-amber-300/40 shadow-inner transition-colors duration-500"
                       >
                         {/* Upper photo with bright natural filter */}
@@ -5204,12 +5205,12 @@ export function StudioEditor({
                     {/* FULL-SIZE COVER MOCKUP */}
                     <div className="p-4 sm:p-5">
                       <div
-                        style={{ backgroundColor: formData.coverConfig?.coverBgColor || '#faf7f2' }}
+                        style={{ backgroundColor: formData.coverConfig?.style2?.bgColor || '#faf7f2' }}
                         className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-4 relative flex flex-col items-center justify-center p-4 border border-rose-200/60 shadow-inner transition-colors duration-500"
                       >
                         {/* Mini 3D envelope adapting to chosen color */}
                         <div
-                          style={{ backgroundColor: formData.coverConfig?.coverBgColor || '#8c111e' }}
+                          style={{ backgroundColor: formData.coverConfig?.style2?.envelopeColor || formData.coverConfig?.style2?.bgColor || '#8c111e' }}
                           className="relative w-36 aspect-[1.35] rounded-xl shadow-xl border border-black/20 flex items-center justify-center group-hover:scale-105 transition-transform duration-500 overflow-hidden"
                         >
                           <div className="absolute top-0 inset-x-0 h-[52%] bg-black/25 [clip-path:polygon(0_0,100%_0,50%_100%)] border-b border-amber-300/40"></div>
@@ -5297,7 +5298,7 @@ export function StudioEditor({
                     {/* FULL-SIZE COVER MOCKUP */}
                     <div className="p-4 sm:p-5">
                       <div
-                        style={{ backgroundColor: formData.coverConfig?.coverBgColor || '#183120' }}
+                        style={{ backgroundColor: formData.coverConfig?.style3?.bgColor || '#183120' }}
                         className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-4 relative flex flex-col items-center justify-center p-4 border border-amber-300/40 shadow-inner transition-colors duration-500"
                       >
                         {/* Mini royal arched portal window with photo */}
@@ -5383,7 +5384,7 @@ export function StudioEditor({
                     {/* FULL-SIZE COVER MOCKUP (CHUẨN THEO ẢNH 1 - SAVE OUR DATE) */}
                     <div className="p-4 sm:p-5">
                       <div
-                        style={{ backgroundColor: formData.coverConfig?.coverBgColor || '#fbf5ed' }}
+                        style={{ backgroundColor: formData.coverConfig?.style4?.bgColor || '#fbf5ed' }}
                         className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-4 relative flex flex-col justify-between p-3 border border-amber-300/40 shadow-inner group-hover:scale-101 transition-all duration-500"
                       >
                         {/* Vertical blue line on right */}
@@ -5693,110 +5694,193 @@ export function StudioEditor({
                 </div>
               </div>
 
-              {/* BỔ SUNG: LỰA CHỌN MÀU BÌA / PHONG BÌ (THEO YÊU CẦU ẢNH 4) */}
-              <div className="p-5 bg-gradient-to-br from-stone-50 to-amber-50/30 rounded-2xl border border-stone-200 space-y-4">
-                <div>
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-[#70561f] flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-amber-700" />
-                    <span>Lựa Chọn Bảng Màu Bìa / Phong Bì Thiệp Cưới</span>
-                  </h3>
-                  <p className="text-[11px] text-stone-500 mt-0.5">
-                    Lựa chọn tone màu phong bì chủ đạo khi khách mời nhận và nhìn thấy bìa thiệp cưới lần đầu
-                  </p>
-                </div>
+              {/* BỔ SUNG: LỰA CHỌN MÀU BÌA / PHONG BÌ (TÁCH BIỆT TỪNG MẪU BÌA, KHÔNG ĐỒNG BỘ NHAU) */}
+              {(() => {
+                const targetStyleId = editingCoverTab || formData.templateStyle || formData.coverConfig?.activeStyle || 'style1';
+                const styleTitles = {
+                  style1: 'Mẫu 1: Bìa Sáp Vàng',
+                  style2: 'Mẫu 2: Phong Bì Đỏ',
+                  style3: 'Mẫu 3: Cổng Xanh Ngọc',
+                  style4: 'Mẫu 4: Bìa Sáp Tối Giản'
+                };
+                const currentStyleName = styleTitles[targetStyleId] || formData.coverConfig?.[targetStyleId]?.headerTitle || 'Mẫu Bìa Tùy Chọn';
 
-                {/* Swatches List */}
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {[
-                      { name: 'Kem Ngọc Trai', color: '#faf7f2', border: 'border-stone-300' },
-                      { name: 'Đỏ Nhung Rượu Vang', color: '#6e0d1c', border: 'border-rose-900' },
-                      { name: 'Xanh Ngọc Lục Bảo', color: '#183120', border: 'border-emerald-900' },
-                      { name: 'Xanh Navy Dạ Hội', color: '#152238', border: 'border-blue-900' },
-                      { name: 'Xanh Rêu Sage Quý Phái', color: '#3c4f41', border: 'border-emerald-800' },
-                      { name: 'Hồng Phấn Dịu Ngọt', color: '#fbe8ea', border: 'border-rose-200' },
-                      { name: 'Nâu Sáp Da Bò Cổ Điển', color: '#4a3728', border: 'border-amber-900' },
-                      { name: 'Trắng Ngà Hoàng Gia', color: '#f5f2eb', border: 'border-stone-300' },
-                    ].map((palette) => {
-                      const isSelected = (formData.coverConfig?.coverBgColor || '#faf7f2').toLowerCase() === palette.color.toLowerCase();
-                      return (
-                        <button
-                          key={palette.color}
-                          type="button"
-                          onClick={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              coverConfig: {
-                                ...(prev.coverConfig || {}),
-                                coverBgColor: palette.color
-                              }
-                            }));
-                            setPreviewEnvelopeOpen(false);
-                            setSaveStatus(`Đã áp dụng màu bìa: ${palette.name}`);
-                            setTimeout(() => setSaveStatus(''), 2500);
-                          }}
-                          className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all shadow-sm ${
-                            isSelected
-                              ? 'ring-2 ring-[#70561f] border-stone-900 bg-white shadow-md'
-                              : 'bg-white hover:bg-stone-50 border border-stone-200'
-                          }`}
-                        >
-                          <span
-                            className={`w-4 h-4 rounded-full ${palette.border} border shadow-inner shrink-0`}
-                            style={{ backgroundColor: palette.color }}
-                          ></span>
-                          <span className={isSelected ? 'text-[#70561f] font-bold' : 'text-stone-700'}>
-                            {palette.name}
-                          </span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-[#70561f] ml-0.5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                const currentCoverColor = (
+                  targetStyleId === 'style1' ? (formData.coverConfig?.style1?.bgColor || '#fbe8ea') :
+                  targetStyleId === 'style2' ? (formData.coverConfig?.style2?.bgColor || '#faf7f2') :
+                  targetStyleId === 'style3' ? (formData.coverConfig?.style3?.bgColor || '#183120') :
+                  targetStyleId === 'style4' ? (formData.coverConfig?.style4?.bgColor || '#fbf5ed') :
+                  (formData.coverConfig?.[targetStyleId]?.bgColor || '#faf7f2')
+                );
 
-                  {/* Custom color picker */}
-                  <div className="flex items-center gap-3 pt-2">
-                    <span className="text-xs text-stone-600 font-semibold">Tự chọn màu bìa bất kỳ:</span>
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-stone-300 shadow-sm">
-                      <input
-                        type="color"
-                        value={formData.coverConfig?.coverBgColor || '#faf7f2'}
-                        onChange={(e) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            coverConfig: {
-                              ...(prev.coverConfig || {}),
-                              coverBgColor: e.target.value
-                            }
-                          }));
-                          setPreviewEnvelopeOpen(false);
-                          setSaveStatus(`Đã chọn màu bìa: ${e.target.value}`);
-                          setTimeout(() => setSaveStatus(''), 2500);
-                        }}
-                        className="w-7 h-7 rounded-lg border-0 cursor-pointer p-0"
-                      />
-                      <input
-                        type="text"
-                        value={formData.coverConfig?.coverBgColor || '#faf7f2'}
-                        onChange={(e) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            coverConfig: {
-                              ...(prev.coverConfig || {}),
-                              coverBgColor: e.target.value
-                            }
-                          }));
-                          setPreviewEnvelopeOpen(false);
-                          setSaveStatus(`Đã chọn màu bìa: ${e.target.value}`);
-                          setTimeout(() => setSaveStatus(''), 2500);
-                        }}
-                        className="w-20 text-xs font-mono font-semibold uppercase bg-transparent text-stone-800"
-                        placeholder="#faf7f2"
-                      />
+                const handleApplyColor = (colorHex, colorLabel) => {
+                  const updatedForm = {
+                    ...formData,
+                    coverConfig: {
+                      ...(formData.coverConfig || {}),
+                      [targetStyleId]: {
+                        ...(formData.coverConfig?.[targetStyleId] || {}),
+                        bgColor: colorHex,
+                        ...(targetStyleId === 'style2' ? { envelopeColor: colorHex } : {})
+                      }
+                    }
+                  };
+                  setFormData(updatedForm);
+                  setPreviewEnvelopeOpen(false);
+                  setSaveStatus(`Đã áp dụng màu ${colorLabel || colorHex} riêng cho ${currentStyleName}`);
+                  setTimeout(() => setSaveStatus(''), 2500);
+
+                  // Persist to all profiles and sync to Cloud Redis
+                  const updatedAll = {
+                    ...allProfiles,
+                    [currentProfileKey]: updatedForm
+                  };
+                  setAllProfiles(updatedAll);
+                  if (onSaveAllProfiles) {
+                    onSaveAllProfiles(updatedAll);
+                  } else if (onSaveProfile) {
+                    onSaveProfile(currentProfileKey, updatedForm);
+                  }
+                  if (typeof broadcastProfileUpdate === 'function') {
+                    broadcastProfileUpdate(updatedAll, 'studio_color_changed');
+                  }
+                };
+
+                return (
+                  <div className="p-5 bg-gradient-to-br from-stone-50 to-amber-50/30 rounded-2xl border border-stone-200 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-[#70561f] flex items-center gap-2">
+                          <Palette className="w-4 h-4 text-amber-700" />
+                          <span>Lựa Chọn Bảng Màu Riêng Biệt Cho Từng Mẫu Bìa Thiệp Cưới</span>
+                        </h3>
+                        <p className="text-[11px] text-stone-500 mt-0.5">
+                          Mỗi mẫu bìa (Mẫu 1, 2, 3, 4) hoàn toàn tách bạch màu sắc theo ý muốn của bạn, không bị đồng bộ đè lên nhau
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-full border border-emerald-300 self-start sm:self-auto shrink-0 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Màu sắc độc lập từng thiệp</span>
+                      </span>
+                    </div>
+
+                    {/* COVER SWITCHER TABS FOR COLOR PALETTE */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
+                        <span>Bấm chọn mẫu thiệp bạn muốn đổi màu:</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 bg-stone-100/80 p-1.5 rounded-xl border border-stone-200">
+                        {[
+                          { id: 'style1', name: 'Mẫu 1: Bìa Sáp Vàng', color: formData.coverConfig?.style1?.bgColor || '#fbe8ea' },
+                          { id: 'style2', name: 'Mẫu 2: Phong Bì Đỏ', color: formData.coverConfig?.style2?.bgColor || '#faf7f2' },
+                          { id: 'style3', name: 'Mẫu 3: Cổng Xanh Ngọc', color: formData.coverConfig?.style3?.bgColor || '#183120' },
+                          { id: 'style4', name: 'Mẫu 4: Bìa Sáp Tối Giản', color: formData.coverConfig?.style4?.bgColor || '#fbf5ed' },
+                        ].filter(item => availableCoverStyles.includes(item.id)).map(item => {
+                          const isTarget = targetStyleId === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                setEditingCoverTab(item.id);
+                                setPreviewEnvelopeOpen(false);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-xs ${
+                                isTarget
+                                  ? 'bg-[#70561f] text-white shadow-md ring-2 ring-amber-300'
+                                  : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200'
+                              }`}
+                            >
+                              <span
+                                className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs shrink-0"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span>{item.name}</span>
+                              {isTarget && (
+                                <span className="text-[10px] bg-white/25 px-1.5 py-0.5 rounded-md font-bold">
+                                  ✓ Đang chọn
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Active target banner */}
+                    <div className="bg-amber-100/70 border border-amber-300/80 px-3.5 py-2 rounded-xl text-xs text-amber-950 flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
+                        <span>Đang chọn bảng màu riêng cho: <strong className="text-[#70561f] font-bold">{currentStyleName}</strong></span>
+                      </span>
+                      <span className="font-mono text-[11px] font-bold bg-white/80 px-2 py-0.5 rounded-md border border-amber-300 text-stone-800">
+                        {currentCoverColor.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Swatches List */}
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        {[
+                          { name: 'Kem Ngọc Trai', color: '#faf7f2', border: 'border-stone-300' },
+                          { name: 'Đỏ Nhung Rượu Vang', color: '#6e0d1c', border: 'border-rose-900' },
+                          { name: 'Xanh Ngọc Lục Bảo', color: '#183120', border: 'border-emerald-900' },
+                          { name: 'Xanh Navy Dạ Hội', color: '#152238', border: 'border-blue-900' },
+                          { name: 'Xanh Rêu Sage Quý Phái', color: '#3c4f41', border: 'border-emerald-800' },
+                          { name: 'Hồng Phấn Dịu Ngọt', color: '#fbe8ea', border: 'border-rose-200' },
+                          { name: 'Nâu Sáp Da Bò Cổ Điển', color: '#4a3728', border: 'border-amber-900' },
+                          { name: 'Trắng Ngà Hoàng Gia', color: '#f5f2eb', border: 'border-stone-300' },
+                          { name: 'Be Cát Tự Nhiên', color: '#fbf5ed', border: 'border-amber-200' },
+                          { name: 'Xanh Mint Pastel', color: '#e8f3ed', border: 'border-emerald-200' },
+                        ].map((palette) => {
+                          const isSelected = currentCoverColor.toLowerCase() === palette.color.toLowerCase();
+                          return (
+                            <button
+                              key={palette.color}
+                              type="button"
+                              onClick={() => handleApplyColor(palette.color, palette.name)}
+                              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all shadow-sm ${
+                                isSelected
+                                  ? 'ring-2 ring-[#70561f] border-stone-900 bg-white shadow-md'
+                                  : 'bg-white hover:bg-stone-50 border border-stone-200'
+                              }`}
+                            >
+                              <span
+                                className={`w-4 h-4 rounded-full ${palette.border} border shadow-inner shrink-0`}
+                                style={{ backgroundColor: palette.color }}
+                              ></span>
+                              <span className={isSelected ? 'text-[#70561f] font-bold' : 'text-stone-700'}>
+                                {palette.name}
+                              </span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-[#70561f] ml-0.5" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom color picker */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <span className="text-xs text-stone-600 font-semibold">Tự chọn màu riêng cho {currentStyleName}:</span>
+                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-stone-300 shadow-sm">
+                          <input
+                            type="color"
+                            value={currentCoverColor}
+                            onChange={(e) => handleApplyColor(e.target.value)}
+                            className="w-7 h-7 rounded-lg border-0 cursor-pointer p-0"
+                          />
+                          <input
+                            type="text"
+                            value={currentCoverColor}
+                            onChange={(e) => handleApplyColor(e.target.value)}
+                            className="w-20 text-xs font-mono font-semibold uppercase bg-transparent text-stone-800"
+                            placeholder="#faf7f2"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* DEDICATED EDIT PANEL FOR COVER CONTENT & PHOTOS */}
               <div className="mt-8 pt-6 border-t border-stone-200 space-y-6">

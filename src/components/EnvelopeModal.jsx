@@ -52,8 +52,19 @@ export function EnvelopeModal({
   const c4 = data.coverConfig?.style4 || {};
   const cCustom = data.coverConfig?.[activeStyle] || {};
 
-  // Active cover background color (reflects user color palette selection)
-  const coverBg = data.coverConfig?.coverBgColor || cCustom.bgColor || '#faf7f2';
+  // Style-specific background colors (Each of the 4 styles has its own independent color)
+  const style1Bg = c1.bgColor || '#fbe8ea';
+  const style2Bg = c2.bgColor || '#faf8f4';
+  const style2Envelope = c2.envelopeColor || c2.bgColor || '#8c111e';
+  const style3Bg = c3.bgColor || '#183120';
+  const style4Bg = c4.bgColor || '#fbf5ed';
+  const customBg = cCustom.bgColor || '#faf7f2';
+
+  // Active cover background color for active style
+  const coverBg = activeStyle === 'style1' ? style1Bg :
+    activeStyle === 'style2' ? style2Bg :
+    activeStyle === 'style3' ? style3Bg :
+    activeStyle === 'style4' ? style4Bg : customBg;
 
   // Helper to detect if a background color is dark
   const isColorDark = (hex) => {
@@ -254,7 +265,7 @@ export function EnvelopeModal({
       {/* STYLE 1: ELEGANT CREAM WAX SEAL ENVELOPE (Chuẩn theo Ảnh 4 tham khảo) */}
       {activeStyle === 'style1' && (
         <div
-          style={{ backgroundColor: coverBg || '#1c1917' }}
+          style={{ backgroundColor: style1Bg }}
           className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-stone-800 text-center animate-fade-in transition-colors duration-500 flex flex-col justify-between"
         >
           {/* Top Photo Section: Generous height with object-[center_12%] so couple's heads, faces, smiles and background scenery are 100% CLEAR */}
@@ -341,7 +352,7 @@ export function EnvelopeModal({
       {/* STYLE 2: RED VELVET ENVELOPE (Ảnh 4 - LoveCard 26) */}
       {activeStyle === 'style2' && (
         <div
-          style={{ backgroundColor: isDark ? coverBg : '#faf8f4' }}
+          style={{ backgroundColor: isColorDark(style2Bg) ? style2Bg : '#faf8f4' }}
           className="relative w-full max-w-sm sm:max-w-md rounded-[32px] p-6 sm:p-7 shadow-2xl border border-stone-200/80 text-center animate-fade-in flex flex-col items-center overflow-hidden transition-colors duration-500"
         >
           {/* Botanical gingko leaves at bottom corners */}
@@ -393,7 +404,7 @@ export function EnvelopeModal({
 
             {/* Envelope Body (Velvet Red or user color) */}
             <div
-              style={{ backgroundColor: coverBg && coverBg !== '#faf8f4' && coverBg !== '#faf7f2' ? coverBg : '#8c111e' }}
+              style={{ backgroundColor: style2Envelope }}
               className="w-full h-full rounded-2xl shadow-2xl relative overflow-hidden border border-black/20 group-hover:brightness-105 transition-all"
             >
               {/* Seam folds */}
@@ -441,7 +452,7 @@ export function EnvelopeModal({
       {/* STYLE 3: ORIENTAL JADE GATE & ROYAL ARCH PORTAL (Ảnh 2 - 27BigGroup A9 - Rõ nét 100% người & khung cảnh) */}
       {activeStyle === 'style3' && (
         <div
-          style={{ backgroundColor: coverBg && isDark ? coverBg : '#183120' }}
+          style={{ backgroundColor: style3Bg }}
           className="relative w-full max-w-sm sm:max-w-md rounded-[32px] p-5 sm:p-6 shadow-2xl border border-amber-400/40 text-center animate-fade-in flex flex-col items-center overflow-hidden transition-colors duration-500"
         >
           {/* Subtle vignette */}
@@ -553,7 +564,7 @@ export function EnvelopeModal({
       {/* STYLE 4: MINIMALIST BOTANICAL WAX SEAL (Ảnh 1 & 5 - Save our date / Đình Hiếu & Thanh Thúy) */}
       {activeStyle === 'style4' && (
         <div
-          style={{ backgroundColor: coverBg && !isDark ? coverBg : '#fbf5ed' }}
+          style={{ backgroundColor: style4Bg }}
           className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-[#e8dcd0] text-center animate-fade-in flex flex-col justify-between min-h-[500px] sm:min-h-[550px] p-6 sm:p-7 transition-colors duration-500"
         >
           {/* Vertical Pale Blue Ribbon Line on the right (Dòng kẻ thẳng) */}
