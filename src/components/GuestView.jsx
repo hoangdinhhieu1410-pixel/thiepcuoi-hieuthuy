@@ -269,7 +269,7 @@ export function GuestView({
         return;
       }
       if (isMounted) {
-        setResolvedAudioUrl('https://cdn.pixabay.com/download/audio/2022/05/16/audio_c976ccb635.mp3?filename=romantic-piano-112199.mp3');
+        setResolvedAudioUrl(cardData.music?.customTrackUrl || '/templates/007/music.m4a');
       }
     };
     resolveAudio();
@@ -278,7 +278,7 @@ export function GuestView({
 
   const activeMusicUrl = resolvedAudioUrl || cardData.music?.customTrackUrl ||
     cardData.music?.presetTracks?.find(t => t.id === cardData.music.activeTrackId)?.url ||
-    'https://cdn.pixabay.com/download/audio/2022/05/16/audio_c976ccb635.mp3?filename=romantic-piano-112199.mp3';
+    '/templates/007/music.m4a';
 
   // Autoplay on envelope open
   useEffect(() => {
@@ -1656,8 +1656,8 @@ export function GuestView({
             <div className="w-12 h-[2px] bg-[#928362] mx-auto mt-2"></div>
           </div>
 
-          {/* Photos Grid with Alternating Cocohappii Transitions */}
-          <div className="relative z-10 grid grid-cols-2 gap-2.5">
+          {/* Photos Grid - Full view layout for wedding portraits */}
+          <div className="relative z-10 grid grid-cols-2 gap-3">
             {(cardData.gallery || []).map((photo, index) => {
               const galleryAnimClass = isCocohappiiPhoto
                 ? (index % 2 === 0 ? 'animate-cocohappii-photo-left' : 'animate-cocohappii-photo-right')
@@ -1667,17 +1667,15 @@ export function GuestView({
                 <div
                   key={photo.id || index}
                   onClick={() => setLightboxIndex(index)}
-                  className={`relative rounded-xl overflow-hidden cursor-pointer shadow-sm group bg-stone-100 ${
-                    index % 3 === 0 ? 'aspect-[4/5]' : 'aspect-square'
-                  }`}
+                  className="relative rounded-xl overflow-hidden cursor-pointer shadow-md group bg-white"
                 >
                   <img
                     key={`gallery-img-${photoAnimKey}-${photoAnimClass}-${index}`}
                     src={photo.url}
                     alt={photo.caption || ''}
-                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${galleryAnimClass}`}
+                    className={`w-full h-auto object-contain group-hover:scale-[1.03] transition-transform duration-500 ${galleryAnimClass}`}
                   />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Maximize2 className="w-5 h-5 text-white drop-shadow" />
                   </div>
                 </div>
