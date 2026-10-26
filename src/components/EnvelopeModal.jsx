@@ -550,7 +550,7 @@ export function EnvelopeModal({
         </div>
       )}
 
-      {/* STYLE 4: MINIMALIST BOTANICAL WAX SEAL (Ảnh 1 & 5 - Save our date / Thanh Sơn & Diệu Nhi) */}
+      {/* STYLE 4: MINIMALIST BOTANICAL WAX SEAL (Ảnh 1 & 5 - Save our date / Đình Hiếu & Thanh Thúy) */}
       {activeStyle === 'style4' && (
         <div
           style={{ backgroundColor: coverBg && !isDark ? coverBg : '#fbf5ed' }}

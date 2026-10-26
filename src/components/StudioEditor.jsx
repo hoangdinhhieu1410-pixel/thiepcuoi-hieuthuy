@@ -6098,9 +6098,9 @@ export function StudioEditor({
                         <label className="block text-stone-700 font-semibold mb-1">Tên Chú Rể (Xếp dòng trên):</label>
                         <input
                           type="text"
-                          value={formData.coverConfig?.style4?.groomName ?? formData.groom?.name ?? 'Thanh Sơn'}
+                          value={formData.coverConfig?.style4?.groomName ?? formData.groom?.name ?? 'Đình Hiếu'}
                           onChange={(e) => updateCoverField('style4', 'groomName', e.target.value)}
-                          placeholder="Thanh Sơn"
+                          placeholder="Đình Hiếu"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-bold text-stone-900"
                         />
                       </div>
@@ -6109,9 +6109,9 @@ export function StudioEditor({
                         <label className="block text-stone-700 font-semibold mb-1">Tên Cô Dâu (Xếp dòng dưới):</label>
                         <input
                           type="text"
-                          value={formData.coverConfig?.style4?.brideName ?? formData.bride?.name ?? 'Diệu Nhi'}
+                          value={formData.coverConfig?.style4?.brideName ?? formData.bride?.name ?? 'Thanh Thúy'}
                           onChange={(e) => updateCoverField('style4', 'brideName', e.target.value)}
-                          placeholder="Diệu Nhi"
+                          placeholder="Thanh Thúy"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-bold text-stone-900"
                         />
                       </div>

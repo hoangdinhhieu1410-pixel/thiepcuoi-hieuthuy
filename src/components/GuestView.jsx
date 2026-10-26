@@ -909,7 +909,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.bride?.father || 'Lê Anh Liên'}
+                        value={cardData.bride?.father || 'Lê Ngọc Thanh'}
                         onChange={(v) => updateField('bride.father', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -924,7 +924,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.bride?.mother || 'Nguyễn T. Bích Phượng'}
+                        value={cardData.bride?.mother || 'Nguyễn Minh Nhật'}
                         onChange={(v) => updateField('bride.mother', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -954,7 +954,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.groom?.father || 'Đỗ Văn Liên'}
+                        value={cardData.groom?.father || 'Hoàng Đình Thanh'}
                         onChange={(v) => updateField('groom.father', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -969,7 +969,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.groom?.mother || 'Trần Thị Thuỳ'}
+                        value={cardData.groom?.mother || 'Trần Thị Hằng Nga'}
                         onChange={(v) => updateField('groom.mother', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -1004,7 +1004,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.groom?.father || 'Đỗ Văn Liên'}
+                        value={cardData.groom?.father || 'Hoàng Đình Thanh'}
                         onChange={(v) => updateField('groom.father', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -1019,7 +1019,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.groom?.mother || 'Trần Thị Thuỳ'}
+                        value={cardData.groom?.mother || 'Trần Thị Hằng Nga'}
                         onChange={(v) => updateField('groom.mother', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -1049,7 +1049,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.bride?.father || 'Lê Anh Liên'}
+                        value={cardData.bride?.father || 'Lê Ngọc Thanh'}
                         onChange={(v) => updateField('bride.father', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
@@ -1064,7 +1064,7 @@ export function GuestView({
                         className="text-[#928362] font-normal"
                       />
                       <EditableText
-                        value={cardData.bride?.mother || 'Nguyễn T. Bích Phượng'}
+                        value={cardData.bride?.mother || 'Nguyễn Minh Nhật'}
                         onChange={(v) => updateField('bride.mother', v)}
                         isEditing={isLiveEditing}
                         className="text-[#928362] font-normal"
