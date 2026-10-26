@@ -268,7 +268,8 @@ export const DEFAULT_WEDDING_DATA = {
     title: 'Thư mời cưới Đình Hiếu ♥ Thanh Thúy',
     description: 'Thiệp cưới online của Đình Hiếu ♥ Thanh Thúy nơi gửi gắm lời mời trân trọng và câu chuyện tình yêu đong đầy ý nghĩa.',
     thumbnail: '/templates/007/images/cover_social.jpg',
-    slug: 'dinhhieu-thanhthuy-wedding'
+    slug: 'dinhhieu-thanhthuy-wedding',
+    customDomain: 'https://thiepcuoi-hieuthuy-web.vercel.app'
   },
 
   // Guest Management
@@ -405,6 +406,7 @@ export const DEFAULT_BRIDE_WEDDING_DATA = {
     title: 'Thư mời cưới Thanh Thúy ♥ Đình Hiếu (Nhà Gái)',
     description: 'Trân trọng kính mời quý khách đến chung vui lễ thành hôn của Thanh Thúy & Đình Hiếu.',
     thumbnail: '/templates/007/images/cover_social.jpg',
-    slug: 'le-vu-quy-thanhthuy-dinhhieu'
+    slug: 'le-vu-quy-thanhthuy-dinhhieu',
+    customDomain: 'https://thiepcuoi-hieuthuy-web.vercel.app'
   }
 };

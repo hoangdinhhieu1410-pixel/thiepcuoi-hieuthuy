@@ -225,7 +225,23 @@ export function App() {
       return 'groom';
     }
   });
-  const [viewMode, setViewMode] = useState('guest');
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      // Link gửi riêng cho khách mời (có ?to=..., ?guest=..., ?name=..., hoặc ?view=guest): HIỂN THỊ THIỆP GUEST
+      if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest' || params.get('view') === 'card') {
+        return 'guest';
+      }
+      if (params.get('guest_mode') === 'true') {
+        return 'guest';
+      }
+      // Mặc định cho chủ nhân khi vào trang chủ chính (cả localhost và https://thiepcuoi-hieuthuy-web.vercel.app/):
+      // LUÔN MỞ NGAY GIAO DIỆN CHỈNH SỬA STUDIO ĐỂ THAO TÁC SỬA THIỆP
+      return 'studio';
+    } catch (e) {
+      return 'studio';
+    }
+  });
   const [guestName, setGuestName] = useState(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -267,17 +283,16 @@ export function App() {
     try {
       const params = new URLSearchParams(window.location.search);
       // If URL has guest parameters: to, guest, name, view=guest -> STRICTLY GUEST MODE!
-      if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest') {
+      if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest' || params.get('view') === 'card') {
         return false;
       }
-      // If URL explicitly requests admin
-      if (params.get('admin') === 'true' || params.get('edit') === 'true' || params.get('studio') === 'true') {
-        return true;
+      if (params.get('guest_mode') === 'true') {
+        return false;
       }
-      // Check stored admin flag from previous studio session
-      return localStorage.getItem('wedding_is_admin') === 'true';
+      // When visiting the main website without guest parameters (owner session), ALWAYS enable Admin mode!
+      return true;
     } catch (e) {
-      return false;
+      return true;
     }
   });
 
@@ -381,7 +396,9 @@ export function App() {
       if (toParam) {
         setGuestName(decodeURIComponent(toParam));
       }
-      if (params.get('studio') === 'true' || params.get('edit') === 'true') {
+      if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest' || params.get('view') === 'card' || params.get('guest_mode') === 'true') {
+        setViewMode('guest');
+      } else {
         setViewMode('studio');
       }
       if (params.get('open') === '1' || params.get('open') === 'true' || params.get('ruot') === '1') {

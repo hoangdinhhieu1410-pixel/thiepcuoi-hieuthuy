@@ -606,11 +606,11 @@ export function GuestView({
 
             <button
               onClick={onOpenStudio}
-              className="px-2.5 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 transition-colors flex items-center gap-1 text-xs"
-              title="Mở bảng sửa form Studio"
+              className="px-3 py-1.5 rounded-xl bg-amber-500/25 hover:bg-amber-500/35 text-amber-200 border border-amber-400/50 transition-colors flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+              title="Mở toàn bộ giao diện Studio để chỉnh sửa nội dung, ảnh cưới, nhạc, hiệu ứng"
             >
               <Sliders className="w-3.5 h-3.5 text-amber-300" />
-              <span className="hidden sm:inline">Studio Form</span>
+              <span>Vào Studio Sửa</span>
             </button>
           </div>
         </div>
@@ -632,16 +632,26 @@ export function GuestView({
       </div>
       )}
 
-      {/* Floating button for admin to restore toolbar when hidden (NEVER shown to guests) */}
+      {/* Floating button for admin to restore toolbar or go to Studio (NEVER shown to guests) */}
       {!isPreview && isAdmin && !adminToolbarVisible && (
-        <button
-          onClick={() => setAdminToolbarVisible(true)}
-          className="fixed bottom-4 right-4 z-[99] px-3.5 py-2 rounded-full bg-stone-900/95 text-amber-300 border border-amber-500/50 text-xs font-semibold shadow-2xl hover:bg-stone-800 transition-all flex items-center gap-2 backdrop-blur-md hover:scale-105 active:scale-95 cursor-pointer"
-          title="Bấm để mở lại thanh công cụ quản trị thiệp"
-        >
-          <Sliders className="w-4 h-4 text-amber-400" />
-          <span>Mở Menu Quản Trị</span>
-        </button>
+        <div className="fixed bottom-4 right-4 z-[99] flex items-center gap-2">
+          <button
+            onClick={onOpenStudio}
+            className="px-3.5 py-2 rounded-full bg-[#70561f] text-amber-100 border border-amber-400/60 text-xs font-semibold shadow-2xl hover:bg-[#5a4417] transition-all flex items-center gap-1.5 backdrop-blur-md hover:scale-105 active:scale-95 cursor-pointer"
+            title="Mở toàn bộ giao diện chỉnh sửa Studio Form"
+          >
+            <Sliders className="w-4 h-4 text-amber-300" />
+            <span>Vào Studio Sửa</span>
+          </button>
+          <button
+            onClick={() => setAdminToolbarVisible(true)}
+            className="px-3 py-2 rounded-full bg-stone-900/95 text-stone-300 border border-stone-700 text-xs font-semibold shadow-2xl hover:bg-stone-800 transition-all flex items-center gap-1.5 backdrop-blur-md hover:scale-105 active:scale-95 cursor-pointer"
+            title="Bấm để mở lại thanh công cụ quản trị thiệp"
+          >
+            <Eye className="w-3.5 h-3.5 text-amber-400" />
+            <span>Hiện Menu</span>
+          </button>
+        </div>
       )}
 
       {/* 2. ENVELOPE COVER OPENING MODAL */}
