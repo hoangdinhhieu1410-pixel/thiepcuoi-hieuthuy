@@ -2,10 +2,10 @@ export const DEFAULT_WEDDING_DATA = {
   profileType: 'groom',
   profileName: 'Thiệp Nhà Trai',
   // General & Styling (Cocohappii 007 Beige Palette)
-  templateStyle: 'style1', // 'style1' (Wax seal cream), 'style2' (Red floral), 'style3' (Oriental gate)
+  templateStyle: 'style4', // 'style1' (Wax seal cream), 'style2' (Red floral), 'style3' (Oriental gate), 'style4' (Save our date)
   primaryColor: '#70561f', // Antique gold / Bronze brown
   secondaryColor: '#928362',
-  bgColor: '#fbf8f2',
+  bgColor: '#faf7f2',
 
   // Couple Information (Hoàng Đình Hiếu ♥ Lê Thanh Thúy)
   groom: {
@@ -53,7 +53,7 @@ export const DEFAULT_WEDDING_DATA = {
 
   // Cấu hình Bìa Phong Bì (Cover Opening Styles)
   coverConfig: {
-    activeStyle: 'style1',
+    activeStyle: 'style4',
     availableStyles: ['style1', 'style2', 'style3', 'style4'],
     coverAnimationEffect: 'waxFlap', // 'waxFlap' (Mở nắp sáp), 'splitDoor' (Mở cửa đôi), 'zoomFade' (Thu nhỏ điện ảnh), 'none' (Tĩnh)
     coverBgColor: '#faf7f2',
@@ -65,7 +65,7 @@ export const DEFAULT_WEDDING_DATA = {
       date: '29.11.2026',
       greetingLabel: 'TRÂN TRỌNG KÍNH MỜI',
       buttonText: 'Xem thiệp ngay',
-      photo: '/templates/007/images/hero_banner.jpg',
+      photo: '/templates/007/images/cover_style1.jpg',
     },
     style2: {
       id: 'style2',
@@ -85,7 +85,7 @@ export const DEFAULT_WEDDING_DATA = {
       hintText: 'Chạm vào ấn đỏ để mở cánh cửa',
       greetingLabel: 'Trân trọng kính mời',
       buttonText: 'MỞ THIỆP',
-      photo: '/templates/007/images/hero_banner.jpg',
+      photo: '/templates/007/images/cover_style3.jpg',
     },
     style4: {
       id: 'style4',
@@ -238,27 +238,33 @@ export const DEFAULT_WEDDING_DATA = {
   music: {
     enabled: true,
     autoplayOnOpen: true,
-    activeTrackId: 'preset-1',
-    customTrackUrl: '',
-    customTrackName: '',
+    activeTrackId: 'track_dalab',
+    customTrackUrl: '/templates/007/music.m4a',
+    customTrackName: 'Da LAB - Một Nhà',
     presetTracks: [
+      {
+        id: 'track_dalab',
+        title: 'Da LAB - Một Nhà',
+        artist: 'Da LAB',
+        url: '/templates/007/music.m4a'
+      },
+      {
+        id: 'track_11',
+        title: 'Yêu Em Thì Gạt Đầu (Remix)',
+        artist: 'Nhạc Hot TikTok',
+        url: '/templates/007/tracks/track_11.m4a'
+      },
+      {
+        id: 'track_2',
+        title: 'Rước Tình Về Với Quê Hương (Bản Hot TikTok) - H2K',
+        artist: 'H2K',
+        url: '/templates/007/tracks/track_2.m4a'
+      },
       {
         id: 'preset-1',
         title: 'Beautiful in White (Piano)',
         artist: 'Shane Filan Style',
         url: 'https://cdn.pixabay.com/download/audio/2022/05/16/audio_c976ccb635.mp3?filename=romantic-piano-112199.mp3'
-      },
-      {
-        id: 'preset-2',
-        title: 'Until I Found You (Acoustic)',
-        artist: 'Stephen Sanchez Style',
-        url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=wedding-piano-10023.mp3'
-      },
-      {
-        id: 'preset-3',
-        title: 'A Thousand Years (Acoustic & Cello)',
-        artist: 'Christina Perri Style',
-        url: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3?filename=sweet-piano-love-story-7389.mp3'
       }
     ]
   },

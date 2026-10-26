@@ -26,3 +26,4 @@ scratch/
 Thumbs.db
 
 .vercel
+.env*

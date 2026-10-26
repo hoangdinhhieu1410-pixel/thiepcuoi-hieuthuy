@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from './data/defaultData';
 import { GuestView } from './components/GuestView';
 import { StudioEditor } from './components/StudioEditor';
-import { saveProfilesToStorage, loadProfilesFromStorage, getLiveSyncChannel, broadcastProfileUpdate } from './utils/storage';
+import { saveProfilesToStorage, loadProfilesFromStorage, getLiveSyncChannel, broadcastProfileUpdate, getAudioTrackUrl } from './utils/storage';
 
 const PROFILES_STORAGE_KEY = 'wedding_invitation_profiles_v5';
 
@@ -443,6 +443,49 @@ export function App() {
               groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...dbProfiles.groom }, DEFAULT_WEDDING_DATA),
               bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...dbProfiles.bride }, DEFAULT_BRIDE_WEDDING_DATA)
             }));
+
+            // Tự động sao chép toàn bộ ảnh và nhạc từ IndexedDB máy local sang server codebase để đẩy lên Vercel
+            if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+              (async () => {
+                try {
+                  let audioBase64 = null;
+                  let audioMime = 'audio/mp3';
+                  const activeTrackId = dbProfiles.groom?.music?.activeTrackId || dbProfiles.bride?.music?.activeTrackId;
+                  if (activeTrackId) {
+                    const audioUrl = await getAudioTrackUrl(activeTrackId);
+                    if (audioUrl) {
+                      try {
+                        const audioResp = await fetch(audioUrl);
+                        const audioBlob = await audioResp.blob();
+                        audioMime = audioBlob.type || 'audio/mp3';
+                        const reader = new FileReader();
+                        audioBase64 = await new Promise((res) => {
+                          reader.onloadend = () => res(reader.result);
+                          reader.readAsDataURL(audioBlob);
+                        });
+                      } catch (errAudio) {
+                        console.warn('Audio fetch error:', errAudio);
+                      }
+                    }
+                  }
+
+                  await fetch('/api/sync-local-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      profiles: dbProfiles,
+                      audio: {
+                        trackId: activeTrackId,
+                        mime: audioMime,
+                        dataUrl: audioBase64
+                      }
+                    })
+                  });
+                } catch (errSync) {
+                  console.warn('Sync to codebase error:', errSync);
+                }
+              })();
+            }
           }
         }).catch(err => {
           console.warn('Error loading from IndexedDB:', err);
