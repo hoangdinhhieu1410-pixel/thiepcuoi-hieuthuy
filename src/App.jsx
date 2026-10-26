@@ -497,6 +497,30 @@ export function App() {
       console.warn('Error reading URL params:', e);
       setIsStorageReady(true);
     }
+
+    // Load initial cloud wishes from Redis server
+    fetch('/api/wishes')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success && Array.isArray(d?.wishes) && d.wishes.length > 0) {
+          setProfiles(prev => {
+            const serverWishes = d.wishes;
+            const updated = {
+              ...prev,
+              groom: {
+                ...(prev?.groom || {}),
+                wishes: serverWishes
+              },
+              bride: {
+                ...(prev?.bride || {}),
+                wishes: serverWishes
+              }
+            };
+            return updated;
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Save specific profile (Mẫu 1: Nhà Trai hoặc Mẫu 2: Nhà Gái)
@@ -559,6 +583,13 @@ export function App() {
       timestamp: Date.now(),
       ...newWish
     };
+
+    // Save to cloud Redis backend
+    fetch('/api/wishes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enrichedWish)
+    }).catch(e => console.warn('Cloud wish post error:', e));
 
     setProfiles(prev => {
       const prevGroomWishes = prev?.groom?.wishes || [];

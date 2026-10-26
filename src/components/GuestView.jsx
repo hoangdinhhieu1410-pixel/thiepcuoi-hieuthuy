@@ -289,6 +289,27 @@ export function GuestView({
     }
   }, [envelopeOpen, cardData.music?.enabled]);
 
+  // Load cloud wishes from server
+  useEffect(() => {
+    fetch('/api/wishes')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success && Array.isArray(d?.wishes) && d.wishes.length > 0) {
+          setCardData(prev => {
+            const curWishes = prev.wishes || [];
+            const existingIds = new Set(curWishes.map(w => w.id));
+            const newFromServer = d.wishes.filter(w => !existingIds.has(w.id));
+            if (newFromServer.length === 0) return prev;
+            return {
+              ...prev,
+              wishes: [...newFromServer, ...curWishes]
+            };
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const toggleMusic = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -378,6 +399,13 @@ export function GuestView({
       createdAt: 'Vừa xong',
       timestamp: Date.now()
     };
+
+    // Always submit wish to cloud server
+    fetch('/api/wishes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newWish)
+    }).catch(e => console.warn('Guest wish send error:', e));
 
     if (onAddWish) {
       onAddWish(newWish);

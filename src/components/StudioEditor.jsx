@@ -67,18 +67,64 @@ export function StudioEditor({
   const [wishesFilter, setWishesFilter] = useState('all'); // 'all' | 'groom' | 'bride'
   const [wishesSearch, setWishesSearch] = useState('');
   const [showAddWishModal, setShowAddWishModal] = useState(false);
+  const [cloudWishes, setCloudWishes] = useState([]);
+  const [isRefreshingWishes, setIsRefreshingWishes] = useState(false);
   const [manualWish, setManualWish] = useState({
     name: '',
     side: 'groom',
     message: ''
   });
 
-  // Unified wishes list from both profiles
+  // Fetch wishes from cloud Redis backend
+  const fetchCloudWishes = async (showToast = false) => {
+    try {
+      setIsRefreshingWishes(true);
+      const res = await fetch('/api/wishes');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data?.wishes)) {
+        setCloudWishes(data.wishes);
+        const updatedGroom = {
+          ...(allProfiles?.groom || {}),
+          wishes: data.wishes
+        };
+        const updatedBride = {
+          ...(allProfiles?.bride || {}),
+          wishes: data.wishes
+        };
+        const updatedAll = {
+          ...allProfiles,
+          groom: updatedGroom,
+          bride: updatedBride
+        };
+        setAllProfiles(updatedAll);
+        setFormData(p => ({ ...p, wishes: data.wishes }));
+        saveProfilesToStorage(updatedAll);
+        if (showToast) {
+          setSaveStatus(`Đã làm mới! Đang có ${data.wishes.length} lời chúc từ khách mời.`);
+          setTimeout(() => setSaveStatus(''), 3000);
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi tải lời chúc từ máy chủ:', err);
+      if (showToast) {
+        setSaveStatus('Không thể tải lời chúc lúc này.');
+        setTimeout(() => setSaveStatus(''), 2500);
+      }
+    } finally {
+      setIsRefreshingWishes(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCloudWishes(false);
+  }, []);
+
+  // Unified wishes list from both profiles and cloud
   const allUniqueWishes = (() => {
     const listCurrent = formData?.wishes || [];
     const listGroom = allProfiles?.groom?.wishes || [];
     const listBride = allProfiles?.bride?.wishes || [];
-    const combined = [...listCurrent, ...listGroom, ...listBride];
+    const combined = [...cloudWishes, ...listCurrent, ...listGroom, ...listBride];
     const map = new Map();
     combined.forEach(w => {
       if (!w || !w.name || !w.message) return;
@@ -114,6 +160,8 @@ export function StudioEditor({
     if (window.confirm('Bạn có chắc chắn muốn xóa lời chúc này không?')) {
       const filtered = allUniqueWishes.filter(w => w.id !== wishId);
       handleSaveUnifiedWishes(filtered);
+      setCloudWishes(filtered);
+      fetch('/api/wishes?id=' + encodeURIComponent(wishId), { method: 'DELETE' }).catch(() => {});
       setSaveStatus('Đã xóa lời chúc thành công!');
       setTimeout(() => setSaveStatus(''), 2500);
     }
@@ -150,6 +198,11 @@ export function StudioEditor({
       timestamp: Date.now()
     };
     handleSaveUnifiedWishes([newWish, ...allUniqueWishes]);
+    fetch('/api/wishes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newWish)
+    }).catch(e => console.warn('Lỗi gửi lời chúc thủ công lên máy chủ:', e));
     setManualWish({ name: '', side: 'groom', message: '' });
     setShowAddWishModal(false);
     setSaveStatus('Đã thêm lời chúc mới thành công!');
@@ -2412,12 +2465,13 @@ export function StudioEditor({
                   </button>
                   <button
                     type="button"
-                    onClick={handleCopyAllWishes}
-                    className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium transition-colors flex items-center gap-1.5"
-                    title="Sao chép toàn bộ lời chúc ra bộ nhớ tạm"
+                    onClick={() => fetchCloudWishes(true)}
+                    disabled={isRefreshingWishes}
+                    className="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
+                    title="Tải lại danh sách lời chúc mới nhất từ máy chủ"
                   >
-                    <Copy className="w-3.5 h-3.5 text-stone-500" />
-                    <span>Sao chép danh sách</span>
+                    <RotateCcw className={`w-3.5 h-3.5 text-[#70561f] ${isRefreshingWishes ? 'animate-spin' : ''}`} />
+                    <span>{isRefreshingWishes ? 'Đang tải...' : 'Làm mới'}</span>
                   </button>
                   <button
                     type="button"
