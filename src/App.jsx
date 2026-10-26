@@ -162,8 +162,20 @@ const sanitizeProfile = (profile, defaultData) => {
     if (merged.coverConfig.style1 && isDemoSampleName(merged.coverConfig.style1.names)) {
       merged.coverConfig.style1.names = coupleNames;
     }
-    if (merged.coverConfig.style2 && isDemoSampleName(merged.coverConfig.style2.names)) {
-      merged.coverConfig.style2.names = isBride ? `${bride} - ${groom}` : `${groom} - ${bride}`;
+    if (merged.coverConfig.style2) {
+      if (isDemoSampleName(merged.coverConfig.style2.names)) {
+        merged.coverConfig.style2.names = isBride ? `${bride} - ${groom}` : `${groom} - ${bride}`;
+      }
+      // Bảo đảm phong bì Mẫu 2 luôn giữ màu đỏ nhung nguyên bản (#8c111e), không bị biến thành màu trắng
+      if (merged.coverConfig.style2.envelopeColor === '#faf7f2' ||
+          merged.coverConfig.style2.envelopeColor === '#faf8f4' ||
+          merged.coverConfig.style2.envelopeColor === '#ffffff' ||
+          !merged.coverConfig.style2.envelopeColor) {
+        merged.coverConfig.style2.envelopeColor = '#8c111e';
+      }
+      if (!merged.coverConfig.style2.bgColor) {
+        merged.coverConfig.style2.bgColor = '#faf8f4';
+      }
     }
     if (merged.coverConfig.style3 && isDemoSampleName(merged.coverConfig.style3.names)) {
       merged.coverConfig.style3.names = isBride ? `${bride} & ${groom}` : `${groom} & ${bride}`;

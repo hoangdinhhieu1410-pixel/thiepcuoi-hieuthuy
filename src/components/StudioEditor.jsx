@@ -5489,7 +5489,7 @@ export function StudioEditor({
                       >
                         {/* Mini 3D envelope adapting to chosen color */}
                         <div
-                          style={{ backgroundColor: formData.coverConfig?.style2?.envelopeColor || formData.coverConfig?.style2?.bgColor || '#8c111e' }}
+                          style={{ backgroundColor: (formData.coverConfig?.style2?.envelopeColor && formData.coverConfig?.style2?.envelopeColor !== '#faf7f2' && formData.coverConfig?.style2?.envelopeColor !== '#faf8f4' && formData.coverConfig?.style2?.envelopeColor !== '#ffffff') ? formData.coverConfig?.style2?.envelopeColor : '#8c111e' }}
                           className="relative w-36 aspect-[1.35] rounded-xl shadow-xl border border-black/20 flex items-center justify-center group-hover:scale-105 transition-transform duration-500 overflow-hidden"
                         >
                           <div className="absolute top-0 inset-x-0 h-[52%] bg-black/25 [clip-path:polygon(0_0,100%_0,50%_100%)] border-b border-amber-300/40"></div>
@@ -5986,21 +5986,32 @@ export function StudioEditor({
 
                 const currentCoverColor = (
                   targetStyleId === 'style1' ? (formData.coverConfig?.style1?.bgColor || '#fbe8ea') :
-                  targetStyleId === 'style2' ? (formData.coverConfig?.style2?.bgColor || '#faf7f2') :
+                  targetStyleId === 'style2' ? ((formData.coverConfig?.style2?.envelopeColor && formData.coverConfig?.style2?.envelopeColor !== '#faf7f2' && formData.coverConfig?.style2?.envelopeColor !== '#faf8f4') ? formData.coverConfig?.style2?.envelopeColor : '#8c111e') :
                   targetStyleId === 'style3' ? (formData.coverConfig?.style3?.bgColor || '#183120') :
                   targetStyleId === 'style4' ? (formData.coverConfig?.style4?.bgColor || '#fbf5ed') :
                   (formData.coverConfig?.[targetStyleId]?.bgColor || '#faf7f2')
                 );
 
                 const handleApplyColor = async (colorHex, colorLabel) => {
+                  let updates = {};
+                  if (targetStyleId === 'style2') {
+                    updates = {
+                      envelopeColor: colorHex,
+                      bgColor: '#faf8f4' // Giữ nền thiệp sạch sẽ để phong bì nổi bật
+                    };
+                  } else {
+                    updates = {
+                      bgColor: colorHex
+                    };
+                  }
+
                   const updatedForm = {
                     ...formData,
                     coverConfig: {
                       ...(formData.coverConfig || {}),
                       [targetStyleId]: {
                         ...(formData.coverConfig?.[targetStyleId] || {}),
-                        bgColor: colorHex,
-                        ...(targetStyleId === 'style2' ? { envelopeColor: colorHex } : {})
+                        ...updates
                       }
                     }
                   };
@@ -6053,7 +6064,7 @@ export function StudioEditor({
                       <div className="flex flex-wrap items-center gap-2 bg-stone-100/80 p-1.5 rounded-xl border border-stone-200">
                         {[
                           { id: 'style1', name: 'Mẫu 1: Bìa Sáp Vàng', color: formData.coverConfig?.style1?.bgColor || '#fbe8ea' },
-                          { id: 'style2', name: 'Mẫu 2: Phong Bì Đỏ', color: formData.coverConfig?.style2?.bgColor || '#faf7f2' },
+                          { id: 'style2', name: 'Mẫu 2: Phong Bì Đỏ', color: ((formData.coverConfig?.style2?.envelopeColor && formData.coverConfig?.style2?.envelopeColor !== '#faf7f2' && formData.coverConfig?.style2?.envelopeColor !== '#faf8f4') ? formData.coverConfig?.style2?.envelopeColor : '#8c111e') },
                           { id: 'style3', name: 'Mẫu 3: Cổng Xanh Ngọc', color: formData.coverConfig?.style3?.bgColor || '#183120' },
                           { id: 'style4', name: 'Mẫu 4: Bìa Sáp Tối Giản', color: formData.coverConfig?.style4?.bgColor || '#fbf5ed' },
                         ].filter(item => availableCoverStyles.includes(item.id)).map(item => {
@@ -6089,22 +6100,37 @@ export function StudioEditor({
                     </div>
 
                     {/* Active target banner */}
-                    <div className="bg-amber-100/70 border border-amber-300/80 px-3.5 py-2 rounded-xl text-xs text-amber-950 flex items-center justify-between">
+                    <div className="bg-amber-100/70 border border-amber-300/80 px-3.5 py-2 rounded-xl text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
-                        <span>Đang chọn bảng màu riêng cho: <strong className="text-[#70561f] font-bold">{currentStyleName}</strong></span>
+                        <span>Đang chọn màu cho: <strong className="text-[#70561f] font-bold">{currentStyleName}</strong></span>
                       </span>
-                      <span className="font-mono text-[11px] font-bold bg-white/80 px-2 py-0.5 rounded-md border border-amber-300 text-stone-800">
-                        {currentCoverColor.toUpperCase()}
-                      </span>
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        {targetStyleId === 'style2' && (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyColor('#8c111e', 'Đỏ Nhung Nguyên Bản')}
+                            className="px-2.5 py-1 rounded-lg bg-rose-800 hover:bg-rose-900 text-white font-bold text-[11px] flex items-center gap-1 shadow-sm cursor-pointer transition-all"
+                            title="Khôi phục lại màu đỏ nhung nguyên bản cho Mẫu 2"
+                          >
+                            <RotateCcw className="w-3 h-3 text-rose-200" />
+                            <span>↺ Đặt Lại Màu Đỏ Nguyên Bản</span>
+                          </button>
+                        )}
+                        <span className="font-mono text-[11px] font-bold bg-white/80 px-2 py-0.5 rounded-md border border-amber-300 text-stone-800">
+                          {currentCoverColor.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Swatches List */}
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2.5">
                         {[
+                          { name: 'Đỏ Nhung Nguyên Bản', color: '#8c111e', border: 'border-rose-900' },
+                          { name: 'Đỏ Rượu Vang Ruby', color: '#6e0d1c', border: 'border-rose-950' },
+                          { name: 'Đỏ Mận Quý Phái', color: '#7f1d1d', border: 'border-red-900' },
                           { name: 'Kem Ngọc Trai', color: '#faf7f2', border: 'border-stone-300' },
-                          { name: 'Đỏ Nhung Rượu Vang', color: '#6e0d1c', border: 'border-rose-900' },
                           { name: 'Xanh Ngọc Lục Bảo', color: '#183120', border: 'border-emerald-900' },
                           { name: 'Xanh Navy Dạ Hội', color: '#152238', border: 'border-blue-900' },
                           { name: 'Xanh Rêu Sage Quý Phái', color: '#3c4f41', border: 'border-emerald-800' },

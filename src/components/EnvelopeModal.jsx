@@ -55,7 +55,10 @@ export function EnvelopeModal({
   // Style-specific background colors (Each of the 4 styles has its own independent color)
   const style1Bg = c1.bgColor || '#fbe8ea';
   const style2Bg = c2.bgColor || '#faf8f4';
-  const style2Envelope = c2.envelopeColor || c2.bgColor || '#8c111e';
+  // Mẫu 2: Phong bì nhung đỏ nguyên bản (#8c111e), không dùng bgColor làm màu phong bì
+  const style2Envelope = (c2.envelopeColor && c2.envelopeColor !== '#faf7f2' && c2.envelopeColor !== '#faf8f4' && c2.envelopeColor !== '#ffffff')
+    ? c2.envelopeColor
+    : '#8c111e';
   const style3Bg = c3.bgColor || '#183120';
   const style4Bg = c4.bgColor || '#fbf5ed';
   const customBg = cCustom.bgColor || '#faf7f2';
