@@ -3442,9 +3442,9 @@ export function StudioEditor({
 
                 {/* Helpful Instruction Tip for Reordering */}
                 <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2 text-xs text-amber-950 flex items-center gap-2 shadow-xs">
-                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-amber-600 text-sm select-none">✋</span>
                   <span>
-                    <strong>Hướng dẫn sắp xếp thứ tự:</strong> Bạn có thể <strong>kéo thả trực tiếp</strong> từng thẻ ảnh hoặc bấm các nút <strong>[◀ Lên trước] [Xuống sau ▶]</strong> trên từng ảnh (hoặc bấm nút mũi tên ngay trên thiệp điện thoại bên phải) để thay đổi vị trí ảnh theo ý muốn.
+                    <strong>Kéo thả sắp xếp thứ tự:</strong> Nhấn giữ chuột/ngón tay vào ảnh (hình bàn tay) và kéo thả trực tiếp vào vị trí bạn muốn, hoặc thao tác kéo thả trực tiếp ngay trên màn hình thiệp xem trước bên phải.
                   </span>
                 </div>
 
@@ -3462,6 +3462,7 @@ export function StudioEditor({
                         onDragOver={(e) => handleGalleryDragOver(e, index)}
                         onDragEnd={() => { setGalleryDragIdx(null); setGalleryDragOverIdx(null); }}
                         onDrop={(e) => handleGalleryDrop(e, index)}
+                        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
                         className={`group relative bg-stone-50 rounded-2xl overflow-hidden border transition-all duration-200 shadow-sm flex flex-col cursor-grab active:cursor-grabbing ${
                           isDragging
                             ? 'opacity-40 scale-95 border-amber-500 border-dashed ring-2 ring-amber-400'

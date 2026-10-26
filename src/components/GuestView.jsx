@@ -133,6 +133,92 @@ export function GuestView({
     setTimeout(() => setSaveToast(''), 2500);
   };
 
+  // Drag and drop photo state & handlers for card view
+  const [cardDragIdx, setCardDragIdx] = useState(null);
+  const [cardDragOverIdx, setCardDragOverIdx] = useState(null);
+  const [hasDragged, setHasDragged] = useState(false);
+  const touchStartPos = useRef(null);
+  const touchDragItemIdx = useRef(null);
+
+  // Desktop mouse drag handlers
+  const handleCardDragStart = (e, index) => {
+    if (!isPreview && !isAdmin) return;
+    setCardDragIdx(index);
+    setHasDragged(false);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleCardDragOver = (e, index) => {
+    if (!isPreview && !isAdmin) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (cardDragOverIdx !== index) {
+      setCardDragOverIdx(index);
+    }
+  };
+
+  const handleCardDrop = (e, targetIndex) => {
+    if (!isPreview && !isAdmin) return;
+    e.preventDefault();
+    setCardDragOverIdx(null);
+    if (cardDragIdx === null || cardDragIdx === targetIndex) {
+      setCardDragIdx(null);
+      return;
+    }
+    setHasDragged(true);
+    handleMoveGalleryPhoto(cardDragIdx, targetIndex);
+    setCardDragIdx(null);
+    setTimeout(() => setHasDragged(false), 200);
+  };
+
+  const handleCardDragEnd = () => {
+    setCardDragIdx(null);
+    setCardDragOverIdx(null);
+    setTimeout(() => setHasDragged(false), 200);
+  };
+
+  // Mobile / touch screen handlers
+  const handleCardTouchStart = (e, index) => {
+    if (!isPreview && !isAdmin) return;
+    touchDragItemIdx.current = index;
+    setCardDragIdx(index);
+    setHasDragged(false);
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleCardTouchMove = (e) => {
+    if ((!isPreview && !isAdmin) || touchDragItemIdx.current === null) return;
+    const touch = e.touches[0];
+    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+    const photoContainer = elem?.closest('[data-gallery-idx]');
+    if (photoContainer) {
+      const overIdx = parseInt(photoContainer.getAttribute('data-gallery-idx'), 10);
+      if (!isNaN(overIdx) && overIdx !== cardDragOverIdx) {
+        setCardDragOverIdx(overIdx);
+      }
+    }
+  };
+
+  const handleCardTouchEnd = (e) => {
+    if ((!isPreview && !isAdmin) || touchDragItemIdx.current === null) return;
+    const touch = e.changedTouches[0];
+    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+    const photoContainer = elem?.closest('[data-gallery-idx]');
+    if (photoContainer) {
+      const targetIdx = parseInt(photoContainer.getAttribute('data-gallery-idx'), 10);
+      if (!isNaN(targetIdx) && targetIdx !== touchDragItemIdx.current) {
+        setHasDragged(true);
+        handleMoveGalleryPhoto(touchDragItemIdx.current, targetIdx);
+        setTimeout(() => setHasDragged(false), 200);
+      }
+    }
+    touchDragItemIdx.current = null;
+    setCardDragOverIdx(null);
+    setCardDragIdx(null);
+  };
+
   useEffect(() => {
     setEnvelopeOpen(initialEnvelopeOpen);
     if (initialEnvelopeOpen) {
@@ -1685,8 +1771,8 @@ export function GuestView({
           {/* Quick guide in preview/admin mode */}
           {(isPreview || isAdmin) && (
             <div className="relative z-20 mb-3 text-center">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-900 bg-amber-100/90 border border-amber-300 py-1 px-3 rounded-full shadow-xs">
-                <span>💡 Bấm mũi tên ◀ ▶ trên từng ảnh để đổi thứ tự ảnh</span>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-900 bg-amber-100/90 border border-amber-300 py-1.5 px-3.5 rounded-full shadow-xs select-none">
+                <span>✋ Nhấn giữ vào ảnh và kéo thả để sắp xếp lại album</span>
               </span>
             </div>
           )}
@@ -1698,67 +1784,66 @@ export function GuestView({
                 ? (index % 2 === 0 ? 'animate-cocohappii-photo-left' : 'animate-cocohappii-photo-right')
                 : photoAnimClass;
 
+              const isDragging = cardDragIdx === index;
+              const isOver = cardDragOverIdx === index;
+
               return (
                 <div
                   key={photo.id || index}
-                  onClick={() => setLightboxIndex(index)}
-                  className="break-inside-avoid mb-3 relative rounded-xl overflow-hidden cursor-pointer shadow-sm group"
+                  data-gallery-idx={index}
+                  draggable={isPreview || isAdmin}
+                  onDragStart={(e) => handleCardDragStart(e, index)}
+                  onDragOver={(e) => handleCardDragOver(e, index)}
+                  onDragEnd={handleCardDragEnd}
+                  onDrop={(e) => handleCardDrop(e, index)}
+                  onTouchStart={(e) => handleCardTouchStart(e, index)}
+                  onTouchMove={handleCardTouchMove}
+                  onTouchEnd={handleCardTouchEnd}
+                  onClick={() => {
+                    if (!hasDragged && cardDragIdx === null) {
+                      setLightboxIndex(index);
+                    }
+                  }}
+                  style={{
+                    cursor: (isPreview || isAdmin)
+                      ? (isDragging ? 'grabbing' : 'grab')
+                      : 'pointer'
+                  }}
+                  className={`break-inside-avoid mb-3 relative rounded-xl overflow-hidden shadow-sm transition-all duration-200 select-none ${
+                    isDragging
+                      ? 'opacity-40 scale-95 ring-2 ring-amber-500 border-2 border-dashed border-amber-500 shadow-inner'
+                      : isOver
+                      ? 'ring-4 ring-amber-500 scale-[1.03] shadow-2xl z-30 brightness-105'
+                      : (isPreview || isAdmin)
+                      ? 'hover:shadow-lg hover:scale-[1.01] cursor-grab active:cursor-grabbing'
+                      : 'cursor-pointer'
+                  }`}
                 >
                   <img
                     key={`gallery-img-${photoAnimKey}-${photoAnimClass}-${index}`}
                     src={photo.url}
                     alt={photo.caption || ''}
-                    className={`w-full h-auto block rounded-xl group-hover:scale-[1.03] transition-transform duration-500 ${galleryAnimClass}`}
+                    draggable={false}
+                    className={`w-full h-auto block rounded-xl pointer-events-none select-none transition-transform duration-500 ${galleryAnimClass}`}
                   />
-                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl pointer-events-none">
-                    <Maximize2 className="w-5 h-5 text-white drop-shadow" />
-                  </div>
 
-                  {/* Reorder controls on each photo in preview / admin mode */}
+                  {/* Order badge & subtle hand grip indicator on top-left (No arrows!) */}
                   {(isPreview || isAdmin) && (
-                    <div
-                      className="absolute top-1.5 inset-x-1.5 z-20 flex items-center justify-between"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span className="bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md border border-white/20 select-none">
-                        #{index + 1}
-                      </span>
-                      <div className="flex items-center gap-1 bg-black/75 backdrop-blur-xs p-0.5 rounded-full shadow-md border border-white/20">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveGalleryPhoto(index, index - 1);
-                          }}
-                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                            index === 0
-                              ? 'opacity-25 text-stone-400 cursor-not-allowed'
-                              : 'bg-white hover:bg-amber-100 text-stone-900 cursor-pointer shadow-xs active:scale-90'
-                          }`}
-                          title="Chuyển ảnh này lên trước"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5 text-amber-800" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === (cardData.gallery || []).length - 1}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveGalleryPhoto(index, index + 1);
-                          }}
-                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                            index === (cardData.gallery || []).length - 1
-                              ? 'opacity-25 text-stone-400 cursor-not-allowed'
-                              : 'bg-white hover:bg-amber-100 text-stone-900 cursor-pointer shadow-xs active:scale-90'
-                          }`}
-                          title="Chuyển ảnh này xuống sau"
-                        >
-                          <ChevronRight className="w-3.5 h-3.5 text-amber-800" />
-                        </button>
-                      </div>
+                    <div className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md border border-white/20 select-none pointer-events-none">
+                      <span className="text-amber-300">✋</span>
+                      <span>#{index + 1}</span>
                     </div>
                   )}
+
+                  <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl pointer-events-none">
+                    {(isPreview || isAdmin) ? (
+                      <span className="bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md border border-white/20 flex items-center gap-1">
+                        <span>✋ Kéo để đổi vị trí</span>
+                      </span>
+                    ) : (
+                      <Maximize2 className="w-5 h-5 text-white drop-shadow" />
+                    )}
+                  </div>
                 </div>
               );
             })}
