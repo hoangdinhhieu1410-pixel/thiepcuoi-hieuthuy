@@ -489,17 +489,14 @@ export function App() {
           }
         }).catch(err => {
           console.warn('Error loading from IndexedDB:', err);
-        }).finally(() => {
-          setIsStorageReady(true);
         });
       }
     } catch (e) {
       console.warn('Error reading URL params:', e);
-      setIsStorageReady(true);
     }
 
-    // Load latest saved card configuration from Cloud Redis
-    fetch('/api/card-config')
+    // Load latest saved card configuration from Cloud Redis (eliminates 1-second cover flash)
+    const cloudConfigPromise = fetch('/api/card-config')
       .then(r => r.json())
       .then(d => {
         if (d?.success && d?.config?.groom && d?.config?.bride) {
@@ -511,6 +508,12 @@ export function App() {
         }
       })
       .catch(() => {});
+
+    // Ensure we wait for cloud config before revealing the card (timeout max 1.2s for slow networks)
+    const timeoutPromise = new Promise(res => setTimeout(res, 1200));
+    Promise.race([cloudConfigPromise, timeoutPromise]).finally(() => {
+      setIsStorageReady(true);
+    });
 
     // Load initial cloud wishes from Redis server
     fetch('/api/wishes')

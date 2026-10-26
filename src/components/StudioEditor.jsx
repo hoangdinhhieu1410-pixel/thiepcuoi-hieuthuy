@@ -558,26 +558,41 @@ export function StudioEditor({
 
   // Select Cover Style (Nút chọn làm bìa chính)
   const handleSelectCover = (styleId) => {
-    setFormData(prev => ({
-      ...prev,
+    const updatedForm = {
+      ...formData,
       templateStyle: styleId,
       coverConfig: {
-        ...(prev.coverConfig || {}),
+        ...(formData.coverConfig || {}),
         activeStyle: styleId
       }
-    }));
+    };
+    setFormData(updatedForm);
     setEditingCoverTab(styleId);
     setPreviewEnvelopeOpen(false); // Close envelope in preview so user immediately sees the selected cover!
     if (previewScrollRef.current) {
       previewScrollRef.current.scrollTo({ top: 0, behavior: 'instant' });
     }
+
+    // Persist immediately to all profiles and sync to Cloud Redis
+    const updatedAll = {
+      ...allProfiles,
+      [currentProfileKey]: updatedForm
+    };
+    setAllProfiles(updatedAll);
+    if (onSaveAllProfiles) {
+      onSaveAllProfiles(updatedAll);
+    } else if (onSaveProfile) {
+      onSaveProfile(currentProfileKey, updatedForm);
+    }
+    broadcastProfileUpdate(updatedAll, 'studio_cover_changed');
+
     const names = {
       style1: 'Mẫu 1: Bìa Sáp Vàng Hoàng Gia (Cocohappii)',
       style2: 'Mẫu 2: Phong Bì Đỏ Hoa Tươi (LoveCard 26)',
       style3: 'Mẫu 3: Cổng Xanh Ngọc & Ấn Triện (27BigGroup A9)',
       style4: 'Mẫu 4: Khung Ảnh Vòm & Sáp Hoàng Gia (Ảnh 2 & 4)'
     };
-    setSaveStatus(`Đã chọn [${names[styleId] || styleId}] làm mẫu bìa thiệp!`);
+    setSaveStatus(`Đã lưu và đồng bộ [${names[styleId] || styleId}] lên hệ thống!`);
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
@@ -4547,16 +4562,12 @@ export function StudioEditor({
                     return (
                       <div
                         key={track.id}
-                        onClick={async () => {
-                          let playUrl = track.url;
-                          if (track.isCustom || (track.id && track.id.startsWith('track-'))) {
-                            const fresh = await getAudioTrackUrl(track.id);
-                            if (fresh) playUrl = fresh;
-                          }
+                        onClick={() => {
+                          const staticTrackUrl = `/templates/007/tracks/${track.id}.m4a`;
                           const updatedMusic = {
                             ...(formData.music || {}),
                             activeTrackId: track.id,
-                            customTrackUrl: playUrl || track.url,
+                            customTrackUrl: staticTrackUrl,
                             customTrackName: track.title,
                             enabled: true
                           };
@@ -4566,9 +4577,27 @@ export function StudioEditor({
                           };
                           userHasEdited.current = true;
                           setFormData(updated);
-                          if (onSaveProfile) {
+
+                          const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
+                          const updatedAll = {
+                            ...allProfiles,
+                            [currentProfileKey]: updated,
+                            ...(allProfiles[otherKey] ? {
+                              [otherKey]: {
+                                ...allProfiles[otherKey],
+                                music: updatedMusic
+                              }
+                            } : {})
+                          };
+                          setAllProfiles(updatedAll);
+                          if (onSaveAllProfiles) {
+                            onSaveAllProfiles(updatedAll);
+                          } else if (onSaveProfile) {
                             onSaveProfile(currentProfileKey, updated);
                           }
+                          broadcastProfileUpdate(updatedAll, 'studio_music_changed');
+                          setSaveStatus(`Đã chọn và đồng bộ bài hát: ${track.title}!`);
+                          setTimeout(() => setSaveStatus(''), 3000);
                         }}
                         className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 text-xs ${
                           isSelected

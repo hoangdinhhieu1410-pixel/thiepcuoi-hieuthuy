@@ -870,8 +870,8 @@ export function GuestView({
               {/* Personalized Guest Badge */}
               {guestName && (
                 <div className="mt-3 text-center">
-                  <div className="inline-block px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-[#d8cdb4] text-xs text-[#928362] font-semibold shadow-md whitespace-nowrap">
-                    Kính mời: <span className="font-bold underline text-[#70561f]">{guestName}</span>
+                  <div className="inline-block px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-[#d8cdb4] text-xs font-semibold shadow-md whitespace-nowrap">
+                    <span className="font-bold text-[#70561f]">{guestName}</span>
                   </div>
                 </div>
               )}
