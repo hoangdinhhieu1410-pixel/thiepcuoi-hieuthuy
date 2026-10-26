@@ -270,17 +270,14 @@
 
 .animate-cocohappii-left {
   animation: fadeInLeftSlow 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
-  display: inline-block;
 }
 
 .animate-cocohappii-right {
   animation: fadeInRightSlow 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
-  display: inline-block;
 }
 
 .animate-cocohappii-up {
   animation: fadeInUpSlow 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
-  display: inline-block;
 }
 
 .animate-cocohappii-photo-left {
@@ -433,12 +430,10 @@
 /* Text Animation Classes (Applied to containers and child text) */
 .animate-slide-up {
   animation: slideUpFloatBreathe 4s infinite ease-in-out !important;
-  display: inline-block;
 }
 
 .animate-text-blur {
   animation: textBlurBreathe 4s infinite ease-in-out !important;
-  display: inline-block;
 }
 
 .animate-shimmer, .animate-shimmer * {
@@ -447,17 +442,14 @@
 
 .animate-pop-scale {
   animation: popScaleBreathe 3.5s infinite ease-in-out !important;
-  display: inline-block;
 }
 
 .animate-typewriter {
   animation: calligraphyTiltStroke 4s infinite ease-in-out !important;
-  display: inline-block;
 }
 
 .animate-wave-bounce {
   animation: waveBounceGentle 3.5s infinite ease-in-out !important;
-  display: inline-block;
 }
 
 .animate-glow-pulse, .animate-glow-pulse * {
@@ -466,6 +458,17 @@
 
 .animate-spread-spacing, .animate-spread-spacing * {
   animation: spreadSpacingBreathe 4.5s infinite ease-in-out !important;
+}
+
+span.animate-slide-up,
+span.animate-text-blur,
+span.animate-pop-scale,
+span.animate-typewriter,
+span.animate-wave-bounce,
+span.animate-cocohappii-left,
+span.animate-cocohappii-right,
+span.animate-cocohappii-up {
+  display: inline-block;
 }
 
 /* Scrollbar */

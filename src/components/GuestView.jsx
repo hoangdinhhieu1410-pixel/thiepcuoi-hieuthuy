@@ -1470,7 +1470,11 @@ export function GuestView({
 
         {/* ================= SECTION 4: CARD-CALENDAR ================= */}
         {cardData.sectionVisibility?.calendar !== false && (
-          <div key={`calendar-text-${textAnimKey}-${textAnimClass}`} id="card-calendar" className={`relative px-6 py-12 border-b border-[#e5dec9] overflow-hidden ${textAnimClass}`}>
+          <div 
+            key={`calendar-text-${textAnimKey}-${textAnimClass}`} 
+            id="card-calendar" 
+            className="w-full block relative px-3 sm:px-6 py-10 sm:py-12 border-b border-[#e5dec9] overflow-hidden"
+          >
             {/* Flower sketch decorations on left and right for rich atmosphere */}
             <img
               src="/templates/007/images/decor-flower3.png"
@@ -1483,7 +1487,7 @@ export function GuestView({
               className="absolute -bottom-6 -right-10 w-44 pointer-events-none opacity-80 rotate-[-15deg] z-0 select-none"
             />
 
-            <div className="relative z-10">
+            <div className={`relative z-10 w-full ${textAnimClass}`}>
               <MiniCalendar targetDate={cardData.weddingDate || '2026-11-29'} events={cardData.events} />
             </div>
           </div>

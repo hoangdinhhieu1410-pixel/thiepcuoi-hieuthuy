@@ -74,34 +74,34 @@ export function MiniCalendar({ targetDate = '2026-11-29', events = [] }) {
   const ceremonyDay = parseDayNumber(ceremonyEvent, 29);
 
   return (
-    <div className="w-full max-w-[360px] mx-auto text-center font-avo relative select-none">
+    <div className="w-full max-w-full mx-auto text-center font-avo relative select-none px-1 sm:px-2">
       {/* Top bar indicator */}
       <div className="w-20 h-[3px] bg-[#928362] rounded-full mx-auto mb-6"></div>
 
-      {/* Năm & Tháng riêng biệt trên dưới, cách nhau 1 chút thanh lịch */}
+      {/* Năm & Tháng riêng biệt trên dưới, thanh lịch chuẩn thiệp cưới */}
       <div className="calendar-header mb-6 flex flex-col items-center justify-center">
-        <div className="font-blackmango text-5xl sm:text-6xl text-[#928362] tracking-wider leading-none select-none mb-1 sm:mb-2">
+        <div className="font-blackmango text-5xl sm:text-6xl md:text-7xl text-[#928362] tracking-wider leading-none select-none mb-1 sm:mb-2">
           {year}
         </div>
-        <div className="font-highspirited text-4xl sm:text-5xl text-[#928362] leading-tight select-none">
+        <div className="font-highspirited text-4xl sm:text-5xl md:text-6xl text-[#928362] leading-tight select-none">
           {monthName}
         </div>
       </div>
 
-      {/* Weekday Headers */}
-      <div className="grid grid-cols-7 gap-1.5 text-xs text-[#928362] font-semibold mb-2 uppercase">
+      {/* Weekday Headers - Full chiều ngang cân đối */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs sm:text-sm text-[#928362] font-bold mb-3 uppercase tracking-wider">
         {weekdays.map((wd, idx) => (
-          <div key={idx} className="py-1">
+          <div key={idx} className="py-1 text-center">
             {wd}
           </div>
         ))}
       </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1.5 text-xs">
+      {/* Calendar Grid - Tận dụng trọn vẹn bề rộng thiệp */}
+      <div className="grid grid-cols-7 gap-y-2.5 sm:gap-y-3.5 gap-x-1 sm:gap-x-2 text-xs sm:text-sm">
         {days.map((day, idx) => {
           if (!day) {
-            return <div key={idx} className="h-9"></div>;
+            return <div key={idx} className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 mx-auto"></div>;
           }
 
           const isReception = day === receptionDay;
@@ -112,11 +112,11 @@ export function MiniCalendar({ targetDate = '2026-11-29', events = [] }) {
             return (
               <div
                 key={idx}
-                className="h-9 flex items-center justify-center relative rounded-full bg-gradient-to-tr from-[#70561f] via-rose-600 to-pink-500 text-white font-bold shadow-md ring-2 ring-amber-300 scale-105 z-20 cursor-default"
+                className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 mx-auto flex items-center justify-center relative rounded-full bg-gradient-to-tr from-[#70561f] via-rose-600 to-pink-500 text-white font-bold shadow-md ring-2 ring-amber-300 ring-offset-1 ring-offset-[#faf7f2] scale-105 z-20 cursor-default"
                 title={`Ngày ${day}/${monthDisplayNum}: ${receptionEvent?.title || 'Tiệc Cưới'} & ${ceremonyEvent?.title || 'Lễ Thành Hôn'}`}
               >
                 {/* Biểu tượng trái tim đôi */}
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center -space-x-1 drop-shadow-md">
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex items-center -space-x-1 drop-shadow-md pointer-events-none">
                   <Heart className="w-3.5 h-3.5 fill-[#70561f] text-amber-300" />
                   <Heart className="w-3.5 h-3.5 fill-rose-500 text-white animate-pulse" />
                 </div>
@@ -130,10 +130,10 @@ export function MiniCalendar({ targetDate = '2026-11-29', events = [] }) {
             return (
               <div
                 key={idx}
-                className="h-9 flex items-center justify-center relative rounded-full bg-[#70561f] text-white font-bold shadow-md ring-2 ring-[#70561f]/40 ring-offset-1 scale-105 z-10 cursor-default"
+                className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 mx-auto flex items-center justify-center relative rounded-full bg-[#70561f] text-white font-bold shadow-md ring-2 ring-[#70561f]/40 ring-offset-1 ring-offset-[#faf7f2] scale-105 z-10 cursor-default"
                 title={`Ngày ${day}/${monthDisplayNum}: ${receptionEvent?.title || 'Tiệc Cưới'}`}
               >
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-amber-300 drop-shadow-sm">
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-amber-300 drop-shadow-sm pointer-events-none">
                   <Heart className="w-3.5 h-3.5 fill-[#70561f] text-amber-300" />
                 </div>
                 <span>{day}</span>
@@ -146,10 +146,10 @@ export function MiniCalendar({ targetDate = '2026-11-29', events = [] }) {
             return (
               <div
                 key={idx}
-                className="h-9 flex items-center justify-center relative rounded-full bg-gradient-to-tr from-rose-600 via-rose-500 to-pink-500 text-white font-bold shadow-md ring-2 ring-rose-400/50 ring-offset-1 scale-105 z-20 cursor-default"
+                className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 mx-auto flex items-center justify-center relative rounded-full bg-gradient-to-tr from-rose-600 via-rose-500 to-pink-500 text-white font-bold shadow-md ring-2 ring-rose-400/50 ring-offset-1 ring-offset-[#faf7f2] scale-105 z-20 cursor-default"
                 title={`Ngày ${day}/${monthDisplayNum}: ${ceremonyEvent?.title || 'Lễ Thành Hôn'}`}
               >
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-rose-500 animate-pulse drop-shadow-md">
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-rose-500 animate-pulse drop-shadow-md pointer-events-none">
                   <Heart className="w-3.5 h-3.5 fill-rose-500 text-white" />
                 </div>
                 <span>{day}</span>
@@ -161,12 +161,28 @@ export function MiniCalendar({ targetDate = '2026-11-29', events = [] }) {
           return (
             <div
               key={idx}
-              className="h-9 flex items-center justify-center rounded-full text-stone-700 transition-colors hover:bg-[#ede5d5]/50"
+              className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 sm:w-10 sm:h-10 mx-auto flex items-center justify-center rounded-full text-stone-700 font-medium transition-colors hover:bg-[#ede5d5]/60"
             >
               <span>{day}</span>
             </div>
           );
         })}
+      </div>
+
+      {/* Chú thích sự kiện ngày cưới dưới lịch */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 text-[11px] sm:text-xs text-[#928362] font-medium">
+        {receptionEvent && (
+          <div className="flex items-center gap-1.5 bg-white/70 backdrop-blur-xs px-2.5 py-1 rounded-full border border-[#d8cdb4] shadow-2xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#70561f] inline-block shrink-0 shadow-xs"></span>
+            <span>Ngày {receptionDay}: {receptionEvent.title || 'Tiệc Cưới'}</span>
+          </div>
+        )}
+        {ceremonyEvent && ceremonyDay !== receptionDay && (
+          <div className="flex items-center gap-1.5 bg-white/70 backdrop-blur-xs px-2.5 py-1 rounded-full border border-rose-200 shadow-2xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shrink-0 shadow-xs"></span>
+            <span>Ngày {ceremonyDay}: {ceremonyEvent.title || 'Lễ Thành Hôn'}</span>
+          </div>
+        )}
       </div>
     </div>
   );
