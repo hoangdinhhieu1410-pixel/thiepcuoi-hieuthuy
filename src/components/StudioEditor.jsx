@@ -237,37 +237,49 @@ export function StudioEditor({
   const isInitialMount = useRef(true);
   const userHasEdited = useRef(false);
 
-  // Synchronize when parent profiles prop updates from IndexedDB load (before user types)
+  // Synchronize when parent profiles prop updates (before user types or when cloud config arrives)
   useEffect(() => {
-    if (!userHasEdited.current && profiles) {
+    if (profiles) {
       setAllProfiles(profiles);
       const target = profiles[currentProfileKey] || profiles.groom;
       if (target) {
-        setFormData(JSON.parse(JSON.stringify(target)));
-        setLastSavedData(JSON.parse(JSON.stringify(target)));
+        const cloned = JSON.parse(JSON.stringify(target));
+        // Only update formData if user hasn't made unsaved changes
+        const hasUnsavedChanges = lastSavedData && JSON.stringify(formData) !== JSON.stringify(lastSavedData);
+        if (!hasUnsavedChanges) {
+          setFormData(cloned);
+          setLastSavedData(cloned);
+        }
       }
     }
   }, [profiles, currentProfileKey]);
 
-  // Auto-save debounced effect (300ms): whenever formData changes after mount, broadcast & save it!
+  // Auto-save debounced effect (1000ms): ONLY if formData actually differs from lastSavedData!
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    userHasEdited.current = true;
-    const timer = setTimeout(() => {
+    if (!lastSavedData) return;
+    const hasUnsavedChanges = JSON.stringify(formData) !== JSON.stringify(lastSavedData);
+    if (!hasUnsavedChanges) return;
+
+    const timer = setTimeout(async () => {
       const updatedAll = {
         ...allProfiles,
+        activeProfile: currentProfileKey,
         [currentProfileKey]: formData
       };
+      setLastSavedData(JSON.parse(JSON.stringify(formData)));
       broadcastProfileUpdate(updatedAll, 'studio_autosave');
-      if (onSaveProfile) {
-        onSaveProfile(currentProfileKey, formData);
+      if (onSaveAllProfiles) {
+        await onSaveAllProfiles(updatedAll);
+      } else if (onSaveProfile) {
+        await onSaveProfile(currentProfileKey, formData);
       }
-    }, 300);
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [formData, currentProfileKey]);
+  }, [formData]);
 
   // Real-time live preview state
   const [showPreview, setShowPreview] = useState(true);
