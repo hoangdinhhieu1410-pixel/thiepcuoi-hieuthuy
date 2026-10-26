@@ -627,41 +627,6 @@ export function GuestView({
         : (adminToolbarVisible && isAdmin ? 'min-h-screen pt-14 pb-8' : 'min-h-screen pt-0 sm:pt-4 md:pt-6 pb-8')
     } bg-gradient-to-b from-[#181512] via-[#12100e] to-[#0a0908] flex flex-col items-center text-stone-800 font-avo selection:bg-[#70561f]/20 w-full relative overflow-x-hidden`}>
 
-      {/* LUXURY DESKTOP SIDE ACCENTS (Only visible on wide desktop / laptop screens >= 1180px) */}
-      {!isPreview && (
-        <>
-          {/* Left Side Monogram Badge */}
-          <div className="hidden min-[1180px]:flex fixed left-6 2xl:left-12 top-1/2 -translate-y-1/2 flex-col items-center text-center z-30 pointer-events-none select-none p-5 rounded-3xl bg-black/40 backdrop-blur-md border border-amber-500/20 shadow-2xl max-w-[210px] animate-fade-in">
-            <span className="text-xl text-amber-400 mb-1">⚜️</span>
-            <span className="font-motherland text-2xl text-[#d4af67] block leading-tight">
-              {groomName} & {brideName}
-            </span>
-            <span className="font-avo text-[10px] uppercase tracking-[0.25em] text-amber-200/80 mt-1 block font-semibold">
-              Save The Date
-            </span>
-            <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2"></div>
-            <span className="font-mono text-xs text-stone-300 font-semibold">
-              {cardData.saveTheDateDay || '26.12.2026'}
-            </span>
-          </div>
-
-          {/* Right Side Plaque Badge */}
-          <div className="hidden min-[1180px]:flex fixed right-6 2xl:right-12 top-1/2 -translate-y-1/2 flex-col items-center text-center z-30 pointer-events-none select-none p-5 rounded-3xl bg-black/40 backdrop-blur-md border border-amber-500/20 shadow-2xl max-w-[210px] animate-fade-in">
-            <span className="text-lg text-amber-400 mb-1">💌</span>
-            <span className="font-serif-elegant font-bold text-xs uppercase tracking-[0.2em] text-[#d4af67] block">
-              Thiệp Cưới Online
-            </span>
-            <p className="text-[11px] text-stone-300 mt-2 leading-relaxed">
-              Trân trọng kính mời quý khách chung vui cùng hai bên gia đình
-            </p>
-            <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2"></div>
-            <span className="text-[10px] text-amber-300/80 italic font-serif">
-              Tối ưu hiển thị đa thiết bị
-            </span>
-          </div>
-        </>
-      )}
-      
       {/* Live Indicator Pill for Photo Animation testing */}
       {activePhotoTestNotice && (
         <div className="sticky top-2 z-[90] flex justify-center pointer-events-none px-4 animate-bounce">
