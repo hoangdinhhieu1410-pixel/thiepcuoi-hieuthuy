@@ -1592,6 +1592,28 @@ export function StudioEditor({
   const [copiedZaloId, setCopiedZaloId] = useState('');
   const [copiedMessengerId, setCopiedMessengerId] = useState('');
 
+  // Chuyển đổi tên sang ký tự Unicode Sans Bold Italic (in đậm + nghiêng thật 100% trên Zalo & Messenger, không lộ ký hiệu _*)
+  const toBoldItalic = (text) => {
+    if (!text) return '';
+    const nfd = String(text).normalize('NFD');
+    let result = '';
+    for (const char of nfd) {
+      const code = char.codePointAt(0);
+      if (code >= 0x41 && code <= 0x5A) {
+        result += String.fromCodePoint(0x1D63C + (code - 0x41));
+      } else if (code >= 0x61 && code <= 0x7A) {
+        result += String.fromCodePoint(0x1D656 + (code - 0x61));
+      } else if (char === 'Đ') {
+        result += '𝘿';
+      } else if (char === 'đ') {
+        result += '𝙙';
+      } else {
+        result += char;
+      }
+    }
+    return result;
+  };
+
   // Helper copy to clipboard with both Rich HTML and Plain text markdown
   const copyRichAndPlainText = async (plainText, htmlText) => {
     try {
@@ -1615,11 +1637,12 @@ export function StudioEditor({
     }
   };
 
-  // Format full formal Zalo invitation message (Tô đậm và in nghiêng tên khách mời, chuẩn bố cục)
+  // Format full formal Zalo invitation message (Tô đậm và in nghiêng tên khách mời bằng ký tự Unicode chuyên dụng)
   const getGuestZaloMessage = (guest) => {
     const link = getGuestLink(guest);
     const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
-    const guestName = (guest?.name || 'Quý Khách').trim();
+    const guestNameRaw = (guest?.name || 'Quý Khách').trim();
+    const guestNameStyled = toBoldItalic(guestNameRaw);
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
     const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
@@ -1628,18 +1651,19 @@ export function StudioEditor({
     const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
     const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
 
-    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: _*${guestName}*_\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời _*${guestName}*_ bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của _*${guestName}*_ là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
+    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: ${guestNameStyled}\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestNameStyled} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestNameStyled} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
 
-    const html = `<p>💌 <b>THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel})</b> 💌<br>${salutation}: <b><i>${guestName}</i></b><br>Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>📅 Ngày: ${weddingDate}<br><br>👉 Kính mời <b><i>${guestName}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br><a href="${link}">${link}</a><br><br>Sự hiện diện của <b><i>${guestName}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>Rất hân hạnh được đón tiếp!</p>`;
+    const html = `<p>💌 <b>THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel})</b> 💌<br>${salutation}: <b><i>${guestNameRaw}</i></b><br>Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>📅 Ngày: ${weddingDate}<br><br>👉 Kính mời <b><i>${guestNameRaw}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br><a href="${link}">${link}</a><br><br>Sự hiện diện của <b><i>${guestNameRaw}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>Rất hân hạnh được đón tiếp!</p>`;
 
     return { plain, html };
   };
 
-  // Format full formal Messenger invitation message (Tô đậm và in nghiêng tên khách mời, chuẩn bố cục)
+  // Format full formal Messenger invitation message (Tô đậm và in nghiêng tên khách mời bằng ký tự Unicode chuyên dụng)
   const getGuestMessengerMessage = (guest) => {
     const link = getGuestLink(guest);
     const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
-    const guestName = (guest?.name || 'Quý Khách').trim();
+    const guestNameRaw = (guest?.name || 'Quý Khách').trim();
+    const guestNameStyled = toBoldItalic(guestNameRaw);
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
     const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
@@ -1648,9 +1672,9 @@ export function StudioEditor({
     const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
     const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
 
-    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: _*${guestName}*_\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời _*${guestName}*_ bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của _*${guestName}*_ là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
+    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: ${guestNameStyled}\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestNameStyled} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestNameStyled} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
 
-    const html = `<p>💌 <b>THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel})</b> 💌<br>${salutation}: <b><i>${guestName}</i></b><br>Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>📅 Ngày: ${weddingDate}<br><br>👉 Kính mời <b><i>${guestName}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br><a href="${link}">${link}</a><br><br>Sự hiện diện của <b><i>${guestName}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>Rất hân hạnh được đón tiếp!</p>`;
+    const html = `<p>💌 <b>THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel})</b> 💌<br>${salutation}: <b><i>${guestNameRaw}</i></b><br>Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>📅 Ngày: ${weddingDate}<br><br>👉 Kính mời <b><i>${guestNameRaw}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br><a href="${link}">${link}</a><br><br>Sự hiện diện của <b><i>${guestNameRaw}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>Rất hân hạnh được đón tiếp!</p>`;
 
     return { plain, html };
   };
@@ -3253,16 +3277,6 @@ export function StudioEditor({
                               title="Mở thử thiệp (giao diện thực tế khách nhìn thấy, sạch 100% không menu)"
                             >
                               <Eye className="w-4 h-4" />
-                            </a>
-
-                            <a
-                              href={`https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(guestLink)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition-colors"
-                              title="Xóa cache Facebook / Debug xem trước trên Messenger"
-                            >
-                              <ExternalLink className="w-4 h-4 text-blue-600" />
                             </a>
 
                             <button
@@ -5783,16 +5797,16 @@ export function StudioEditor({
                     </button>
                   </div>
 
-                  <div className="max-w-sm mx-auto pt-1">
+                  <div className="max-w-sm mx-auto pt-1 space-y-2">
                     <a
                       href={`https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(
                         formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride` 
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom`)
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/`)
                           : (currentProfileKey === 'bride'
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom`)
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/`)
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -5801,6 +5815,25 @@ export function StudioEditor({
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>⚡ Xóa Cache Facebook Messenger (Sharing Debugger)</span>
+                    </a>
+
+                    <a
+                      href={`https://developers.zalo.me/tools/debug-sharing?url=${encodeURIComponent(
+                        formData.socialShare?.customDomain 
+                          ? (currentProfileKey === 'bride' 
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride` 
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/`)
+                          : (currentProfileKey === 'bride'
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/`)
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                      title="Mở Zalo Debug Sharing để ép Zalo xóa cache và tải lại thẻ xem trước ngay lập tức"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>⚡ Xóa Cache Zalo (Debug Sharing Zalo)</span>
                     </a>
                   </div>
 

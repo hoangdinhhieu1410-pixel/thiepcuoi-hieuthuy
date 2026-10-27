@@ -48,7 +48,22 @@ export default async function handler(req, res) {
     return res.status(200).send("User-agent: *\nAllow: /\n");
   }
 
-  const { to, guest, name, salutation, xungho, side, profile, v, t } = req.query || {};
+  // Fast response for HEAD requests
+  if (req.method === 'HEAD') {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.status(200).end();
+  }
+
+  // Robust query extraction (checks both req.query and req.url searchParams)
+  let query = { ...(req.query || {}) };
+  try {
+    const parsed = new URL(req.url || '/', 'https://thiepcuoi-hieuthuy-web.vercel.app');
+    for (const [k, val] of parsed.searchParams.entries()) {
+      if (query[k] === undefined) query[k] = val;
+    }
+  } catch (e) {}
+
+  const { to, guest, name, salutation, xungho, side, profile, v, t } = query;
   const guestName = String(to || guest || name || '').trim();
   const guestSal = String(salutation || xungho || 'Trân trọng kính mời').trim();
 
@@ -80,16 +95,10 @@ export default async function handler(req, res) {
     ? (brideProfile.heroImage || 'https://thiepcuoi-hieuthuy-web.vercel.app/templates/007/images/og_banner.jpg')
     : (groomProfile.heroImage || 'https://thiepcuoi-hieuthuy-web.vercel.app/templates/007/images/og_banner.jpg');
 
-  // Exact configured values
+  // Exact configured values (Priority strictly follows what user configured in Studio)
   let title = (social.title && social.title.trim()) ? social.title.trim() : defaultTitle;
   let description = (social.description && social.description.trim()) ? social.description.trim() : defaultDesc;
   let ogImage = (social.thumbnail && social.thumbnail.trim()) ? social.thumbnail.trim() : defaultImage;
-
-  // Personalize title & description if guestName is provided
-  if (guestName) {
-    title = `${guestSal} ${guestName} - ${isBride ? 'Thanh Thúy ♥ Đình Hiếu' : 'Đình Hiếu ♥ Thanh Thúy'}`;
-    description = `Trân trọng kính mời ${guestName} đến tham dự ${isBride ? 'lễ vu quy' : 'lễ thành hôn'} chung vui cùng gia đình chúng tôi vào ngày 29.11.2026.`;
-  }
 
   // Ensure ogImage is an absolute URL for social crawlers (Zalo, Facebook require absolute URLs)
   if (ogImage && !ogImage.startsWith('http://') && !ogImage.startsWith('https://')) {
@@ -128,15 +137,12 @@ export default async function handler(req, res) {
   const safeDesc = escapeAttr(description);
   const safeImage = escapeAttr(ogImage);
 
-  // Exact Canonical URL matching the incoming request URL:
-  // Meta Facebook Messenger requires og:url to match the exact URL requested.
-  // Mismatching og:url causes Meta's LinkPreview client to drop the rich preview card to a domain fallback.
+  // OpenGraph Canonical URL: Point to canonical root for Groom, and ?side=bride for Bride
+  // This allows Facebook, Messenger and Zalo to immediately reuse the globally cached preview card for all guest links!
   const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
-  let currentReqPath = req.url || '/';
-  if (currentReqPath.startsWith('/api/index.js')) {
-    currentReqPath = currentReqPath.replace('/api/index.js', '') || '/';
-  }
-  const cleanCanonicalUrl = `${baseCanonical}${currentReqPath.startsWith('/') ? currentReqPath : '/' + currentReqPath}`;
+  const cleanCanonicalUrl = isBride 
+    ? `${baseCanonical}/?side=bride` 
+    : `${baseCanonical}/`;
   const safeUrl = escapeAttr(cleanCanonicalUrl);
 
   // Replace Title tag & Meta description
