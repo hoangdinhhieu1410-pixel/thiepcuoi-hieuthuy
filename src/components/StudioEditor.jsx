@@ -5606,15 +5606,15 @@ export function StudioEditor({
                       {formData.socialShare?.customDomain 
                         ? (currentProfileKey === 'bride' 
                             ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga`
-                            : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?to=Mẹ+Nga`)
+                            : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&to=Anh+Nam`)
                         : (currentProfileKey === 'bride'
                             ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga`
-                            : `https://thiepcuoi-hieuthuy-web.vercel.app/?to=Mẹ+Nga`)}
+                            : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&to=Anh+Nam`)}
                     </div>
 
                     <div className="aspect-[1.91/1] w-full bg-stone-900 overflow-hidden flex items-center justify-center">
                       <img
-                        src="/templates/007/images/og_banner.jpg"
+                        src={formData.socialShare?.thumbnail || (currentProfileKey === 'bride' ? formData.bride?.heroImage : formData.groom?.heroImage) || '/templates/007/images/og_banner.jpg'}
                         alt="OG Preview"
                         className="w-full h-full object-cover"
                       />
@@ -5622,12 +5622,75 @@ export function StudioEditor({
 
                     <div className="p-3.5 bg-stone-50/70 border-t border-stone-100">
                       <h4 className="font-bold text-stone-900 text-sm leading-snug line-clamp-2">
-                        {formData.socialShare?.title || `Thư mời cưới ${formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu'} ♥ ${formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy'}`}
+                        {formData.socialShare?.title || (currentProfileKey === 'bride' ? 'Thư mời cưới Thanh Thúy ♥ Đình Hiếu' : 'Thư mời cưới Đình Hiếu ♥ Thanh Thúy')}
                       </h4>
                       <p className="text-stone-500 text-xs mt-1 leading-relaxed line-clamp-2">
-                        {formData.socialShare?.description || 'Thiệp cưới online nơi gửi gắm lời mời trân trọng và câu chuyện tình yêu đong đầy ý nghĩa...'}
+                        {formData.socialShare?.description || (currentProfileKey === 'bride' ? 'Trân trọng kính mời quý khách đến chung vui lễ thành hôn của Thanh Thúy & Đình Hiếu.' : 'Thiệp cưới online của Đình Hiếu ♥ Thanh Thúy nơi gửi gắm lời mời trân trọng và câu chuyện tình yêu đong đầy ý nghĩa.')}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Nút sao chép link thử nghiệm & link chung */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 max-w-sm mx-auto pt-1">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await handleSaveCurrent();
+                        const sampleUrl = formData.socialShare?.customDomain 
+                          ? (currentProfileKey === 'bride' 
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga`
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&to=Anh+Nam`)
+                          : (currentProfileKey === 'bride'
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&to=Anh+Nam`);
+                        navigator.clipboard.writeText(sampleUrl);
+                        setCopiedLink('preview-sample');
+                        setTimeout(() => setCopiedLink(''), 2500);
+                      }}
+                      className="w-full sm:w-auto flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                    >
+                      {copiedLink === 'preview-sample' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Đã copy link gửi thử!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy link gửi thử (kèm tên khách)</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await handleSaveCurrent();
+                        const generalUrl = formData.socialShare?.customDomain 
+                          ? (currentProfileKey === 'bride' 
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride`
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom`)
+                          : (currentProfileKey === 'bride'
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom`);
+                        navigator.clipboard.writeText(generalUrl);
+                        setCopiedLink('preview-card');
+                        setTimeout(() => setCopiedLink(''), 2500);
+                      }}
+                      className="w-full sm:w-auto flex-1 py-2 px-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                    >
+                      {copiedLink === 'preview-card' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Đã copy link thiệp!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Link Thiệp Chung</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   {/* Clarification Notice on Why Localhost Only Shows Raw Link */}

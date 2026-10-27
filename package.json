@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && node -e \"const fs=require('fs'); fs.copyFileSync('dist/index.html', 'dist/app.html'); fs.unlinkSync('dist/index.html');\"",
     "build:single": "vite build --config vite.config.single.js",
     "export": "vite build --config vite.config.single.js && node -e \"require('fs').copyFileSync('dist-single/index.html', 'thiep-cuoi-offline.html')\"",
     "preview": "vite preview"
