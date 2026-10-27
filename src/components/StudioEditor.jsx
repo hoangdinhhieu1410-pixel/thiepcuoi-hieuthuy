@@ -841,25 +841,15 @@ export function StudioEditor({
       previewScrollRef.current.scrollTo({ top: 0, behavior: 'instant' });
     }
 
-    const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
     // Persist immediately to all profiles and sync to Cloud Redis
+    // HOÀN TOÀN ĐỘC LẬP: Mẫu bìa phong bì của Nhà Trai và Nhà Gái lưu riêng biệt 100%, không bao giờ can thiệp profile còn lại
     const updatedAll = {
       ...allProfiles,
       activeProfile: currentProfileKey,
-      [currentProfileKey]: updatedForm,
-      ...(autoSyncMedia && allProfiles[otherKey] ? {
-        [otherKey]: {
-          ...allProfiles[otherKey],
-          templateStyle: styleId,
-          coverConfig: {
-            ...(allProfiles[otherKey].coverConfig || {}),
-            activeStyle: styleId
-          }
-        }
-      } : {})
+      [currentProfileKey]: updatedForm
     };
     setAllProfiles(updatedAll);
-    setSaveStatus(`Đang đồng bộ mẫu bìa [${styleId}] lên đám mây... ⏳`);
+    setSaveStatus(`Đang đồng bộ mẫu bìa [${styleId}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'} lên đám mây... ⏳`);
     if (onSaveAllProfiles) {
       await onSaveAllProfiles(updatedAll);
     } else if (onSaveProfile) {
@@ -964,24 +954,15 @@ export function StudioEditor({
   const [previewGiftModal, setPreviewGiftModal] = useState(false);
   const audioPreviewRef = useRef(null);
 
-  // Auto-sync photos/media across both profiles (Nhà Trai & Nhà Gái)
-  const [autoSyncMedia, setAutoSyncMedia] = useState(true);
-
-  // Helper to update media field and auto-sync to both profiles
+  // Helper to update media field (Album ảnh, hình nền...) hoàn toàn độc lập cho từng mẫu thiệp
   const updateMediaField = (field, value) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
       setAllProfiles(prevAll => {
         const updatedAll = {
           ...prevAll,
-          [currentProfileKey]: updated,
-          ...(autoSyncMedia && prevAll[otherKey] ? {
-            [otherKey]: {
-              ...prevAll[otherKey],
-              [field]: value
-            }
-          } : {})
+          activeProfile: currentProfileKey,
+          [currentProfileKey]: updated
         };
         if (onSaveAllProfiles) {
           onSaveAllProfiles(updatedAll);
@@ -1156,24 +1137,18 @@ export function StudioEditor({
     }
   };
 
-  // Helper to update avatar and auto-sync
+  // Helper to update avatar
   const updateCoupleAvatar = (role, base64) => {
     setFormData(prev => {
       const updated = {
         ...prev,
         [role]: { ...(prev[role] || {}), avatar: base64 }
       };
-      const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
       setAllProfiles(prevAll => {
         const updatedAll = {
           ...prevAll,
-          [currentProfileKey]: updated,
-          ...(autoSyncMedia && prevAll[otherKey] ? {
-            [otherKey]: {
-              ...prevAll[otherKey],
-              [role]: { ...(prevAll[otherKey]?.[role] || {}), avatar: base64 }
-            }
-          } : {})
+          activeProfile: currentProfileKey,
+          [currentProfileKey]: updated
         };
         if (onSaveAllProfiles) {
           onSaveAllProfiles(updatedAll);
@@ -1190,34 +1165,25 @@ export function StudioEditor({
   const handleSwitchProfileInternal = (newKey) => {
     if (newKey === currentProfileKey) return;
     // Auto-save currently edited formData to allProfiles[currentProfileKey]
+    // TUYỆT ĐỐI KHÔNG COPY/ĐỒNG BỘ NỘI DUNG SANG newKey (Nhà Trai và Nhà Gái hoàn toàn độc lập 100%)
     let updatedAll = {
       ...allProfiles,
       activeProfile: newKey,
       [currentProfileKey]: formData
     };
-    if (autoSyncMedia) {
-      if (updatedAll[newKey]) {
-        updatedAll[newKey] = {
-          ...updatedAll[newKey],
-          heroBannerPhoto: formData.heroBannerPhoto,
-          timelineBgPhoto: formData.timelineBgPhoto,
-          timelineBgPhotoPosition: formData.timelineBgPhotoPosition,
-          footerBgPhoto: formData.footerBgPhoto,
-          gallery: formData.gallery,
-          music: formData.music,
-          bgColor: formData.bgColor,
-          photoTransitionEffect: formData.photoTransitionEffect,
-          textTransitionEffect: formData.textTransitionEffect
-        };
-      }
-    }
     updatedAll = cleanProfileGuests(updatedAll);
     setAllProfiles(updatedAll);
     setCurrentProfileKey(newKey);
     const target = updatedAll[newKey] || (newKey === 'bride' ? DEFAULT_BRIDE_WEDDING_DATA : DEFAULT_WEDDING_DATA);
     target.profileType = newKey;
-    setFormData(JSON.parse(JSON.stringify(target)));
-    setLastSavedData(JSON.parse(JSON.stringify(target)));
+    const clonedTarget = JSON.parse(JSON.stringify(target));
+    setFormData(clonedTarget);
+    setLastSavedData(clonedTarget);
+
+    // Cập nhật tab chỉnh sửa bìa tương ứng với mẫu bìa riêng của profile đích
+    const targetCoverStyle = clonedTarget.templateStyle || clonedTarget.coverConfig?.activeStyle || 'style1';
+    setEditingCoverTab(targetCoverStyle);
+
     // Auto-persist so user never loses data when switching profiles
     if (onSaveAllProfiles) {
       onSaveAllProfiles(updatedAll);
@@ -1227,6 +1193,13 @@ export function StudioEditor({
     }
   };
 
+  // Synchronize if parent activeProfileKey changes
+  useEffect(() => {
+    if (activeProfileKey && activeProfileKey !== currentProfileKey) {
+      handleSwitchProfileInternal(activeProfileKey);
+    }
+  }, [activeProfileKey]);
+
   // Save currently active profile
   const handleSaveCurrent = async () => {
     if (isReadOnly) {
@@ -1234,33 +1207,12 @@ export function StudioEditor({
       return;
     }
     setSaveStatus('Đang đồng bộ lên máy chủ đám mây... ⏳');
+    // TUYỆT ĐỐI ĐỘC LẬP: Chỉ lưu dữ liệu của profile đang chỉnh sửa (currentProfileKey), không can thiệp bên còn lại
     let updatedAll = {
       ...allProfiles,
       activeProfile: currentProfileKey,
       [currentProfileKey]: formData
     };
-    if (autoSyncMedia) {
-      const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
-      if (updatedAll[otherKey]) {
-        updatedAll[otherKey] = {
-          ...updatedAll[otherKey],
-          heroBannerPhoto: formData.heroBannerPhoto,
-          timelineBgPhoto: formData.timelineBgPhoto,
-          timelineBgPhotoPosition: formData.timelineBgPhotoPosition,
-          footerBgPhoto: formData.footerBgPhoto,
-          gallery: formData.gallery,
-          music: formData.music,
-          bgColor: formData.bgColor,
-          templateStyle: formData.templateStyle,
-          coverConfig: {
-            ...(updatedAll[otherKey].coverConfig || {}),
-            activeStyle: formData.templateStyle || formData.coverConfig?.activeStyle || 'style1'
-          },
-          photoTransitionEffect: formData.photoTransitionEffect,
-          textTransitionEffect: formData.textTransitionEffect
-        };
-      }
-    }
     updatedAll = cleanProfileGuests(updatedAll);
     setAllProfiles(updatedAll);
     setLastSavedData(JSON.parse(JSON.stringify(formData)));
@@ -3990,26 +3942,19 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-stone-200 shadow-xs hover:border-[#70561f] transition-all">
-                    <input
-                      type="checkbox"
-                      checked={autoSyncMedia}
-                      onChange={(e) => setAutoSyncMedia(e.target.checked)}
-                      className="w-4 h-4 accent-[#70561f] rounded"
-                    />
-                    <span className="text-xs font-semibold text-stone-800">
-                      Tự động đồng bộ ảnh cho cả 2 mẫu (Nhà Trai & Nhà Gái)
-                    </span>
-                  </label>
+                <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-xs font-semibold text-stone-700 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Cài đặt độc lập (Nhà Trai & Nhà Gái riêng biệt)</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleCopyData('media')}
-                    className="px-3 py-1.5 rounded-xl bg-[#70561f] hover:bg-[#5a4417] text-white text-xs font-medium shadow-xs transition-all flex items-center gap-1.5"
-                    title="Sao chép toàn bộ ảnh & album sang mẫu còn lại"
+                    className="px-3 py-1.5 rounded-xl bg-[#70561f] hover:bg-[#5a4417] text-white text-xs font-medium shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Chủ động sao chép toàn bộ ảnh & album sang mẫu còn lại khi bạn muốn"
                   >
                     <ArrowRightLeft className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Đồng bộ ngay</span>
+                    <span>Sao chép sang mẫu còn lại</span>
                   </button>
                 </div>
               </div>
@@ -5539,27 +5484,20 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           userHasEdited.current = true;
                           setFormData(updated);
 
-                          const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
                           const updatedAll = {
                             ...allProfiles,
                             activeProfile: currentProfileKey,
-                            [currentProfileKey]: updated,
-                            ...(allProfiles[otherKey] ? {
-                              [otherKey]: {
-                                ...allProfiles[otherKey],
-                                music: updatedMusic
-                              }
-                            } : {})
+                            [currentProfileKey]: updated
                           };
                           setAllProfiles(updatedAll);
-                          setSaveStatus(`Đang đồng bộ bài hát [${track.title}] lên link thiệp... ⏳`);
+                          setSaveStatus(`Đang đồng bộ bài hát [${track.title}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}... ⏳`);
                           if (onSaveAllProfiles) {
                             await onSaveAllProfiles(updatedAll);
                           } else if (onSaveProfile) {
                             await onSaveProfile(currentProfileKey, updated);
                           }
                           broadcastProfileUpdate(updatedAll, 'studio_music_changed');
-                          setSaveStatus(`✅ Đã đồng bộ bài hát: ${track.title} lên toàn bộ link thiệp!`);
+                          setSaveStatus(`✅ Đã chọn bài hát: ${track.title} cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}!`);
                           setTimeout(() => setSaveStatus(''), 3000);
                         }}
                         className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 text-xs ${
@@ -7878,7 +7816,17 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
               isPreview={true}
               initialEnvelopeOpen={previewEnvelopeOpen}
               onEnvelopeToggle={(isOpen) => setPreviewEnvelopeOpen(isOpen)}
-              onStyleChange={(style) => setFormData(p => ({ ...p, templateStyle: style }))}
+              onStyleChange={(style) => {
+                setFormData(p => ({
+                  ...p,
+                  templateStyle: style,
+                  coverConfig: {
+                    ...(p.coverConfig || {}),
+                    activeStyle: style
+                  }
+                }));
+                setEditingCoverTab(style);
+              }}
               testAnimationTrigger={testAnimationCount}
               testPhotoAnimTrigger={testPhotoAnimCount}
               testTextAnimTrigger={testTextAnimCount}

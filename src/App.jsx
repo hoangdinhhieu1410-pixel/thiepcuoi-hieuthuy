@@ -776,7 +776,11 @@ export function App() {
     const current = profiles[activeProfileKey] || profiles.groom;
     const updated = {
       ...current,
-      templateStyle: styleKey
+      templateStyle: styleKey,
+      coverConfig: {
+        ...(current.coverConfig || {}),
+        activeStyle: styleKey
+      }
     };
     handleUpdateCurrentData(updated);
   };
