@@ -39,7 +39,15 @@ export default async function handler(req, res) {
       if (!raw) {
         return res.status(200).json({ success: true, config: null });
       }
-      return res.status(200).json({ success: true, config: JSON.parse(raw) });
+      const config = JSON.parse(raw);
+      // Enforce single source of truth for wishes so card-config and wishes API never conflict
+      try {
+        const rawWishes = await redis.get('wedding_wishes_list');
+        const currentWishes = rawWishes ? JSON.parse(rawWishes) : [];
+        if (config.groom) config.groom.wishes = currentWishes;
+        if (config.bride) config.bride.wishes = currentWishes;
+      } catch (eWishes) {}
+      return res.status(200).json({ success: true, config });
     }
 
     if (req.method === 'POST') {
@@ -98,6 +106,12 @@ export default async function handler(req, res) {
       if (configToSave.bride?.music) configToSave.bride.music = cleanMusic(configToSave.bride.music);
 
       await redis.set(REDIS_KEY, JSON.stringify(configToSave));
+
+      // Sync wishes explicitly into wedding_wishes_list if provided
+      const incomingWishes = configToSave.groom?.wishes || configToSave.bride?.wishes;
+      if (Array.isArray(incomingWishes)) {
+        await redis.set('wedding_wishes_list', JSON.stringify(incomingWishes));
+      }
 
       // Dual-sync to Supabase Cloud Database (if configured)
       const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;

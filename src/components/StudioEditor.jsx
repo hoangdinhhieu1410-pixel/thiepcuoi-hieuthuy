@@ -298,11 +298,11 @@ export function StudioEditor({
   };
 
   const handlePurgeAllWishes = async () => {
-    if (allUniqueWishes.length === 0) {
-      alert('Hiện không có lời chúc nào để xóa.');
-      return;
-    }
-    if (!window.confirm(`Bạn có chắc chắn muốn XÓA TẤT CẢ (${allUniqueWishes.length}) lời chúc không?\nThao tác này sẽ làm sạch toàn bộ sổ lưu bút trên cả máy chủ và thiệp cưới.`)) {
+    const count = allUniqueWishes.length;
+    const msg = count > 0
+      ? `Bạn có chắc chắn muốn XÓA TẤT CẢ (${count}) lời chúc không?\nThao tác này sẽ làm sạch toàn bộ sổ lưu bút trên cả máy chủ và thiệp cưới.`
+      : 'Làm sạch và đồng bộ lại toàn bộ sổ lưu bút về 0 trên toàn hệ thống và thiệp cưới?';
+    if (!window.confirm(msg)) {
       return;
     }
 

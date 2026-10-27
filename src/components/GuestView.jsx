@@ -277,9 +277,6 @@ export function GuestView({
 
   useEffect(() => {
     setCardData(data || {});
-    if (Array.isArray(data?.wishes)) {
-      setLiveWishes(data.wishes);
-    }
   }, [data]);
 
   // Keyboard navigation & ESC to close lightbox
