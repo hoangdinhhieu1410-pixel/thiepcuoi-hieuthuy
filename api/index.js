@@ -122,11 +122,12 @@ export default async function handler(req, res) {
   const safeDesc = escapeAttr(description);
   const safeImage = escapeAttr(ogImage);
 
-  // Exact Canonical URL matching the current request (CRITICAL: Prevents Zalo & FB from canonicalizing back to root!)
-  const requestUrl = req.url || '';
-  const normalizedPath = requestUrl.startsWith('/') ? requestUrl : `/${requestUrl}`;
-  const fullCanonicalUrl = `https://thiepcuoi-hieuthuy-web.vercel.app${normalizedPath}`;
-  const cleanCanonicalUrl = fullCanonicalUrl.replace(/&amp;/g, '&');
+  // OpenGraph Canonical URL: Point to canonical root for Groom, and ?side=bride for Bride
+  // This allows Facebook & Messenger to immediately reuse the globally cached preview card for all guest links!
+  const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
+  const cleanCanonicalUrl = isBride 
+    ? `${baseCanonical}/?side=bride` 
+    : `${baseCanonical}/`;
 
   // Replace Title tag
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
