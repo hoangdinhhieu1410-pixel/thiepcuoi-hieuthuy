@@ -342,7 +342,8 @@ export function App() {
   const handleLogout = () => {
     localStorage.removeItem('wedding_auth_user');
     setCurrentUser(null);
-    setViewMode('guest');
+    setIsAdmin(false);
+    setViewMode('studio');
   };
 
   // Whenever user is in studio and approved, mark them as admin

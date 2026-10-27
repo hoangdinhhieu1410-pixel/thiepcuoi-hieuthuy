@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ShieldCheck, Mail, Lock, UserCheck, AlertCircle, Clock, ArrowRight, ArrowLeft, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Lock, AlertCircle, Clock, ArrowLeft, RefreshCw, Sparkles, Heart } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'hoangdinhhieu1410@gmail.com';
 const GOOGLE_CLIENT_ID = '305909808631-hgd2ju2ktrhvik9vp1juue67ld749abu.apps.googleusercontent.com';
 
 export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
-  const [emailInput, setEmailInput] = useState('');
-  const [nameInput, setNameInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [showManualLogin, setShowManualLogin] = useState(false);
 
   // Check if a saved session already exists
   useEffect(() => {
@@ -154,14 +151,14 @@ export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
             use_fedcm_for_prompt: false,
           });
 
-          // Render official Google button exactly like in user's screenshot
+          // Render official Google button
           const btnElem = document.getElementById('google-signin-btn');
           if (btnElem) {
             btnElem.innerHTML = '';
             window.google.accounts.id.renderButton(btnElem, {
               theme: 'outline',
               size: 'large',
-              width: 350,
+              width: 340,
               text: 'signin_with',
               shape: 'rectangular',
               logo_alignment: 'left',
@@ -193,51 +190,45 @@ export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
     }
   }, []);
 
-  const handleManualLogin = (e) => {
-    e.preventDefault();
-    const cleanEmail = emailInput.trim().toLowerCase();
-    if (!cleanEmail) {
-      setErrorMsg('Vui lòng nhập địa chỉ Gmail');
-      return;
-    }
-    submitLogin(cleanEmail, nameInput);
-  };
-
-  const handleQuickSuperAdmin = () => {
-    submitLogin(SUPER_ADMIN_EMAIL, 'Hoàng Đình Hiếu');
-  };
-
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#0c101c]/95 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto animate-fade-in font-sans">
-      <div className="w-full max-w-[450px]">
-        {/* App Branding (matching user's screenshot) */}
+    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#fcf9f2] via-[#f7f0e4] to-[#f4e8dc] flex items-center justify-center p-4 overflow-y-auto animate-fade-in font-sans relative">
+      {/* Decorative colorful ambient glows */}
+      <div className="absolute top-10 left-1/4 w-72 h-72 rounded-full bg-rose-300/30 blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full bg-amber-300/35 blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/2 right-10 w-60 h-60 rounded-full bg-orange-300/25 blur-3xl pointer-events-none"></div>
+
+      <div className="w-full max-w-[460px] relative z-10">
+        {/* App Branding: Colorful, fresh & elegant wedding theme */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 mx-auto mb-3.5 rounded-2xl bg-gradient-to-br from-[#1DD1C4] via-[#33DECF] to-teal-500 flex items-center justify-center text-3xl shadow-xl shadow-teal-500/20 ring-1 ring-white/20">
-            📊
+          <div className="w-16 h-16 sm:w-18 sm:h-18 mx-auto mb-3.5 rounded-3xl bg-gradient-to-tr from-rose-500 via-amber-400 to-pink-500 p-0.5 shadow-xl shadow-rose-500/25 ring-4 ring-white">
+            <div className="w-full h-full rounded-[22px] bg-white flex items-center justify-center text-3xl sm:text-4xl shadow-inner">
+              💍
+            </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Dashboard B2B
+          <h1 className="text-2xl sm:text-3xl font-serif-elegant font-bold text-stone-900 tracking-tight flex items-center justify-center gap-2">
+            <span>Studio Thiết Kế Thiệp Cưới</span>
+            <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
           </h1>
-          <p className="text-xs sm:text-sm text-white/50 mt-1">
-            Studio Thiệp Cưới — Quản lý vận hành &amp; Thiết kế
+          <p className="text-xs sm:text-sm text-[#70561f] font-medium mt-1">
+            Đình Hiếu ♥ Thanh Thúy — Quản Trị Hệ Thống
           </p>
         </div>
 
-        {/* PENDING APPROVAL SCREEN (Exact format from user's Dashboard) */}
+        {/* PENDING APPROVAL SCREEN (Fresh light theme) */}
         {pendingUser && !isBlocked && (
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] p-7 sm:p-8 shadow-2xl text-center space-y-5 animate-fade-in">
-            <div className="text-5xl animate-pulse">⏳</div>
+          <div className="bg-white/95 backdrop-blur-2xl border border-stone-200/90 rounded-[32px] p-7 sm:p-9 shadow-2xl shadow-stone-300/50 text-center space-y-5 animate-fade-in">
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl text-amber-600 animate-bounce">
+              ⏳
+            </div>
             <div>
-              <h2 className="text-lg font-bold text-white mb-2">
+              <h2 className="text-lg font-serif-elegant font-bold text-stone-900 mb-1.5">
                 Đang chờ phê duyệt quyền truy cập
               </h2>
-              <div className="inline-block bg-white/10 px-3 py-1 rounded-full text-xs font-mono text-[#33DECF] font-semibold mb-3">
+              <div className="inline-block bg-amber-50 border border-amber-200 px-3.5 py-1 rounded-full text-xs font-mono text-amber-900 font-semibold mb-3">
                 {pendingUser.email}
               </div>
-              <p className="text-xs text-white/70 leading-relaxed">
-                Tài khoản của bạn đã được ghi nhận vào hệ thống.
-                <br /><br />
-                Vui lòng liên hệ Super Admin <strong className="text-[#33DECF]">hoangdinhhieu1410@gmail.com</strong> để kích hoạt tài khoản của bạn.
+              <p className="text-xs text-stone-600 leading-relaxed max-w-xs mx-auto">
+                Tài khoản của bạn đã được ghi nhận. Vui lòng liên hệ Super Admin <strong className="text-[#70561f] font-semibold">{SUPER_ADMIN_EMAIL}</strong> để kích hoạt quyền truy cập.
               </p>
             </div>
 
@@ -246,7 +237,7 @@ export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
                 type="button"
                 disabled={isLoading}
                 onClick={() => verifyUserStatus(pendingUser.email)}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#1DD1C4] to-[#33DECF] hover:opacity-95 text-stone-950 font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#70561f] to-amber-600 hover:from-[#5a4417] hover:to-amber-700 text-white font-bold text-xs shadow-lg shadow-amber-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                 <span>Kiểm tra lại trạng thái</span>
@@ -258,7 +249,7 @@ export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
                   setPendingUser(null);
                   localStorage.removeItem('wedding_auth_user');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 text-xs font-medium transition-all cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-2xl bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 text-xs font-semibold transition-all cursor-pointer"
               >
                 Đổi tài khoản khác
               </button>
@@ -266,15 +257,17 @@ export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
           </div>
         )}
 
-        {/* BLOCKED / DELETED SCREEN */}
+        {/* BLOCKED / DELETED SCREEN (Light theme) */}
         {isBlocked && (
-          <div className="bg-white/5 backdrop-blur-xl border border-rose-500/30 rounded-[24px] p-7 sm:p-8 shadow-2xl text-center space-y-4 animate-fade-in">
-            <div className="text-5xl text-rose-500">🚫</div>
+          <div className="bg-white/95 backdrop-blur-2xl border border-rose-300 rounded-[32px] p-7 sm:p-9 shadow-2xl text-center space-y-4 animate-fade-in">
+            <div className="w-16 h-16 mx-auto rounded-full bg-rose-100 text-3xl flex items-center justify-center">
+              🚫
+            </div>
             <div>
-              <h2 className="text-lg font-bold text-white mb-1">
+              <h2 className="text-lg font-serif-elegant font-bold text-rose-900 mb-1">
                 Truy cập bị từ chối
               </h2>
-              <p className="text-xs text-white/60">
+              <p className="text-xs text-stone-600">
                 Tài khoản này đã bị xóa hoặc từ chối khỏi hệ thống.
               </p>
             </div>
@@ -284,103 +277,52 @@ export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
                 setIsBlocked(false);
                 localStorage.removeItem('wedding_auth_user');
               }}
-              className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all cursor-pointer shadow-md"
             >
               Đăng nhập bằng tài khoản khác
             </button>
           </div>
         )}
 
-        {/* MAIN LOGIN CARD (Exact 1:1 match with user's Image 1 & Image 2) */}
+        {/* MAIN LOGIN CARD: Bright, clean, luxury white with colorful accents */}
         {!pendingUser && !isBlocked && (
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] p-7 sm:p-9 shadow-2xl space-y-6">
+          <div className="bg-white/95 backdrop-blur-2xl border border-stone-200/90 rounded-[32px] p-7 sm:p-9 shadow-2xl shadow-stone-300/40 space-y-6">
             {/* Header in Card */}
             <div className="text-center">
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-1.5 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-serif-elegant font-bold text-stone-900 tracking-tight">
                 Chọn tài khoản để đăng nhập
               </h2>
-              <p className="text-xs text-white/50">
+              <p className="text-xs sm:text-sm text-stone-500 mt-1">
                 Đăng nhập bằng tài khoản Google của bạn
               </p>
             </div>
 
             {errorMsg && (
-              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
-            {/* Google Sign-In Button Container */}
-            <div className="flex flex-col items-center justify-center min-h-[44px]">
+            {/* Google Sign-In Button Container (Center) */}
+            <div className="flex flex-col items-center justify-center min-h-[46px] my-2">
               <div id="google-signin-btn" className="flex justify-center w-full" />
             </div>
 
-            {/* Quick Super Admin Instant Pill */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-amber-400 font-bold">👑 Super Admin:</span>
-                <span className="font-mono text-white/80 text-[11px] truncate max-w-[170px] sm:max-w-[190px]">
-                  {SUPER_ADMIN_EMAIL}
-                </span>
-              </div>
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={handleQuickSuperAdmin}
-                className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-stone-950 rounded-lg text-[11px] font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap"
-              >
-                Vào Ngay
-              </button>
-            </div>
-
-            {/* Lock notice at bottom of card (Exact text from user's image) */}
-            <div className="text-xs text-white/40 flex items-center justify-center gap-1.5 text-center px-2">
-              <Lock className="w-3.5 h-3.5 text-amber-400/70 flex-shrink-0" />
+            {/* Lock notice at bottom of card */}
+            <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-[11px] sm:text-xs text-amber-900 flex items-center justify-center gap-2 text-center">
+              <Lock className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
               <span>Đăng nhập cần được Quản trị viên phê duyệt trước khi truy cập được dữ liệu.</span>
             </div>
-
-            {/* Toggle manual login */}
-            <div className="pt-2 border-t border-white/10 text-center">
-              <button
-                type="button"
-                onClick={() => setShowManualLogin(!showManualLogin)}
-                className="text-[11px] text-white/40 hover:text-white/70 transition-colors cursor-pointer"
-              >
-                {showManualLogin ? '▲ Thu gọn đăng nhập thủ công' : '▼ Nhập địa chỉ Gmail khác thủ công'}
-              </button>
-            </div>
-
-            {/* Manual Gmail Input (Expandable) */}
-            {showManualLogin && (
-              <form onSubmit={handleManualLogin} className="space-y-3 pt-1 animate-fade-in">
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="Nhập địa chỉ Gmail..."
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/15 bg-white/5 text-white placeholder-white/30 text-xs focus:ring-2 focus:ring-[#33DECF] focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Xác nhận đăng nhập với Gmail này</span>
-                </button>
-              </form>
-            )}
           </div>
         )}
 
         {/* Back to Guest Link */}
-        <div className="mt-5 text-center">
+        <div className="mt-6 text-center">
           <button
             type="button"
             onClick={onCancelToGuest}
-            className="inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors cursor-pointer hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs text-[#70561f] hover:text-[#5a4417] font-semibold transition-colors cursor-pointer hover:underline"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Quay lại xem thiệp cưới (Dành cho khách mời • Không cần đăng nhập)</span>
