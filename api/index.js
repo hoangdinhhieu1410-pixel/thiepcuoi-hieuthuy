@@ -130,17 +130,28 @@ export default async function handler(req, res) {
   html = html.replace(/<meta property="og:image:secure_url"[^>]*>/gi, `<meta property="og:image:secure_url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:alt"[^>]*>/gi, `<meta property="og:image:alt" content="${safeTitle}" />`);
   html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeUrl}" />`);
+  html = html.replace(/<meta property="og:site_name"[^>]*>/gi, `<meta property="og:site_name" content="Thiệp Cưới Online" />`);
+  html = html.replace(/<meta property="og:locale"[^>]*>/gi, `<meta property="og:locale" content="vi_VN" />`);
+  html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, `<meta property="fb:app_id" content="966242223397117" />`);
 
   // Replace Twitter Card meta tags
   html = html.replace(/<meta name="twitter:title"[^>]*>/gi, `<meta name="twitter:title" content="${safeTitle}" />`);
   html = html.replace(/<meta name="twitter:description"[^>]*>/gi, `<meta name="twitter:description" content="${safeDesc}" />`);
   html = html.replace(/<meta name="twitter:image"[^>]*>/gi, `<meta name="twitter:image" content="${safeImage}" />`);
 
-  // Strictly forbid any CDN caching so Nhà Trai and Nhà Gái never cross-contaminate
+  // Differentiate response headers:
+  // For crawlers (Facebook Messenger, Zalo, Twitter): Must provide public cache so Facebook crawler accepts and stores rich link card
+  const userAgent = String(req.headers['user-agent'] || '').toLowerCase();
+  const isCrawler = /facebookexternalhit|facebot|zalo|twitterbot|pinterest|whatsapp|telegrambot|slackbot|discordbot/i.test(userAgent);
+
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.setHeader('Surrogate-Control', 'no-store');
+  if (isCrawler) {
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+  } else {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
   res.status(200).send(html);
 }

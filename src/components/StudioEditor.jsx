@@ -1596,11 +1596,11 @@ export function StudioEditor({
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
 
-  // Format full formal Zalo invitation message
-  const getGuestZaloMessage = (guest) => {
+  // Format full formal Zalo & Messenger invitation message (Bold & Italic for Guest Name)
+  const getGuestZaloMessageData = (guest) => {
     const link = getGuestLink(guest);
-    const salutation = guest?.salutation || 'Trân trọng kính mời';
-    const guestName = guest?.name || 'Quý Khách';
+    const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
+    const guestName = (guest?.name || 'Quý Khách').trim();
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
     const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
@@ -1609,14 +1609,47 @@ export function StudioEditor({
     const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
     const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
 
-    return `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: ${guestName}\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestName} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestName} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi! Rất hân hạnh được đón tiếp!`;
+    // Plain text with Markdown bold-italic (*_Tên Khách_*) for Messenger & standard paste
+    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: *_${guestName}_*\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời *_${guestName}_* bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của *_${guestName}_* là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
+
+    // Rich HTML with <b><i> tags for rich-text paste in Zalo, Messenger, Word, Email
+    const html = `<p>💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌<br>
+${salutation}: <b><i>${guestName}</i></b><br>
+Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>
+📅 Ngày: ${weddingDate}</p>
+<p>👉 Kính mời <b><i>${guestName}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br>
+<a href="${link}">${link}</a></p>
+<p>Sự hiện diện của <b><i>${guestName}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>
+Rất hân hạnh được đón tiếp!</p>`;
+
+    return { plain, html, link };
   };
 
-  // Copy full Zalo message
+  // Helper to write both HTML (rich bold & italic) and plain text to clipboard
+  const writeFormattedClipboard = async (plainText, htmlText) => {
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+        const htmlBlob = new Blob([htmlText], { type: 'text/html' });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': textBlob,
+            'text/html': htmlBlob
+          })
+        ]);
+        return;
+      }
+    } catch (err) {
+      console.warn('ClipboardItem error, fallback to plain text:', err);
+    }
+    await navigator.clipboard.writeText(plainText);
+  };
+
+  // Copy full Zalo & Messenger message
   const copyGuestZaloMessage = async (guest) => {
     await handleSaveCurrent();
-    const msg = getGuestZaloMessage(guest);
-    navigator.clipboard.writeText(msg);
+    const { plain, html } = getGuestZaloMessageData(guest);
+    await writeFormattedClipboard(plain, html);
     setCopiedZaloId(guest.id);
     setTimeout(() => setCopiedZaloId(''), 3000);
   };
@@ -3144,7 +3177,7 @@ export function StudioEditor({
                               )}
                             </button>
 
-                            {/* Copy full formal Zalo message */}
+                            {/* Copy full formal Zalo & Messenger message */}
                             <button
                               type="button"
                               onClick={() => copyGuestZaloMessage(guest)}
@@ -3153,17 +3186,17 @@ export function StudioEditor({
                                   ? 'bg-blue-600 text-white ring-2 ring-blue-300'
                                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
                               }`}
-                              title="Sao chép toàn bộ tin nhắn mời cưới trang trọng kèm link để dán thẳng vào Zalo"
+                              title="Sao chép toàn bộ tin nhắn mời cưới trang trọng (tô đậm in nghiêng tên khách) để dán thẳng vào Zalo hoặc Messenger Facebook"
                             >
                               {copiedZaloId === guest.id ? (
                                 <>
                                   <Check className="w-3.5 h-3.5" />
-                                  <span>Đã copy lời mời Zalo!</span>
+                                  <span>Đã copy lời mời Zalo & Messenger!</span>
                                 </>
                               ) : (
                                 <>
                                   <MessageCircle className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>Copy Lời Mời Zalo</span>
+                                  <span>Copy Lời Mời Zalo & Messenger</span>
                                 </>
                               )}
                             </button>
