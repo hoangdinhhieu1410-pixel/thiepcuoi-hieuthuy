@@ -1660,12 +1660,12 @@ export function StudioEditor({
     const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
     const guestName = (guest?.name || 'Quý Khách').trim();
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
-    const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
-    const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
-    const coupleText = isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`;
-    const weddingDate = formData.eventDateText || formData.saveTheDateDay || '29.11.2026';
-    const ceremonyType = isBride ? 'lễ Vu Quy' : 'lễ Thành Hôn';
-    const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
+    const groomName = (formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu').trim();
+    const brideName = (formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy').trim();
+    const coupleText = (isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`).trim();
+    const weddingDate = (formData.eventDateText || formData.saveTheDateDay || '29.11.2026').trim();
+    const ceremonyType = (isBride ? 'lễ Vu Quy' : 'lễ Thành Hôn').trim();
+    const sideLabel = (isBride ? 'Nhà Gái' : 'Nhà Trai').trim();
 
     let inviteLine = '';
     if (salutation.toLowerCase().includes('kính mời')) {
