@@ -1,12 +1,24 @@
 {
   "rewrites": [
     {
+      "source": "/api/auth-users",
+      "destination": "/api/auth-users.js"
+    },
+    {
       "source": "/api/card-config",
       "destination": "/api/card-config.js"
     },
     {
       "source": "/api/wishes",
       "destination": "/api/wishes.js"
+    },
+    {
+      "source": "/api/cloud-sync",
+      "destination": "/api/cloud-sync.js"
+    },
+    {
+      "source": "/api/upload-media",
+      "destination": "/api/upload-media.js"
     },
     {
       "source": "/(.*)",
