@@ -85,6 +85,12 @@ export default async function handler(req, res) {
   let description = (social.description && social.description.trim()) ? social.description.trim() : defaultDesc;
   let ogImage = (social.thumbnail && social.thumbnail.trim()) ? social.thumbnail.trim() : defaultImage;
 
+  // Personalize title & description if guestName is provided
+  if (guestName) {
+    title = `${guestSal} ${guestName} - ${isBride ? 'Thanh Thúy ♥ Đình Hiếu' : 'Đình Hiếu ♥ Thanh Thúy'}`;
+    description = `Trân trọng kính mời ${guestName} đến tham dự ${isBride ? 'lễ vu quy' : 'lễ thành hôn'} chung vui cùng gia đình chúng tôi vào ngày 29.11.2026.`;
+  }
+
   // Ensure ogImage is an absolute URL for social crawlers (Zalo, Facebook require absolute URLs)
   if (ogImage && !ogImage.startsWith('http://') && !ogImage.startsWith('https://')) {
     const base = 'https://thiepcuoi-hieuthuy-web.vercel.app';
@@ -122,23 +128,29 @@ export default async function handler(req, res) {
   const safeDesc = escapeAttr(description);
   const safeImage = escapeAttr(ogImage);
 
-  // OpenGraph Canonical URL: Point to canonical root for Groom, and ?side=bride for Bride
-  // This allows Facebook & Messenger to immediately reuse the globally cached preview card for all guest links!
+  // Exact Canonical URL matching the incoming request URL:
+  // Meta Facebook Messenger requires og:url to match the exact URL requested.
+  // Mismatching og:url causes Meta's LinkPreview client to drop the rich preview card to a domain fallback.
   const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
-  const cleanCanonicalUrl = isBride 
-    ? `${baseCanonical}/?side=bride` 
-    : `${baseCanonical}/`;
+  let currentReqPath = req.url || '/';
+  if (currentReqPath.startsWith('/api/index.js')) {
+    currentReqPath = currentReqPath.replace('/api/index.js', '') || '/';
+  }
+  const cleanCanonicalUrl = `${baseCanonical}${currentReqPath.startsWith('/') ? currentReqPath : '/' + currentReqPath}`;
+  const safeUrl = escapeAttr(cleanCanonicalUrl);
 
-  // Replace Title tag
+  // Replace Title tag & Meta description
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
+  html = html.replace(/<meta name="description"[^>]*>/gi, `<meta name="description" content="${safeDesc}" />`);
 
   // Replace or inject OpenGraph meta tags
   html = html.replace(/<meta property="og:title"[^>]*>/gi, `<meta property="og:title" content="${safeTitle}" />`);
   html = html.replace(/<meta property="og:description"[^>]*>/gi, `<meta property="og:description" content="${safeDesc}" />`);
   html = html.replace(/<meta property="og:image"[^>]*>/gi, `<meta property="og:image" content="${safeImage}" />`);
+  html = html.replace(/<meta property="og:image:url"[^>]*>/gi, `<meta property="og:image:url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:secure_url"[^>]*>/gi, `<meta property="og:image:secure_url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:alt"[^>]*>/gi, `<meta property="og:image:alt" content="${safeTitle}" />`);
-  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${cleanCanonicalUrl}" />`);
+  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeUrl}" />`);
   html = html.replace(/<meta property="og:site_name"[^>]*>/gi, `<meta property="og:site_name" content="Thiệp Cưới Online" />`);
   html = html.replace(/<meta property="og:locale"[^>]*>/gi, `<meta property="og:locale" content="vi_VN" />`);
   html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, '');
@@ -147,6 +159,12 @@ export default async function handler(req, res) {
   html = html.replace(/<meta name="twitter:title"[^>]*>/gi, `<meta name="twitter:title" content="${safeTitle}" />`);
   html = html.replace(/<meta name="twitter:description"[^>]*>/gi, `<meta name="twitter:description" content="${safeDesc}" />`);
   html = html.replace(/<meta name="twitter:image"[^>]*>/gi, `<meta name="twitter:image" content="${safeImage}" />`);
+
+  // Fast response for HEAD requests
+  if (req.method === 'HEAD') {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.status(200).end();
+  }
 
   // Differentiate response headers:
   // For crawlers (Facebook Messenger, Zalo, Twitter): Must provide public cache so Facebook crawler accepts and stores rich link card
