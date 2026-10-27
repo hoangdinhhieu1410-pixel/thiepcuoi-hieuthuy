@@ -116,16 +116,16 @@ export function EnvelopeModal({
   const renderCoupleNames = (namesStr, fontClass = 'font-motherland', colorClass = 'text-[#78350f]', dividerColor = 'text-amber-700') => {
     const [person1, person2] = getCoupleNamesArray(namesStr);
     return (
-      <div className="flex flex-col items-center justify-center my-1 select-none w-full px-2">
-        <span className={`${fontClass} text-3xl sm:text-4xl ${colorClass} leading-tight whitespace-nowrap tracking-wide drop-shadow-xs`}>
+      <div className="flex flex-col items-center justify-center mt-1 mb-2 select-none w-full px-2">
+        <span className={`${fontClass} text-3xl sm:text-4xl ${colorClass} leading-normal pt-1 whitespace-nowrap tracking-wide drop-shadow-xs`}>
           {person1}
         </span>
-        <div className="flex items-center justify-center gap-2.5 my-0.5">
+        <div className="flex items-center justify-center gap-2.5 my-1.5">
           <span className="w-8 sm:w-10 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-amber-500"></span>
           <span className={`font-serif-elegant italic text-sm sm:text-base ${dividerColor} font-bold`}>&</span>
           <span className="w-8 sm:w-10 h-[1px] bg-gradient-to-l from-transparent via-amber-400 to-amber-500"></span>
         </div>
-        <span className={`${fontClass} text-3xl sm:text-4xl ${colorClass} leading-tight whitespace-nowrap tracking-wide drop-shadow-xs`}>
+        <span className={`${fontClass} text-3xl sm:text-4xl ${colorClass} leading-normal pb-1 whitespace-nowrap tracking-wide drop-shadow-xs`}>
           {person2}
         </span>
       </div>
@@ -297,28 +297,28 @@ export function EnvelopeModal({
               </div>
             </div>
 
-            {/* Subtitle with Sparkles (Ảnh 4) */}
-            <p className="font-avo text-[10px] sm:text-[11px] uppercase tracking-[0.25em] text-[#8a7251] font-semibold mt-1 mb-1">
+            {/* Subtitle with Sparkles (Ảnh 4 - Khoảng cách thoáng đãng, sang trọng) */}
+            <p className="font-avo text-[10px] sm:text-[11px] uppercase tracking-[0.25em] text-[#8a7251] font-semibold mt-2 sm:mt-2.5 mb-3.5 sm:mb-4.5">
               ✦ {c1.subTitle || 'THE WEDDING OF'} ✦
             </p>
 
-            {/* Couple Names: Motherland Signature Calligraphy (Chuẩn 100% Ảnh 4 & 5!) */}
-            <div className="flex flex-col items-center justify-center my-1 select-none w-full px-2">
-              <span className="font-motherland text-3xl sm:text-[38px] text-[#78350f] leading-none whitespace-nowrap tracking-wide drop-shadow-xs">
+            {/* Couple Names: Motherland Signature Calligraphy (Chuẩn 100% Ảnh 4 & 5 - Không dính chữ) */}
+            <div className="flex flex-col items-center justify-center mt-1 mb-2.5 sm:mb-3 select-none w-full px-2">
+              <span className="font-motherland text-3xl sm:text-[38px] text-[#78350f] leading-normal pt-1.5 sm:pt-2 whitespace-nowrap tracking-wide drop-shadow-xs">
                 {style1Person1}
               </span>
-              <div className="flex items-center justify-center gap-3 my-1">
+              <div className="flex items-center justify-center gap-3 my-2 sm:my-2.5">
                 <span className="w-10 sm:w-14 h-[1px] bg-gradient-to-r from-transparent via-[#c4983f] to-[#e5bc64]"></span>
                 <span className="font-serif-elegant italic text-sm text-amber-700 font-bold">&</span>
                 <span className="w-10 sm:w-14 h-[1px] bg-gradient-to-l from-transparent via-[#c4983f] to-[#e5bc64]"></span>
               </div>
-              <span className="font-motherland text-3xl sm:text-[38px] text-[#78350f] leading-none whitespace-nowrap tracking-wide drop-shadow-xs">
+              <span className="font-motherland text-3xl sm:text-[38px] text-[#78350f] leading-normal pb-1 sm:pb-1.5 whitespace-nowrap tracking-wide drop-shadow-xs">
                 {style1Person2}
               </span>
             </div>
 
             {/* Date with Rings Icon (Ảnh 4) */}
-            <div className="flex items-center justify-center gap-2.5 my-1.5 text-stone-600">
+            <div className="flex items-center justify-center gap-2.5 my-2 sm:my-2.5 text-stone-600">
               <span className="text-stone-400 text-xs">— ⚭ —</span>
               <span className="font-avo font-semibold text-stone-800 tracking-widest text-xs sm:text-sm whitespace-nowrap">
                 {getCleanDate(c1.date)}
@@ -483,22 +483,22 @@ export function EnvelopeModal({
             </svg>
           </div>
 
-          {/* Top Header */}
-          <p className="relative z-10 font-avo uppercase tracking-[0.3em] text-[#eddab0] text-[10px] sm:text-[11px] font-semibold mb-1">
+          {/* Top Header (Khoảng cách thoáng đãng, sang trọng) */}
+          <p className="relative z-10 font-avo uppercase tracking-[0.3em] text-[#eddab0] text-[10px] sm:text-[11px] font-semibold mt-1.5 sm:mt-2 mb-3.5 sm:mb-4.5">
             ✦ {c3.headerTitle || 'THIỆP MỜI CƯỚI'} ✦
           </p>
 
-          {/* Couple Names in Luminous Motherland Calligraphy Script with Stacked Divider (Chuẩn Ảnh 4 & 5, có điểm nhấn) */}
-          <div className="relative z-10 flex flex-col items-center justify-center my-0.5 select-none w-full px-2">
-            <span className="font-motherland text-2xl sm:text-3xl text-[#fef9ec] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-none whitespace-nowrap">
+          {/* Couple Names in Luminous Motherland Calligraphy Script with Stacked Divider (Chuẩn Ảnh 4 & 5 - Không dính chữ) */}
+          <div className="relative z-10 flex flex-col items-center justify-center mt-1 mb-2.5 sm:mb-3 select-none w-full px-2">
+            <span className="font-motherland text-2xl sm:text-3xl text-[#fef9ec] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-normal pt-1.5 sm:pt-2 whitespace-nowrap">
               {style3Person1}
             </span>
-            <div className="flex items-center justify-center gap-2.5 my-0.5">
+            <div className="flex items-center justify-center gap-2.5 my-2 sm:my-2.5">
               <span className="w-8 sm:w-12 h-[1px] bg-gradient-to-r from-transparent via-[#eddab0] to-amber-300"></span>
               <span className="font-serif-elegant italic text-xs text-amber-300 font-bold">&</span>
               <span className="w-8 sm:w-12 h-[1px] bg-gradient-to-l from-transparent via-[#eddab0] to-amber-300"></span>
             </div>
-            <span className="font-motherland text-2xl sm:text-3xl text-[#fef9ec] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-none whitespace-nowrap">
+            <span className="font-motherland text-2xl sm:text-3xl text-[#fef9ec] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-normal pb-1 sm:pb-1.5 whitespace-nowrap">
               {style3Person2}
             </span>
           </div>

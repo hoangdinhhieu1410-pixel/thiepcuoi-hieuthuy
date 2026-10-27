@@ -5713,10 +5713,10 @@ export function StudioEditor({
                               <span className="text-[8px] text-amber-100">✦</span>
                             </div>
                           </div>
-                          <span className="text-[8px] text-[#737373] font-avo font-normal mt-0.5 block">
+                          <span className="text-[8px] text-[#737373] font-avo font-normal mt-1 mb-1 block">
                             {formData.coverConfig?.style1?.subTitle || 'The Wedding Of'}
                           </span>
-                          <div className="font-motherland text-base font-bold text-[#78350f] leading-tight my-0.5 flex items-center justify-center gap-1.5 truncate max-w-full">
+                          <div className="font-motherland text-base font-bold text-[#78350f] leading-normal pt-0.5 my-1 flex items-center justify-center gap-1.5 truncate max-w-full">
                             <span>{formData.groom?.nickname || 'Đình Hiếu'}</span>
                             <span className="text-amber-700 text-xs">&</span>
                             <span>{formData.bride?.nickname || 'Thanh Thúy'}</span>
@@ -5896,10 +5896,10 @@ export function StudioEditor({
                           <div className="absolute inset-x-0 bottom-1 h-3 bg-red-900 border-y border-amber-300/80"></div>
                           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-800 border border-amber-300 flex items-center justify-center text-[7px] text-amber-200">囍</div>
                         </div>
-                        <span className="text-[9px] font-avo font-semibold text-amber-200 mt-1 relative z-10 block tracking-wider">
+                        <span className="text-[9px] font-avo font-semibold text-amber-200 mt-1.5 mb-1 relative z-10 block tracking-wider">
                           ✦ {formData.coverConfig?.style3?.headerTitle || 'THIỆP MỜI CƯỚI'} ✦
                         </span>
-                        <div className="font-motherland text-sm font-bold text-amber-100 relative z-10 mt-0.5 flex items-center justify-center gap-1.5 drop-shadow">
+                        <div className="font-motherland text-sm font-bold text-amber-100 relative z-10 mt-1 mb-1 leading-normal pt-0.5 flex items-center justify-center gap-1.5 drop-shadow">
                           <span>{formData.groom?.nickname || 'Đình Hiếu'}</span>
                           <span className="font-serif-elegant italic text-xs text-amber-300 font-bold">&</span>
                           <span>{formData.bride?.nickname || 'Thanh Thúy'}</span>
