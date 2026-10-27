@@ -48,16 +48,12 @@ export default async function handler(req, res) {
     return res.status(200).send("User-agent: *\nAllow: /\n");
   }
 
-  // Fast response for HEAD requests
-  if (req.method === 'HEAD') {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(200).end();
-  }
-
-  // Robust query extraction (checks both req.query and req.url searchParams)
+  // Robust query & pathname extraction (checks both req.query and req.url searchParams)
   let query = { ...(req.query || {}) };
+  let pathname = '/';
   try {
     const parsed = new URL(req.url || '/', 'https://thiepcuoi-hieuthuy-web.vercel.app');
+    pathname = parsed.pathname.toLowerCase();
     for (const [k, val] of parsed.searchParams.entries()) {
       if (query[k] === undefined) query[k] = val;
     }
@@ -71,10 +67,18 @@ export default async function handler(req, res) {
   const forceFresh = Boolean(v || t);
   const config = await fetchConfig(forceFresh);
 
-  // Robust bride detection
+  // Robust bride detection (checks pathname, query parameter, and guest database)
   const sideParam = String(side || profile || '').toLowerCase();
-  let isBride = sideParam === 'bride' || sideParam === '2' || sideParam === 'nhagai' || sideParam === 'gai';
-  if (!sideParam && guestName && config) {
+  let isBride = pathname.includes('co-dau') || 
+                pathname.includes('nha-gai') || 
+                pathname.includes('nhagai') || 
+                pathname.includes('bride') || 
+                sideParam === 'bride' || 
+                sideParam === '2' || 
+                sideParam === 'nhagai' || 
+                sideParam === 'gai';
+
+  if (!isBride && guestName && config) {
     const inBride = (config.bride?.guests || []).some(g => (g.name || '').trim().toLowerCase() === guestName.toLowerCase());
     if (inBride) isBride = true;
   }
@@ -137,17 +141,30 @@ export default async function handler(req, res) {
   const safeDesc = escapeAttr(description);
   const safeImage = escapeAttr(ogImage);
 
-  // OpenGraph Canonical URL: Point to canonical root for Groom, and ?side=bride for Bride
-  // This allows Facebook, Messenger and Zalo to immediately reuse the globally cached preview card for all guest links!
+  // Canonical URL & OpenGraph og:url:
+  // Using clean dedicated paths (/co-dau for Bride, /chu-re for Groom) guarantees that:
+  // 1. Zalo, Facebook and Messenger NEVER conflate Bride and Groom caches.
+  // 2. Both /co-dau, /chu-re and query params (?side=bride) work 100% reliably.
   const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
-  const cleanCanonicalUrl = isBride 
-    ? `${baseCanonical}/?side=bride` 
-    : `${baseCanonical}/`;
+  const canonicalPath = isBride ? '/co-dau' : (pathname.includes('chu-re') || pathname.includes('nha-trai') || pathname.includes('groom') ? '/chu-re' : '/');
+  const cleanCanonicalUrl = `${baseCanonical}${canonicalPath}`;
   const safeUrl = escapeAttr(cleanCanonicalUrl);
 
   // Replace Title tag & Meta description
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
   html = html.replace(/<meta name="description"[^>]*>/gi, `<meta name="description" content="${safeDesc}" />`);
+
+  // Ensure Base tag for assets resolution on subpaths (/co-dau, /chu-re)
+  if (!html.includes('<base href=')) {
+    html = html.replace(/<head>/i, '<head>\n    <base href="/" />');
+  }
+
+  // Canonical Link tag
+  if (html.includes('<link rel="canonical"')) {
+    html = html.replace(/<link rel="canonical"[^>]*>/gi, `<link rel="canonical" href="${safeUrl}" />`);
+  } else {
+    html = html.replace(/<head>/i, `<head>\n    <link rel="canonical" href="${safeUrl}" />`);
+  }
 
   // Replace or inject OpenGraph meta tags
   html = html.replace(/<meta property="og:title"[^>]*>/gi, `<meta property="og:title" content="${safeTitle}" />`);
@@ -166,12 +183,6 @@ export default async function handler(req, res) {
   html = html.replace(/<meta name="twitter:description"[^>]*>/gi, `<meta name="twitter:description" content="${safeDesc}" />`);
   html = html.replace(/<meta name="twitter:image"[^>]*>/gi, `<meta name="twitter:image" content="${safeImage}" />`);
 
-  // Fast response for HEAD requests
-  if (req.method === 'HEAD') {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(200).end();
-  }
-
   // Differentiate response headers:
   // For crawlers (Facebook Messenger, Zalo, Twitter): Must provide public cache so Facebook crawler accepts and stores rich link card
   const userAgent = String(req.headers['user-agent'] || '').toLowerCase();
@@ -183,5 +194,11 @@ export default async function handler(req, res) {
   } else {
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, must-revalidate');
   }
+
+  // Fast response for HEAD requests (after headers are set)
+  if (req.method === 'HEAD') {
+    return res.status(200).end();
+  }
+
   res.status(200).send(html);
 }

@@ -1560,24 +1560,22 @@ export function StudioEditor({
     }
   };
 
-  // Generate Personalized Link for a guest (Tách biệt 100% Nhà Trai / Nhà Gái)
+  // Generate Personalized Link for a guest (Tách biệt 100% Nhà Trai / Nhà Gái qua đường dẫn riêng biệt)
   const getGuestLink = (guest) => {
     const configuredDomain = (formData.socialShare?.customDomain || '').trim();
     let baseUrl;
     if (configuredDomain) {
       baseUrl = configuredDomain.replace(/\/+$/, '');
     } else {
-      baseUrl = (window.location.origin + window.location.pathname).replace(/\/+$/, '');
+      baseUrl = window.location.origin.replace(/\/+$/, '');
     }
 
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
+    const path = isBride ? '/co-dau' : '/chu-re';
     const guestName = (guest?.name || '').trim();
     const sal = (guest?.salutation || '').trim();
 
     const params = new URLSearchParams();
-    if (isBride) {
-      params.set('side', 'bride');
-    }
     if (guestName) {
       params.set('to', guestName);
     }
@@ -1586,7 +1584,7 @@ export function StudioEditor({
     }
 
     const queryString = params.toString();
-    return queryString ? `${baseUrl}/?${queryString}` : `${baseUrl}/`;
+    return queryString ? `${baseUrl}${path}?${queryString}` : `${baseUrl}${path}`;
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
@@ -5709,11 +5707,11 @@ export function StudioEditor({
                     <div className="px-3.5 pt-3 pb-1 text-blue-600 text-xs font-mono break-all hover:underline">
                       {formData.socialShare?.customDomain 
                         ? (currentProfileKey === 'bride' 
-                            ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga`
-                            : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&to=Anh+Nam`)
+                            ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau?to=Mẹ+Nga`
+                            : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re?to=Anh+Nam`)
                         : (currentProfileKey === 'bride'
-                            ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga`
-                            : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&to=Anh+Nam`)}
+                            ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau?to=Mẹ+Nga`
+                            : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re?to=Anh+Nam`)}
                     </div>
 
                     <div className="aspect-[1.91/1] w-full bg-stone-900 overflow-hidden flex items-center justify-center">
@@ -5742,11 +5740,11 @@ export function StudioEditor({
                         await handleSaveCurrent();
                         const sampleUrl = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
-                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga`
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&to=Anh+Nam`)
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau?to=Mẹ+Nga`
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re?to=Anh+Nam`)
                           : (currentProfileKey === 'bride'
-                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&to=Anh+Nam`);
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau?to=Mẹ+Nga`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re?to=Anh+Nam`);
                         navigator.clipboard.writeText(sampleUrl);
                         setCopiedLink('preview-sample');
                         setTimeout(() => setCopiedLink(''), 2500);
@@ -5772,11 +5770,11 @@ export function StudioEditor({
                         await handleSaveCurrent();
                         const generalUrl = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
-                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride`
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom`)
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau`
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re`)
                           : (currentProfileKey === 'bride'
-                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom`);
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`);
                         navigator.clipboard.writeText(generalUrl);
                         setCopiedLink('preview-card');
                         setTimeout(() => setCopiedLink(''), 2500);
@@ -5802,11 +5800,11 @@ export function StudioEditor({
                       href={`https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(
                         formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
-                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride` 
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/`)
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau` 
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re`)
                           : (currentProfileKey === 'bride'
-                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/`)
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`)
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -5821,11 +5819,11 @@ export function StudioEditor({
                       href={`https://developers.zalo.me/tools/debug-sharing?url=${encodeURIComponent(
                         formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
-                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride` 
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/`)
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau` 
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re`)
                           : (currentProfileKey === 'bride'
-                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/`)
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`)
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"

@@ -245,6 +245,10 @@ export function App() {
 
   const [activeProfileKey, setActiveProfileKey] = useState(() => {
     try {
+      const pathname = (window.location.pathname || '').toLowerCase();
+      if (pathname.includes('co-dau') || pathname.includes('nha-gai') || pathname.includes('nhagai') || pathname.includes('bride')) return 'bride';
+      if (pathname.includes('chu-re') || pathname.includes('nha-trai') || pathname.includes('nhatrai') || pathname.includes('groom')) return 'groom';
+
       const params = getAppParams();
       const side = params.get('side') || params.get('profile') || params.get('mau') || params.get('thiep');
       if (side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') return 'bride';
@@ -477,11 +481,15 @@ export function App() {
       } else {
         setInitialEnvelopeOpen(false);
       }
+      const pathname = (window.location.pathname || '').toLowerCase();
+      const isBridePath = pathname.includes('co-dau') || pathname.includes('nha-gai') || pathname.includes('nhagai') || pathname.includes('bride');
+      const isGroomPath = pathname.includes('chu-re') || pathname.includes('nha-trai') || pathname.includes('nhatrai') || pathname.includes('groom');
+
       const side = params.get('side') || params.get('profile') || params.get('mau') || params.get('thiep');
-      if (side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') {
+      if (isBridePath || side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') {
         setActiveProfileKey('bride');
         try { sessionStorage.setItem('locked_guest_side', 'bride'); } catch (e) {}
-      } else if (side === 'groom' || side === '1' || side === 'nhatrai' || side === 'trai') {
+      } else if (isGroomPath || side === 'groom' || side === '1' || side === 'nhatrai' || side === 'trai') {
         setActiveProfileKey('groom');
         try { sessionStorage.setItem('locked_guest_side', 'groom'); } catch (e) {}
       }
@@ -541,13 +549,23 @@ export function App() {
               bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...cloudConfig.bride }, DEFAULT_BRIDE_WEDDING_DATA)
             }));
 
-            // Check URL parameters for family side isolation
+            // Check URL parameters & pathname for family side isolation
+            const pathname = (window.location.pathname || '').toLowerCase();
+            const isBridePath = pathname.includes('co-dau') || pathname.includes('nha-gai') || pathname.includes('nhagai') || pathname.includes('bride');
+            const isGroomPath = pathname.includes('chu-re') || pathname.includes('nha-trai') || pathname.includes('nhatrai') || pathname.includes('groom');
+
             const p = getAppParams();
             const sideParam = p.get('side') || p.get('profile') || p.get('mau') || p.get('thiep');
             const guestNameParam = (p.get('to') || p.get('guest') || p.get('name') || '').trim();
             const isGuestAccess = Boolean(guestNameParam || p.get('view') === 'guest' || p.get('view') === 'card' || p.get('guest_mode') === 'true');
 
-            if (sideParam) {
+            if (isBridePath) {
+              setActiveProfileKey('bride');
+              try { sessionStorage.setItem('locked_guest_side', 'bride'); } catch (e) {}
+            } else if (isGroomPath) {
+              setActiveProfileKey('groom');
+              try { sessionStorage.setItem('locked_guest_side', 'groom'); } catch (e) {}
+            } else if (sideParam) {
               const isBride = (sideParam === 'bride' || sideParam === '2' || sideParam === 'nhagai' || sideParam === 'gai');
               const resolved = isBride ? 'bride' : 'groom';
               setActiveProfileKey(resolved);
