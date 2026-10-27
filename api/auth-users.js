@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         try { body = JSON.parse(body); } catch { body = {}; }
       }
 
-      const { action, email, name, role, targetEmail, requesterEmail } = body || {};
+      const { action, email, name, picture, role, targetEmail, requesterEmail } = body || {};
       const normEmail = (email || '').trim().toLowerCase();
       const normTarget = (targetEmail || '').trim().toLowerCase();
       const normRequester = (requesterEmail || '').trim().toLowerCase();
@@ -146,6 +146,7 @@ export default async function handler(req, res) {
           users[SUPER_ADMIN_EMAIL] = {
             email: SUPER_ADMIN_EMAIL,
             name: name || 'Hoàng Đình Hiếu',
+            picture: picture || users[SUPER_ADMIN_EMAIL]?.picture,
             role: 'super_admin',
             status: 'approved',
             lastLoginAt: Date.now()
@@ -171,6 +172,7 @@ export default async function handler(req, res) {
 
           user.lastLoginAt = Date.now();
           if (name && !user.name) user.name = name;
+          if (picture) user.picture = picture;
           await saveUsers(redis, users);
 
           return res.status(200).json({
@@ -184,6 +186,7 @@ export default async function handler(req, res) {
         users[normEmail] = {
           email: normEmail,
           name: name || normEmail.split('@')[0],
+          picture: picture || null,
           role: 'viewer', // default role pending approval
           status: 'pending',
           requestedAt: Date.now(),

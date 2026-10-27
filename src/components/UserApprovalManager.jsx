@@ -307,9 +307,13 @@ export function UserApprovalManager({ currentUser }) {
                   className="bg-white border-2 border-amber-300 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-bold flex items-center justify-center flex-shrink-0 text-sm">
-                      {user.email.substring(0, 2).toUpperCase()}
-                    </div>
+                    {user.picture ? (
+                      <img src={user.picture} alt="" className="w-10 h-10 rounded-xl object-cover border border-amber-300 shadow-sm flex-shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-bold flex items-center justify-center flex-shrink-0 text-sm">
+                        {user.email.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-stone-900 text-sm">{user.name || user.email}</span>
@@ -403,15 +407,19 @@ export function UserApprovalManager({ currentUser }) {
                       {/* User Info */}
                       <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
-                            isSuperAdmin
-                              ? 'bg-amber-100 text-[#70561f] border border-amber-300'
-                              : isEditor
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                : 'bg-blue-100 text-blue-800 border border-blue-200'
-                          }`}>
-                            {isSuperAdmin ? '👑' : user.email.substring(0, 2).toUpperCase()}
-                          </div>
+                          {user.picture ? (
+                            <img src={user.picture} alt="" className="w-8 h-8 rounded-xl object-cover border border-stone-200 flex-shrink-0" />
+                          ) : (
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                              isSuperAdmin
+                                ? 'bg-amber-100 text-[#70561f] border border-amber-300'
+                                : isEditor
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            }`}>
+                              {isSuperAdmin ? '👑' : user.email.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
                           <div>
                             <div className="font-bold text-stone-900 flex items-center gap-1.5">
                               <span>{user.name || user.email}</span>
