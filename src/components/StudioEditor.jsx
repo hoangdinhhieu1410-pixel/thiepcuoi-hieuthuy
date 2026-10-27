@@ -3,7 +3,7 @@ import {
   Users, Calendar, Camera, Music, Share2, Palette, Download, Eye,
   Save, Plus, Trash2, Edit2, Copy, Check, ExternalLink, Play, Pause,
   Upload, Search, Heart, Sparkles, MessageSquare, MessageCircle, MessageSquareHeart, ArrowLeft, RefreshCw,
-  Type, Clock, MapPin, Smartphone, X, CheckCircle2, ArrowRightLeft,
+  Type, Clock, MapPin, Smartphone, X, CheckCircle2, ArrowRightLeft, ArrowRight,
   ChevronRight, ChevronLeft, GripVertical, Sparkle, RotateCcw, Sliders, Image as ImageIcon,
   Mail, FileText, EyeOff, Film, Layers, Volume2, VolumeX, Link as LinkIcon,
   Gift, QrCode, Database, Cloud, Server, ShieldCheck, HardDrive, Key, FileJson, CheckCircle, AlertCircle, Laptop, Monitor
@@ -28,17 +28,34 @@ export function StudioEditor({
 }) {
   const [activeTab, setActiveTab] = useState('textcontent');
 
+  // Helper to partition guests strictly by family side
+  const cleanProfileGuests = (profs) => {
+    if (!profs) return profs;
+    const res = JSON.parse(JSON.stringify(profs));
+    if (res.groom) {
+      res.groom.guests = (res.groom.guests || [])
+        .filter(g => (g.side === 'groom' || g.invitedSide === 'Nhà Trai' || (!g.side && !g.invitedSide)) && (g.invitedSide !== 'Nhà Gái' && g.side !== 'bride'))
+        .map(g => ({ ...g, side: 'groom', invitedSide: 'Nhà Trai' }));
+    }
+    if (res.bride) {
+      res.bride.guests = (res.bride.guests || [])
+        .filter(g => g.side === 'bride' || g.invitedSide === 'Nhà Gái')
+        .map(g => ({ ...g, side: 'bride', invitedSide: 'Nhà Gái' }));
+    }
+    return res;
+  };
+
   // Both profiles state
   const [allProfiles, setAllProfiles] = useState(() => {
     if (profiles && profiles.groom && profiles.bride) {
-      return JSON.parse(JSON.stringify(profiles));
+      return cleanProfileGuests(profiles);
     }
     const base = data || DEFAULT_WEDDING_DATA;
-    return {
+    return cleanProfileGuests({
       activeProfile: activeProfileKey || 'groom',
       groom: JSON.parse(JSON.stringify(base)),
       bride: JSON.parse(JSON.stringify(DEFAULT_BRIDE_WEDDING_DATA))
-    };
+    });
   });
 
   const [currentProfileKey, setCurrentProfileKey] = useState(activeProfileKey || 'groom');
@@ -46,7 +63,8 @@ export function StudioEditor({
   // Active form data being edited in real-time
   const [formData, setFormData] = useState(() => {
     const initKey = activeProfileKey || 'groom';
-    const target = (profiles && profiles[initKey]) || (data || DEFAULT_WEDDING_DATA);
+    const cleaned = cleanProfileGuests(profiles);
+    const target = (cleaned && cleaned[initKey]) || (data || DEFAULT_WEDDING_DATA);
     return JSON.parse(JSON.stringify(target));
   });
 
@@ -407,8 +425,9 @@ export function StudioEditor({
   // Synchronize when parent profiles prop updates (before user types or when cloud config arrives)
   useEffect(() => {
     if (profiles) {
-      setAllProfiles(profiles);
-      const target = profiles[currentProfileKey] || profiles.groom;
+      const cleaned = cleanProfileGuests(profiles);
+      setAllProfiles(cleaned);
+      const target = cleaned[currentProfileKey] || cleaned.groom;
       if (target) {
         const cloned = JSON.parse(JSON.stringify(target));
         // Only update formData if user hasn't made unsaved changes
@@ -1104,6 +1123,7 @@ export function StudioEditor({
     // Auto-save currently edited formData to allProfiles[currentProfileKey]
     let updatedAll = {
       ...allProfiles,
+      activeProfile: newKey,
       [currentProfileKey]: formData
     };
     if (autoSyncMedia) {
@@ -1122,6 +1142,7 @@ export function StudioEditor({
         };
       }
     }
+    updatedAll = cleanProfileGuests(updatedAll);
     setAllProfiles(updatedAll);
     setCurrentProfileKey(newKey);
     const target = updatedAll[newKey] || (newKey === 'bride' ? DEFAULT_BRIDE_WEDDING_DATA : DEFAULT_WEDDING_DATA);
@@ -1171,6 +1192,7 @@ export function StudioEditor({
         };
       }
     }
+    updatedAll = cleanProfileGuests(updatedAll);
     setAllProfiles(updatedAll);
     setLastSavedData(JSON.parse(JSON.stringify(formData)));
     broadcastProfileUpdate(updatedAll, 'studio_manual_save');
@@ -1194,11 +1216,11 @@ export function StudioEditor({
       return;
     }
     setSaveStatus('Đang đồng bộ cả 2 mẫu thiệp lên máy chủ đám mây... ⏳');
-    const updatedAll = {
+    const updatedAll = cleanProfileGuests({
       ...allProfiles,
       activeProfile: currentProfileKey,
       [currentProfileKey]: formData
-    };
+    });
     setAllProfiles(updatedAll);
     setLastSavedData(JSON.parse(JSON.stringify(formData)));
     broadcastProfileUpdate(updatedAll, 'studio_manual_save');
@@ -1221,6 +1243,7 @@ export function StudioEditor({
     if (type === 'all') {
       updatedTarget = {
         ...formData,
+        guests: targetData.guests || [], // BẢO VỆ TUYỆT ĐỐI: Giữ nguyên danh sách khách mời của bên nhận, không bị đè hay lẫn lộn!
         profileType: targetKey,
         profileName: targetKey === 'bride' ? 'Thiệp Nhà Gái' : 'Thiệp Nhà Trai',
       };
@@ -1468,7 +1491,7 @@ export function StudioEditor({
     }
   };
 
-  // Generate Personalized Link for a guest (Tối ưu siêu ngắn gọn, thẩm mỹ khi gửi Zalo / SMS)
+  // Generate Personalized Link for a guest (Tách biệt 100% Nhà Trai / Nhà Gái)
   const getGuestLink = (guest) => {
     const configuredDomain = (formData.socialShare?.customDomain || '').trim();
     let baseUrl;
@@ -1479,17 +1502,16 @@ export function StudioEditor({
     }
 
     const params = new URLSearchParams();
-    const isBride = (currentProfileKey === 'bride' || guest?.invitedSide === 'Nhà Gái');
-    // Chỉ thêm side nếu là Nhà Gái (vì Nhà Trai là mặc định, rút gọn link)
-    if (isBride) {
-      params.set('side', 'bride');
-    }
+    
+    // BẮT BUỘC: Luôn định danh rõ ràng side=groom hoặc side=bride trong URL của khách mời
+    const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
+    params.set('side', isBride ? 'bride' : 'groom');
 
     if (guest?.name) {
       params.set('to', guest.name.trim());
     }
 
-    // Chỉ thêm lời xưng hô nếu khác với mặc định "Trân trọng kính mời" để link siêu ngắn
+    // Chỉ thêm lời xưng hô nếu khác với mặc định "Trân trọng kính mời" để link gọn gàng
     const sal = (guest?.salutation || '').trim();
     if (sal && sal !== 'Trân trọng kính mời') {
       params.set('salutation', sal);
@@ -1506,13 +1528,15 @@ export function StudioEditor({
     const link = getGuestLink(guest);
     const salutation = guest?.salutation || 'Trân trọng kính mời';
     const guestName = guest?.name || 'Quý Khách';
+    const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
     const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
-    const isBride = (currentProfileKey === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const coupleText = isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`;
     const weddingDate = formData.eventDateText || formData.saveTheDateDay || '29.11.2026';
+    const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
+    const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
 
-    return `💌 THƯ MỜI CƯỚI TRÂN TRỌNG 💌\n${salutation}: ${guestName}\nĐến tham dự lễ thành hôn chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestName} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestName} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi! Rất hân hạnh được đón tiếp!`;
+    return `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: ${guestName}\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestName} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestName} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi! Rất hân hạnh được đón tiếp!`;
   };
 
   // Copy full Zalo message
@@ -1533,28 +1557,51 @@ export function StudioEditor({
     setTimeout(() => setCopiedLink(''), 2500);
   };
 
-  // Add Guest
+  // Add Guest (Tách biệt tuyệt đối theo Mẫu 1 Nhà Trai / Mẫu 2 Nhà Gái)
   const handleAddGuest = (e) => {
     e.preventDefault();
     if (!newGuest.name.trim()) return;
-    const currentSide = currentProfileKey === 'bride' ? 'Nhà Gái' : 'Nhà Trai';
+    const isBride = currentProfileKey === 'bride';
+    const currentSideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
     const guestObj = {
       ...newGuest,
+      name: newGuest.name.trim(),
       group: newGuest.group || 'Bạn học',
-      invitedSide: currentSide,
+      side: currentProfileKey,
+      invitedSide: currentSideLabel,
       id: 'guest-' + Date.now()
     };
-    const updatedGuests = [guestObj, ...(formData.guests || [])];
+
+    // Filter current side guests to prevent any cross-side pollution
+    const currentSideGuests = (formData.guests || []).filter(g => {
+      if (isBride) return g.side === 'bride' || g.invitedSide === 'Nhà Gái';
+      return (g.side === 'groom' || g.invitedSide === 'Nhà Trai' || (!g.side && !g.invitedSide)) && (g.invitedSide !== 'Nhà Gái' && g.side !== 'bride');
+    });
+
+    const updatedGuests = [guestObj, ...currentSideGuests];
     const updatedForm = { ...formData, guests: updatedGuests };
     setFormData(updatedForm);
+
+    const updatedAll = cleanProfileGuests({
+      ...allProfiles,
+      [currentProfileKey]: updatedForm
+    });
+    setAllProfiles(updatedAll);
+
     if (onSaveProfile) {
       onSaveProfile(currentProfileKey, updatedForm);
     }
+    if (onSaveAllProfiles) {
+      onSaveAllProfiles(updatedAll);
+    }
+
     setNewGuest({
       name: '',
       salutation: 'Trân trọng kính mời',
       group: 'Bạn học'
     });
+    setSaveStatus(`✅ Đã thêm khách "${guestObj.name}" vào danh sách ${currentSideLabel}!`);
+    setTimeout(() => setSaveStatus(''), 2500);
   };
 
   // Delete Guest
@@ -1563,14 +1610,33 @@ export function StudioEditor({
       const updatedGuests = (formData.guests || []).filter(g => g.id !== id);
       const updatedForm = { ...formData, guests: updatedGuests };
       setFormData(updatedForm);
+      const updatedAll = cleanProfileGuests({
+        ...allProfiles,
+        [currentProfileKey]: updatedForm
+      });
+      setAllProfiles(updatedAll);
       if (onSaveProfile) {
         onSaveProfile(currentProfileKey, updatedForm);
       }
+      if (onSaveAllProfiles) {
+        onSaveAllProfiles(updatedAll);
+      }
+      setSaveStatus('Đã xóa khách mời khỏi danh sách!');
+      setTimeout(() => setSaveStatus(''), 2500);
     }
   };
 
-  // Filtered guests
-  const filteredGuests = (formData.guests || []).filter(g => 
+  // Filtered guests strictly for active side (Nhà Trai hoặc Nhà Gái)
+  const isBrideSide = currentProfileKey === 'bride';
+  const currentSideGuests = (formData.guests || []).filter(g => {
+    if (isBrideSide) {
+      return g.side === 'bride' || g.invitedSide === 'Nhà Gái';
+    } else {
+      return (g.side === 'groom' || g.invitedSide === 'Nhà Trai' || (!g.side && !g.invitedSide)) && (g.invitedSide !== 'Nhà Gái' && g.side !== 'bride');
+    }
+  });
+
+  const filteredGuests = currentSideGuests.filter(g => 
     g.name?.toLowerCase().includes(guestSearch.toLowerCase()) ||
     g.group?.toLowerCase().includes(guestSearch.toLowerCase()) ||
     g.note?.toLowerCase().includes(guestSearch.toLowerCase())
@@ -1785,7 +1851,7 @@ export function StudioEditor({
             {(() => {
               const allTabsDefinitions = [
                 { id: 'textcontent', label: 'Sửa Dòng Chữ (Ảnh 1,2,3)', icon: Type, highlight: true },
-                { id: 'guests', label: 'Quản Lý Khách & Link Riêng', icon: Users, badge: formData.guests?.length },
+                { id: 'guests', label: 'Quản Lý Khách & Link Riêng', icon: Users, badge: currentSideGuests.length },
                 { id: 'wishes', label: 'Tổng Hợp Lời Chúc', icon: MessageSquareHeart, badge: allUniqueWishes?.length },
                 { id: 'couple', label: 'Cặp Đôi & Phụ Mẫu', icon: Heart },
                 { id: 'events', label: 'Sự Kiện & Bản Đồ Đi Lại', icon: Calendar, badge: formData.events?.length },
@@ -2706,13 +2772,72 @@ export function StudioEditor({
                 <div>
                   <h2 className="text-xl font-serif-elegant font-bold text-stone-900 flex items-center gap-2">
                     <Users className="w-5 h-5 text-[#70561f]" />
-                    <span>Danh Sách Khách Mời & Sinh Link Cá Nhân Hóa</span>
+                    <span>Danh Sách Khách Mời & Sinh Link Riêng (Tách Biệt 2 Nhà)</span>
                   </h2>
                   <p className="text-xs text-stone-500 mt-1">
-                    Mỗi khách mời sẽ có link riêng hiển thị đúng tên trên phong bì khi họ bấm mở thiệp.
+                    Mỗi khách mời sẽ có link riêng hiển thị đúng tên trên phong bì và <b>khóa cố định 100%</b> đúng thiệp cưới Nhà Trai hoặc Nhà Gái.
                   </p>
                 </div>
               </div>
+
+              {/* BANNER PHÂN BIỆT RÕ RÀNG NHÀ TRAI / NHÀ GÁI */}
+              {currentProfileKey === 'groom' ? (
+                <div className="p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 border-2 border-amber-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#70561f] text-white flex items-center justify-center text-xl shrink-0 shadow">
+                      🎩
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-amber-950 text-sm sm:text-base">MẪU 1: DANH SÁCH KHÁCH MỜI BÊN NHÀ TRAI</span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold border border-amber-300">
+                          Khóa cố định ?side=groom
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-900/90 mt-0.5">
+                        Tất cả khách mời thêm ở đây thuộc bên <b>Nhà Trai</b>. Khi khách nhận link bấm mở, hệ thống luôn hiển thị đúng 100% thông tin thiệp cưới Nhà Trai!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchProfileInternal('bride')}
+                    className="px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-rose-800 border border-rose-300 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+                    title="Chuyển sang xem danh sách khách mời bên Nhà Gái"
+                  >
+                    <span>👰 Sang Khách Nhà Gái (Mẫu 2)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 bg-gradient-to-r from-rose-50 via-pink-50 to-rose-100/60 border-2 border-rose-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-700 text-white flex items-center justify-center text-xl shrink-0 shadow">
+                      👰
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-rose-950 text-sm sm:text-base">MẪU 2: DANH SÁCH KHÁCH MỜI BÊN NHÀ GÁI</span>
+                        <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[10px] font-bold border border-rose-300">
+                          Khóa cố định ?side=bride
+                        </span>
+                      </div>
+                      <p className="text-xs text-rose-900/90 mt-0.5">
+                        Tất cả khách mời thêm ở đây thuộc bên <b>Nhà Gái</b>. Khi khách nhận link bấm mở, hệ thống luôn hiển thị đúng 100% thông tin thiệp cưới Nhà Gái!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchProfileInternal('groom')}
+                    className="px-3.5 py-2 rounded-xl bg-white hover:bg-amber-50 text-amber-950 border border-amber-300 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+                    title="Chuyển sang xem danh sách khách mời bên Nhà Trai"
+                  >
+                    <span>🎩 Sang Khách Nhà Trai (Mẫu 1)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* CẤU HÌNH DOMAIN & HƯỚNG DẪN GỬI ZALO */}
               <div className="p-4 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-amber-50/60 rounded-2xl border border-blue-200 space-y-3">
@@ -2737,7 +2862,7 @@ export function StudioEditor({
                             ...formData,
                             socialShare: { ...formData.socialShare, customDomain: e.target.value }
                           })}
-                          placeholder="Dán link web online của bạn tại đây (VD: https://thiepcuoi-hieuthuy.vercel.app)..."
+                          placeholder="Dán link web online của bạn tại đây (VD: https://thiepcuoi-hieuthuy-web.vercel.app)..."
                           className="w-full px-3 py-2 rounded-xl border border-blue-300 bg-white text-xs focus:ring-2 focus:ring-blue-400 focus:outline-none"
                         />
                       </div>
@@ -2763,10 +2888,21 @@ export function StudioEditor({
 
               {/* ADD NEW GUEST FORM */}
               <form onSubmit={handleAddGuest} className="bg-stone-50 p-4 sm:p-5 rounded-2xl border border-stone-200/80 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#70561f] flex items-center gap-1.5">
-                  <Plus className="w-4 h-4" />
-                  <span>Thêm Khách Mời Mới</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                    currentProfileKey === 'groom' ? 'text-amber-800' : 'text-rose-800'
+                  }`}>
+                    <Plus className="w-4 h-4" />
+                    <span>
+                      {currentProfileKey === 'groom' ? 'Thêm Khách Mời Mới (Bên Nhà Trai)' : 'Thêm Khách Mời Mới (Bên Nhà Gái)'}
+                    </span>
+                  </h3>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    currentProfileKey === 'groom' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-rose-100 text-rose-900 border border-rose-300'
+                  }`}>
+                    {currentProfileKey === 'groom' ? '🎩 Mẫu 1: Nhà Trai' : '👰 Mẫu 2: Nhà Gái'}
+                  </span>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
@@ -2812,7 +2948,7 @@ export function StudioEditor({
                             onClick={() => setNewGuest({ ...newGuest, group: groupName })}
                             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                               isSelected
-                                ? 'bg-[#70561f] text-white shadow ring-2 ring-[#70561f]/30'
+                                ? (currentProfileKey === 'groom' ? 'bg-[#70561f] text-white shadow ring-2 ring-[#70561f]/30' : 'bg-rose-700 text-white shadow ring-2 ring-rose-400')
                                 : 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-200'
                             }`}
                           >
@@ -2830,10 +2966,12 @@ export function StudioEditor({
 
                   <button
                     type="submit"
-                    className="self-end sm:self-auto px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow cursor-pointer shrink-0"
+                    className={`self-end sm:self-auto px-5 py-2.5 rounded-xl text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow cursor-pointer shrink-0 ${
+                      currentProfileKey === 'groom' ? 'bg-[#70561f] hover:bg-[#5b4618]' : 'bg-rose-700 hover:bg-rose-800'
+                    }`}
                   >
-                    <Plus className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Thêm Khách Này</span>
+                    <Plus className="w-3.5 h-3.5 text-amber-200" />
+                    <span>{currentProfileKey === 'groom' ? 'Thêm Khách Nhà Trai' : 'Thêm Khách Nhà Gái'}</span>
                   </button>
                 </div>
               </form>
@@ -2845,42 +2983,63 @@ export function StudioEditor({
                     <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Tìm khách theo tên hoặc nhóm..."
+                      placeholder={`Tìm khách ${currentProfileKey === 'groom' ? 'Nhà Trai' : 'Nhà Gái'} theo tên hoặc nhóm...`}
                       value={guestSearch}
                       onChange={(e) => setGuestSearch(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-none focus:border-[#70561f] bg-white"
                     />
                   </div>
-                  <span className="text-xs text-stone-500 font-medium">
-                    Tổng: <b>{filteredGuests.length}</b> khách
+                  <span className="text-xs text-stone-600 font-medium">
+                    Tổng khách {currentProfileKey === 'groom' ? 'Nhà Trai' : 'Nhà Gái'}: <b>{filteredGuests.length}</b> khách
                   </span>
                 </div>
 
                 {filteredGuests.length === 0 ? (
-                  <p className="text-center py-8 text-stone-400 text-xs italic">
-                    Chưa có khách mời nào phù hợp với tìm kiếm.
-                  </p>
+                  <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-stone-300 p-6 space-y-2">
+                    <p className="text-stone-500 text-xs font-medium">
+                      Chưa có khách mời nào trong danh sách {currentProfileKey === 'groom' ? 'Nhà Trai' : 'Nhà Gái'}.
+                    </p>
+                    <p className="text-stone-400 text-[11px]">
+                      Hãy nhập tên khách vào ô bên trên rồi bấm <b>"Thêm Khách"</b> để tạo link riêng biệt!
+                    </p>
+                  </div>
                 ) : (
-                  <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-100">
+                  <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-100 bg-white">
                     {filteredGuests.map((guest) => {
                       const guestLink = getGuestLink(guest);
+                      const isBrideGuest = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
                       return (
                         <div key={guest.id} className="p-3 sm:p-4 hover:bg-stone-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                          <div>
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-stone-900 text-sm">
                                 {guest.name}
                               </span>
-                              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-[#70561f] text-[11px] font-bold border border-amber-200/80">
+                              <span className="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 text-[11px] font-medium border border-stone-200">
                                 {guest.group || 'Bạn học'}
                               </span>
+                              {isBrideGuest ? (
+                                <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-300">
+                                  👰 Thiệp Nhà Gái (?side=bride)
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300">
+                                  🎩 Thiệp Nhà Trai (?side=groom)
+                                </span>
+                              )}
                             </div>
-                            <p className="text-[11px] text-stone-500 mt-1">
+                            <p className="text-[11px] text-stone-500">
                               {guest.salutation}: <span className="font-medium text-stone-700">{guest.name}</span>
                             </p>
+                            <div className="text-[11px] text-stone-500 font-mono flex items-center gap-1.5 pt-0.5">
+                              <span className="text-stone-400">Link mời:</span>
+                              <code className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 text-stone-700 break-all select-all font-mono text-[10px]">
+                                {guestLink}
+                              </code>
+                            </div>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                          <div className="flex flex-wrap items-center gap-1.5 shrink-0 pt-2 sm:pt-0">
                             {/* Copy plain link */}
                             <button
                               type="button"
@@ -2888,7 +3047,9 @@ export function StudioEditor({
                               className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer ${
                                 copiedLink === guest.id
                                   ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                                  : 'bg-amber-50 text-[#70561f] hover:bg-amber-100 border border-amber-200'
+                                  : isBrideGuest
+                                    ? 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
                               }`}
                               title="Sao chép đường link mở thiệp của khách này"
                             >
@@ -2942,8 +3103,8 @@ export function StudioEditor({
 
                             <button
                               onClick={() => handleDeleteGuest(guest.id)}
-                              className="p-1.5 rounded-xl hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition-colors"
-                              title="Xóa khách mời"
+                              className="p-1.5 rounded-xl hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              title="Xóa khách mời này"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

@@ -234,6 +234,11 @@ export function App() {
       const params = new URLSearchParams(window.location.search);
       const side = params.get('side') || params.get('profile') || params.get('mau') || params.get('thiep');
       if (side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') return 'bride';
+      if (side === 'groom' || side === '1' || side === 'nhatrai' || side === 'trai') return 'groom';
+      
+      const stored = sessionStorage.getItem('locked_guest_side');
+      if (stored === 'bride' || stored === 'groom') return stored;
+
       return 'groom';
     } catch (e) {
       return 'groom';
@@ -461,8 +466,10 @@ export function App() {
       const side = params.get('side') || params.get('profile') || params.get('mau') || params.get('thiep');
       if (side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') {
         setActiveProfileKey('bride');
+        try { sessionStorage.setItem('locked_guest_side', 'bride'); } catch (e) {}
       } else if (side === 'groom' || side === '1' || side === 'nhatrai' || side === 'trai') {
         setActiveProfileKey('groom');
+        try { sessionStorage.setItem('locked_guest_side', 'groom'); } catch (e) {}
       }
       // If user passed ?reset=true, reset to default immediately
       if (params.get('reset') === 'true') {
@@ -520,10 +527,38 @@ export function App() {
               bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...cloudConfig.bride }, DEFAULT_BRIDE_WEDDING_DATA)
             }));
 
-            // If user did not pass ?side= in URL, follow the active profile saved by owner
+            // Check URL parameters for family side isolation
             const p = new URLSearchParams(window.location.search);
             const sideParam = p.get('side') || p.get('profile') || p.get('mau') || p.get('thiep');
-            if (!sideParam && cloudConfig.activeProfile) {
+            const guestNameParam = (p.get('to') || p.get('guest') || p.get('name') || '').trim();
+            const isGuestAccess = Boolean(guestNameParam || p.get('view') === 'guest' || p.get('view') === 'card' || p.get('guest_mode') === 'true');
+
+            if (sideParam) {
+              const isBride = (sideParam === 'bride' || sideParam === '2' || sideParam === 'nhagai' || sideParam === 'gai');
+              const resolved = isBride ? 'bride' : 'groom';
+              setActiveProfileKey(resolved);
+              try { sessionStorage.setItem('locked_guest_side', resolved); } catch (e) {}
+            } else if (isGuestAccess) {
+              // Backward-compatibility: if an old guest link was sent without ?side=, check which list the guest belongs to
+              let resolved = null;
+              if (guestNameParam) {
+                const lowerName = guestNameParam.toLowerCase();
+                const brideGuests = cloudConfig.bride?.guests || [];
+                const groomGuests = cloudConfig.groom?.guests || [];
+                const inBride = brideGuests.some(g => g.name?.trim().toLowerCase() === lowerName);
+                const inGroom = groomGuests.some(g => g.name?.trim().toLowerCase() === lowerName);
+                if (inBride && !inGroom) resolved = 'bride';
+                else if (inGroom) resolved = 'groom';
+              }
+              if (!resolved) {
+                try { resolved = sessionStorage.getItem('locked_guest_side'); } catch (e) {}
+              }
+              if (resolved) {
+                setActiveProfileKey(resolved);
+              }
+              // STRICT GUARD: When viewing as a guest, NEVER let cloudConfig.activeProfile change activeProfileKey!
+            } else if (cloudConfig.activeProfile) {
+              // Only update activeProfileKey for studio/owner view without explicit ?side=
               setActiveProfileKey(cloudConfig.activeProfile);
             }
             saveProfilesToStorage(cloudConfig);

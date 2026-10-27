@@ -388,6 +388,7 @@ export const DEFAULT_WEDDING_DATA = {
       "name": "Mẹ Nga",
       "salutation": "Trân trọng kính mời",
       "group": "Họ hàng",
+      "side": "groom",
       "invitedSide": "Nhà Trai",
       "id": "guest-1793026250581"
     },
@@ -396,6 +397,7 @@ export const DEFAULT_WEDDING_DATA = {
       "name": "Bạn và Người Thương",
       "salutation": "Trân trọng kính mời",
       "group": "Bạn học",
+      "side": "groom",
       "invitedSide": "Nhà Trai"
     },
     {
@@ -403,14 +405,8 @@ export const DEFAULT_WEDDING_DATA = {
       "name": "Anh Nam và Gia Đình",
       "salutation": "Trân trọng kính mời",
       "group": "Đồng nghiệp",
+      "side": "groom",
       "invitedSide": "Nhà Trai"
-    },
-    {
-      "id": "guest-3",
-      "name": "Chị Mai Lan",
-      "salutation": "Thân mời",
-      "group": "Bạn xã hội",
-      "invitedSide": "Nhà Gái"
     }
   ],
   "wishes": []
@@ -798,24 +794,19 @@ export const DEFAULT_BRIDE_WEDDING_DATA = {
   },
   "guests": [
     {
-      "id": "guest-1",
-      "name": "Bạn và Người Thương",
+      "id": "guest-bg-1",
+      "name": "Bạn và Người Thương (Nhà Gái)",
       "salutation": "Trân trọng kính mời",
       "group": "Bạn học",
-      "invitedSide": "Nhà Trai"
+      "side": "bride",
+      "invitedSide": "Nhà Gái"
     },
     {
-      "id": "guest-2",
-      "name": "Anh Nam và Gia Đình",
-      "salutation": "Trân trọng kính mời",
-      "group": "Đồng nghiệp",
-      "invitedSide": "Nhà Trai"
-    },
-    {
-      "id": "guest-3",
+      "id": "guest-bg-2",
       "name": "Chị Mai Lan",
       "salutation": "Thân mời",
       "group": "Bạn xã hội",
+      "side": "bride",
       "invitedSide": "Nhà Gái"
     }
   ],
