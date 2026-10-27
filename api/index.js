@@ -41,6 +41,13 @@ async function fetchConfig(forceFresh = false) {
 }
 
 export default async function handler(req, res) {
+  // Support robots.txt directly as clean text/plain for search engines & social crawlers
+  if (req.url === '/robots.txt' || req.url?.startsWith('/robots.txt')) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send("User-agent: *\nAllow: /\n");
+  }
+
   const { to, guest, name, salutation, xungho, side, profile, v, t } = req.query || {};
   const guestName = String(to || guest || name || '').trim();
   const guestSal = String(salutation || xungho || 'Trân trọng kính mời').trim();
@@ -118,7 +125,7 @@ export default async function handler(req, res) {
   // Exact Canonical URL matching the current request (CRITICAL: Prevents Zalo from canonicalizing back to root!)
   const requestUrl = req.url || '';
   const fullCanonicalUrl = `https://thiepcuoi-hieuthuy-web.vercel.app${requestUrl.startsWith('/') ? '' : '/'}${requestUrl}`;
-  const safeUrl = escapeAttr(fullCanonicalUrl);
+  const cleanCanonicalUrl = fullCanonicalUrl.replace(/&amp;/g, '&');
 
   // Replace Title tag
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
@@ -129,7 +136,7 @@ export default async function handler(req, res) {
   html = html.replace(/<meta property="og:image"[^>]*>/gi, `<meta property="og:image" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:secure_url"[^>]*>/gi, `<meta property="og:image:secure_url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:alt"[^>]*>/gi, `<meta property="og:image:alt" content="${safeTitle}" />`);
-  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeUrl}" />`);
+  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${cleanCanonicalUrl}" />`);
   html = html.replace(/<meta property="og:site_name"[^>]*>/gi, `<meta property="og:site_name" content="Thiệp Cưới Online" />`);
   html = html.replace(/<meta property="og:locale"[^>]*>/gi, `<meta property="og:locale" content="vi_VN" />`);
   html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, `<meta property="fb:app_id" content="966242223397117" />`);

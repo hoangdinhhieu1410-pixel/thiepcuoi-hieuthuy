@@ -1595,12 +1595,14 @@ export function StudioEditor({
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
+  const [copiedMessengerId, setCopiedMessengerId] = useState('');
 
-  // Format full formal Zalo & Messenger invitation message (Bold & Italic for Guest Name)
-  const getGuestZaloMessageData = (guest) => {
+  // Format full formal Zalo invitation message (Tên khách in hoa nổi bật trang trọng)
+  const getGuestZaloMessage = (guest) => {
     const link = getGuestLink(guest);
     const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
     const guestName = (guest?.name || 'Quý Khách').trim();
+    const guestNameUpper = guestName.toUpperCase();
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
     const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
@@ -1609,49 +1611,42 @@ export function StudioEditor({
     const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
     const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
 
-    // Plain text with Markdown bold-italic (*_Tên Khách_*) for Messenger & standard paste
-    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: *_${guestName}_*\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời *_${guestName}_* bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của *_${guestName}_* là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
-
-    // Rich HTML with <b><i> tags for rich-text paste in Zalo, Messenger, Word, Email
-    const html = `<p>💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌<br>
-${salutation}: <b><i>${guestName}</i></b><br>
-Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>
-📅 Ngày: ${weddingDate}</p>
-<p>👉 Kính mời <b><i>${guestName}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br>
-<a href="${link}">${link}</a></p>
-<p>Sự hiện diện của <b><i>${guestName}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>
-Rất hân hạnh được đón tiếp!</p>`;
-
-    return { plain, html, link };
+    return `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: 【 ${guestNameUpper} 】\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời 【 ${guestNameUpper} 】 bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của 【 ${guestNameUpper} 】 là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
   };
 
-  // Helper to write both HTML (rich bold & italic) and plain text to clipboard
-  const writeFormattedClipboard = async (plainText, htmlText) => {
-    try {
-      if (navigator.clipboard && window.ClipboardItem) {
-        const textBlob = new Blob([plainText], { type: 'text/plain' });
-        const htmlBlob = new Blob([htmlText], { type: 'text/html' });
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/plain': textBlob,
-            'text/html': htmlBlob
-          })
-        ]);
-        return;
-      }
-    } catch (err) {
-      console.warn('ClipboardItem error, fallback to plain text:', err);
-    }
-    await navigator.clipboard.writeText(plainText);
+  // Format full formal Messenger invitation message (Markdown * bold thật trên Messenger Facebook)
+  const getGuestMessengerMessage = (guest) => {
+    const link = getGuestLink(guest);
+    const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
+    const guestName = (guest?.name || 'Quý Khách').trim();
+    const guestNameUpper = guestName.toUpperCase();
+    const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
+    const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
+    const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
+    const coupleText = isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`;
+    const weddingDate = formData.eventDateText || formData.saveTheDateDay || '29.11.2026';
+    const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
+    const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
+
+    return `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: *${guestNameUpper}*\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời *${guestNameUpper}* bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của *${guestNameUpper}* là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
   };
 
-  // Copy full Zalo & Messenger message
+  // Copy full Zalo message
   const copyGuestZaloMessage = async (guest) => {
     await handleSaveCurrent();
-    const { plain, html } = getGuestZaloMessageData(guest);
-    await writeFormattedClipboard(plain, html);
+    const msg = getGuestZaloMessage(guest);
+    navigator.clipboard.writeText(msg);
     setCopiedZaloId(guest.id);
     setTimeout(() => setCopiedZaloId(''), 3000);
+  };
+
+  // Copy full Messenger message
+  const copyGuestMessengerMessage = async (guest) => {
+    await handleSaveCurrent();
+    const msg = getGuestMessengerMessage(guest);
+    navigator.clipboard.writeText(msg);
+    setCopiedMessengerId(guest.id);
+    setTimeout(() => setCopiedMessengerId(''), 3000);
   };
 
   // Copy Guest Link
@@ -3177,7 +3172,7 @@ Rất hân hạnh được đón tiếp!</p>`;
                               )}
                             </button>
 
-                            {/* Copy full formal Zalo & Messenger message */}
+                            {/* Copy full formal Zalo message */}
                             <button
                               type="button"
                               onClick={() => copyGuestZaloMessage(guest)}
@@ -3186,17 +3181,41 @@ Rất hân hạnh được đón tiếp!</p>`;
                                   ? 'bg-blue-600 text-white ring-2 ring-blue-300'
                                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
                               }`}
-                              title="Sao chép toàn bộ tin nhắn mời cưới trang trọng (tô đậm in nghiêng tên khách) để dán thẳng vào Zalo hoặc Messenger Facebook"
+                              title="Sao chép lời mời tối ưu cho Zalo (Tên khách in hoa đóng khung nổi bật trang trọng)"
                             >
                               {copiedZaloId === guest.id ? (
                                 <>
                                   <Check className="w-3.5 h-3.5" />
-                                  <span>Đã copy lời mời Zalo & Messenger!</span>
+                                  <span>Đã copy Zalo!</span>
                                 </>
                               ) : (
                                 <>
                                   <MessageCircle className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>Copy Lời Mời Zalo & Messenger</span>
+                                  <span>Lời Mời Zalo</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Copy full formal Messenger message */}
+                            <button
+                              type="button"
+                              onClick={() => copyGuestMessengerMessage(guest)}
+                              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 text-xs shadow-sm cursor-pointer ${
+                                copiedMessengerId === guest.id
+                                  ? 'bg-purple-600 text-white ring-2 ring-purple-300'
+                                  : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
+                              }`}
+                              title="Sao chép lời mời tối ưu cho Messenger Facebook (Tên khách tự động in đậm thật)"
+                            >
+                              {copiedMessengerId === guest.id ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Đã copy Messenger!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Share2 className="w-3.5 h-3.5 text-purple-600" />
+                                  <span>Lời Mời Messenger</span>
                                 </>
                               )}
                             </button>
