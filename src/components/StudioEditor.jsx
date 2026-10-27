@@ -1586,6 +1586,10 @@ export function StudioEditor({
       params.set('salutation', sal);
     }
 
+    // Bắt buộc thêm tham số làm mới v để Zalo & Facebook không bao giờ bị dính cache cũ
+    const versionTag = Math.floor(Date.now() / 60000).toString(36);
+    params.set('v', versionTag);
+
     const queryString = params.toString();
     return queryString ? `${baseUrl}?${queryString}` : baseUrl;
   };
@@ -5636,13 +5640,14 @@ export function StudioEditor({
                       type="button"
                       onClick={async () => {
                         await handleSaveCurrent();
+                        const buster = Date.now().toString(36);
                         const sampleUrl = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
-                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga`
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&to=Anh+Nam`)
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&to=Mẹ+Nga&v=${buster}`
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&to=Anh+Nam&v=${buster}`)
                           : (currentProfileKey === 'bride'
-                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&to=Anh+Nam`);
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&to=Mẹ+Nga&v=${buster}`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&to=Anh+Nam&v=${buster}`);
                         navigator.clipboard.writeText(sampleUrl);
                         setCopiedLink('preview-sample');
                         setTimeout(() => setCopiedLink(''), 2500);
@@ -5666,13 +5671,14 @@ export function StudioEditor({
                       type="button"
                       onClick={async () => {
                         await handleSaveCurrent();
+                        const buster = Date.now().toString(36);
                         const generalUrl = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
-                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride`
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom`)
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride&v=${buster}`
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom&v=${buster}`)
                           : (currentProfileKey === 'bride'
-                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom`);
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride&v=${buster}`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom&v=${buster}`);
                         navigator.clipboard.writeText(generalUrl);
                         setCopiedLink('preview-card');
                         setTimeout(() => setCopiedLink(''), 2500);

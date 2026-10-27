@@ -20,11 +20,10 @@ function getRedis() {
 
 let cachedConfig = null;
 let lastFetchTime = 0;
-const CACHE_TTL_MS = 8000; // 8 seconds memory cache
 
-async function fetchConfig() {
+async function fetchConfig(forceFresh = false) {
   const now = Date.now();
-  if (cachedConfig && (now - lastFetchTime < CACHE_TTL_MS)) {
+  if (!forceFresh && cachedConfig && (now - lastFetchTime < 2000)) {
     return cachedConfig;
   }
   try {
@@ -42,16 +41,22 @@ async function fetchConfig() {
 }
 
 export default async function handler(req, res) {
-  const { to, guest, name, salutation, xungho, side, profile } = req.query || {};
+  const { to, guest, name, salutation, xungho, side, profile, v, t } = req.query || {};
   const guestName = String(to || guest || name || '').trim();
   const guestSal = String(salutation || xungho || 'Trân trọng kính mời').trim();
 
+  // If request has cache buster v or t, force fresh fetch from Redis
+  const forceFresh = Boolean(v || t);
+  const config = await fetchConfig(forceFresh);
+
   // Robust bride detection
   const sideParam = String(side || profile || '').toLowerCase();
-  const isBride = sideParam === 'bride' || sideParam === '2' || sideParam === 'nhagai' || sideParam === 'gai';
+  let isBride = sideParam === 'bride' || sideParam === '2' || sideParam === 'nhagai' || sideParam === 'gai';
+  if (!sideParam && guestName && config) {
+    const inBride = (config.bride?.guests || []).some(g => (g.name || '').trim().toLowerCase() === guestName.toLowerCase());
+    if (inBride) isBride = true;
+  }
 
-  // Read config from Redis (with memory cache fallback)
-  const config = await fetchConfig();
   const brideProfile = config?.bride || {};
   const groomProfile = config?.groom || {};
   const activeData = isBride ? brideProfile : groomProfile;
@@ -110,6 +115,11 @@ export default async function handler(req, res) {
   const safeDesc = escapeAttr(description);
   const safeImage = escapeAttr(ogImage);
 
+  // Exact Canonical URL matching the current request (CRITICAL: Prevents Zalo from canonicalizing back to root!)
+  const requestUrl = req.url || '';
+  const fullCanonicalUrl = `https://thiepcuoi-hieuthuy-web.vercel.app${requestUrl.startsWith('/') ? '' : '/'}${requestUrl}`;
+  const safeUrl = escapeAttr(fullCanonicalUrl);
+
   // Replace Title tag
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
 
@@ -119,14 +129,18 @@ export default async function handler(req, res) {
   html = html.replace(/<meta property="og:image"[^>]*>/gi, `<meta property="og:image" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:secure_url"[^>]*>/gi, `<meta property="og:image:secure_url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:alt"[^>]*>/gi, `<meta property="og:image:alt" content="${safeTitle}" />`);
+  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeUrl}" />`);
 
   // Replace Twitter Card meta tags
   html = html.replace(/<meta name="twitter:title"[^>]*>/gi, `<meta name="twitter:title" content="${safeTitle}" />`);
   html = html.replace(/<meta name="twitter:description"[^>]*>/gi, `<meta name="twitter:description" content="${safeDesc}" />`);
   html = html.replace(/<meta name="twitter:image"[^>]*>/gi, `<meta name="twitter:image" content="${safeImage}" />`);
 
-  // Send response with no-cache on proxy/CDN so Nhà Trai and Nhà Gái never cross-contaminate
+  // Strictly forbid any CDN caching so Nhà Trai and Nhà Gái never cross-contaminate
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, s-maxage=0');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
   res.status(200).send(html);
 }
