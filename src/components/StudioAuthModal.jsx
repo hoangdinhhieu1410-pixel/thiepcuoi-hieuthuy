@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShieldCheck, Mail, Lock, UserCheck, AlertCircle, Clock, ArrowRight, ArrowLeft, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
 
 const SUPER_ADMIN_EMAIL = 'hoangdinhhieu1410@gmail.com';
-const GOOGLE_CLIENT_ID = '1041142083906-7epn9tr3m8trmfm73d6cm91a4ujsl08c.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '305909808631-hgd2ju2ktrhvik9vp1juue67ld749abu.apps.googleusercontent.com';
 
 export function StudioAuthModal({ onAuthenticated, onCancelToGuest }) {
   const [emailInput, setEmailInput] = useState('');

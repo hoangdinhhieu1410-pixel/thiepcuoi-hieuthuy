@@ -130,8 +130,28 @@ export default async function handler(req, res) {
         try { body = JSON.parse(body); } catch { body = {}; }
       }
 
-      const { action, email, name, picture, role, targetEmail, requesterEmail } = body || {};
-      const normEmail = (email || '').trim().toLowerCase();
+      const { action, email, name, picture, token, role, targetEmail, requesterEmail } = body || {};
+      let resolvedEmail = (email || '').trim().toLowerCase();
+      let resolvedName = name;
+      let resolvedPicture = picture;
+
+      // Extract verified identity from Google ID Token if present
+      if (token && typeof token === 'string' && token.includes('.')) {
+        try {
+          const parts = token.split('.');
+          if (parts.length >= 2) {
+            const rawPayload = Buffer.from(parts[1], 'base64').toString('utf8');
+            const googlePayload = JSON.parse(rawPayload);
+            if (googlePayload.email) {
+              resolvedEmail = googlePayload.email.trim().toLowerCase();
+            }
+            if (googlePayload.name && !resolvedName) resolvedName = googlePayload.name;
+            if (googlePayload.picture && !resolvedPicture) resolvedPicture = googlePayload.picture;
+          }
+        } catch (e) {}
+      }
+
+      const normEmail = resolvedEmail;
       const normTarget = (targetEmail || '').trim().toLowerCase();
       const normRequester = (requesterEmail || '').trim().toLowerCase();
 
@@ -145,8 +165,8 @@ export default async function handler(req, res) {
         if (normEmail === SUPER_ADMIN_EMAIL) {
           users[SUPER_ADMIN_EMAIL] = {
             email: SUPER_ADMIN_EMAIL,
-            name: name || 'Hoàng Đình Hiếu',
-            picture: picture || users[SUPER_ADMIN_EMAIL]?.picture,
+            name: resolvedName || 'Hoàng Đình Hiếu',
+            picture: resolvedPicture || users[SUPER_ADMIN_EMAIL]?.picture,
             role: 'super_admin',
             status: 'approved',
             lastLoginAt: Date.now()
@@ -171,8 +191,8 @@ export default async function handler(req, res) {
           }
 
           user.lastLoginAt = Date.now();
-          if (name && !user.name) user.name = name;
-          if (picture) user.picture = picture;
+          if (resolvedName && !user.name) user.name = resolvedName;
+          if (resolvedPicture) user.picture = resolvedPicture;
           await saveUsers(redis, users);
 
           return res.status(200).json({
@@ -185,8 +205,8 @@ export default async function handler(req, res) {
         // New user requesting access
         users[normEmail] = {
           email: normEmail,
-          name: name || normEmail.split('@')[0],
-          picture: picture || null,
+          name: resolvedName || normEmail.split('@')[0],
+          picture: resolvedPicture || null,
           role: 'viewer', // default role pending approval
           status: 'pending',
           requestedAt: Date.now(),
