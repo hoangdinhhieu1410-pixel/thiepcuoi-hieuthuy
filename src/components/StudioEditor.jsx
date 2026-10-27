@@ -12,6 +12,7 @@ import { GuestView } from './GuestView';
 import { WeddingGiftModal } from './WeddingGiftModal';
 import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from '../data/defaultData';
 import { compressImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate } from '../utils/storage';
+import { UserApprovalManager } from './UserApprovalManager';
 
 export function StudioEditor({
   data,
@@ -21,7 +22,9 @@ export function StudioEditor({
   onSaveProfile,
   onSaveAllProfiles,
   onSwitchProfile,
-  onCloseStudio
+  onCloseStudio,
+  currentUser,
+  onLogout
 }) {
   const [activeTab, setActiveTab] = useState('textcontent');
 
@@ -47,6 +50,9 @@ export function StudioEditor({
     return JSON.parse(JSON.stringify(target));
   });
 
+  const isReadOnly = currentUser?.role === 'viewer';
+  const isSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.email === 'hoangdinhhieu1410@gmail.com';
+
   // Last saved data for undo / revert
   const [lastSavedData, setLastSavedData] = useState(() => {
     const initKey = activeProfileKey || 'groom';
@@ -56,6 +62,10 @@ export function StudioEditor({
 
   // Revert unsaved edits back to last saved state
   const handleRevertToLastSaved = () => {
+    if (isReadOnly) {
+      alert('Tài khoản của bạn có quyền "Chỉ xem", không thể thực hiện thao tác này.');
+      return;
+    }
     if (window.confirm('Khôi phục lại toàn bộ dữ liệu theo bản đã lưu gần nhất? Các thay đổi chưa lưu sẽ được hoàn tác.')) {
       setFormData(JSON.parse(JSON.stringify(lastSavedData)));
       setSaveStatus('Đã khôi phục về bản lưu gần nhất thành công!');
@@ -972,6 +982,10 @@ export function StudioEditor({
 
   // Save currently active profile
   const handleSaveCurrent = async () => {
+    if (isReadOnly) {
+      alert('Tài khoản của bạn có quyền "Chỉ xem". Bạn không được phép lưu hoặc sửa đổi dữ liệu!');
+      return;
+    }
     setSaveStatus('Đang đồng bộ lên máy chủ đám mây... ⏳');
     let updatedAll = {
       ...allProfiles,
@@ -1018,6 +1032,10 @@ export function StudioEditor({
 
   // Save both profiles simultaneously
   const handleSaveBoth = async () => {
+    if (isReadOnly) {
+      alert('Tài khoản của bạn có quyền "Chỉ xem". Bạn không được phép lưu hoặc sửa đổi dữ liệu!');
+      return;
+    }
     setSaveStatus('Đang đồng bộ cả 2 mẫu thiệp lên máy chủ đám mây... ⏳');
     const updatedAll = {
       ...allProfiles,
@@ -1412,7 +1430,7 @@ export function StudioEditor({
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              handleSaveCurrent();
+              if (!isReadOnly) handleSaveCurrent();
               if (onCloseStudio) onCloseStudio();
             }}
             className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors flex items-center gap-1.5 text-xs font-semibold"
@@ -1438,6 +1456,32 @@ export function StudioEditor({
               Sửa đến đâu xem trước trực quan đến đó • Tách riêng 2 mẫu thiệp cho Nhà Trai và Nhà Gái
             </p>
           </div>
+
+          {/* User Status & Logout */}
+          {currentUser && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-stone-100 border border-stone-200 text-xs ml-2">
+              <span className="font-semibold text-stone-800 hidden xl:inline">{currentUser.name || currentUser.email}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                isSuperAdmin
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                  : currentUser.role === 'editor'
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : 'bg-blue-100 text-blue-800 border border-blue-300'
+              }`}>
+                {isSuperAdmin ? '👑 Super Admin' : currentUser.role === 'editor' ? '✏️ Chỉnh Sửa' : '👁️ Chỉ Xem'}
+              </span>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="ml-1 px-1.5 py-0.5 rounded text-stone-400 hover:text-rose-600 font-semibold text-[11px] transition-colors cursor-pointer"
+                  title="Đăng xuất khỏi tài khoản"
+                >
+                  Đăng xuất
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Area (KHU VỰC KHOANH ĐỎ): PROFILE SELECTOR + COPY + PREVIEW TOGGLE + SAVE */}
@@ -1474,8 +1518,15 @@ export function StudioEditor({
 
           {/* 2. COPY TOOL BUTTON */}
           <button
-            onClick={() => setShowCopyModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+            onClick={() => {
+              if (isReadOnly) {
+                alert('Tài khoản có quyền Chỉ Xem, không thể thao tác sao chép dữ liệu!');
+                return;
+              }
+              setShowCopyModal(true);
+            }}
+            disabled={isReadOnly}
+            className={`px-2.5 py-1.5 rounded-xl bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 text-xs font-semibold flex items-center gap-1 shadow-sm transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Sao chép dữ liệu giữa Mẫu 1 và Mẫu 2"
           >
             <Copy className="w-3.5 h-3.5 text-stone-500" />
@@ -1499,7 +1550,8 @@ export function StudioEditor({
           {/* 3.5. REVERT UNSAVED EDITS BUTTON */}
           <button
             onClick={handleRevertToLastSaved}
-            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-stone-100 border border-stone-300 text-stone-700 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+            disabled={isReadOnly}
+            className={`px-2.5 py-1.5 rounded-xl bg-white hover:bg-stone-100 border border-stone-300 text-stone-700 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Khôi phục lại dữ liệu theo bản lưu gần nhất (Hoàn tác chưa lưu)"
           >
             <RotateCcw className="w-3.5 h-3.5 text-stone-500" />
@@ -1509,12 +1561,15 @@ export function StudioEditor({
           {/* 4. SAVE CURRENT BUTTON */}
           <button
             onClick={handleSaveCurrent}
-            className={`px-4 py-1.5 rounded-xl text-white text-xs font-semibold shadow-md flex items-center gap-1.5 transition-all hover:scale-102 ${
-              currentProfileKey === 'groom'
-                ? 'bg-[#70561f] hover:bg-[#5a4417]'
-                : 'bg-rose-800 hover:bg-rose-900'
+            disabled={isReadOnly}
+            className={`px-4 py-1.5 rounded-xl text-white text-xs font-semibold shadow-md flex items-center gap-1.5 transition-all ${
+              isReadOnly
+                ? 'bg-stone-400 cursor-not-allowed opacity-60'
+                : currentProfileKey === 'groom'
+                  ? 'bg-[#70561f] hover:bg-[#5a4417] hover:scale-102'
+                  : 'bg-rose-800 hover:bg-rose-900 hover:scale-102'
             }`}
-            title={`Lưu thay đổi cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}`}
+            title={isReadOnly ? 'Tài khoản có quyền Chỉ Xem, không thể lưu' : `Lưu thay đổi cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}`}
           >
             <Save className="w-3.5 h-3.5 text-amber-300" />
             <span>Lưu {currentProfileKey === 'groom' ? 'Thiệp 1 (Nhà Trai)' : 'Thiệp 2 (Nhà Gái)'}</span>
@@ -1523,8 +1578,13 @@ export function StudioEditor({
           {/* 5. SAVE BOTH BUTTON */}
           <button
             onClick={handleSaveBoth}
-            className="px-2.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-200 text-xs font-semibold shadow-sm flex items-center gap-1 transition-all"
-            title="Lưu lại cả 2 mẫu thiệp cùng một lúc"
+            disabled={isReadOnly}
+            className={`px-2.5 py-1.5 rounded-xl text-stone-200 text-xs font-semibold shadow-sm flex items-center gap-1 transition-all ${
+              isReadOnly
+                ? 'bg-stone-700 cursor-not-allowed opacity-50'
+                : 'bg-stone-900 hover:bg-stone-800 hover:text-white'
+            }`}
+            title={isReadOnly ? 'Tài khoản có quyền Chỉ Xem, không thể lưu' : 'Lưu lại cả 2 mẫu thiệp cùng một lúc'}
           >
             <Save className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden xl:inline">Lưu Cả 2</span>
@@ -1532,6 +1592,14 @@ export function StudioEditor({
 
         </div>
       </header>
+
+      {/* READ-ONLY WARNING BANNER */}
+      {isReadOnly && (
+        <div className="bg-amber-500/15 border-b border-amber-400/50 px-4 py-2.5 text-center text-xs text-amber-900 font-medium flex items-center justify-center gap-2">
+          <Eye className="w-4 h-4 text-amber-700 flex-shrink-0" />
+          <span><strong>Chế độ Chỉ Xem:</strong> Bạn đang đăng nhập bằng tài khoản <strong>{currentUser?.email}</strong>. Bạn có thể xem trước tất cả thông tin, thiết kế nhưng các nút Lưu dữ liệu đã bị khóa.</span>
+        </div>
+      )}
 
       {/* MAIN CONTAINER: LEFT (FORM TABS + CONTENT) + RIGHT (REAL-TIME LIVE PREVIEW) */}
       <div className="flex-1 max-w-[1720px] w-full mx-auto p-2 sm:p-4 lg:p-5 flex flex-col lg:flex-row gap-5 items-start">
@@ -1554,6 +1622,9 @@ export function StudioEditor({
             { id: 'templates', label: 'Chọn Mẫu Bìa Phong Bì', icon: Palette },
             { id: 'cloud', label: 'Hạ Tầng Đa Đám Mây & Sao Lưu', icon: Database, badge: 'Supabase + R2', highlight: true },
             { id: 'export', label: 'Xuất Bản & File Độc Lập', icon: Download },
+            ...(isSuperAdmin ? [
+              { id: 'approval', label: 'Phê Duyệt & Phân Quyền', icon: ShieldCheck, highlight: true, badge: '👑 Admin' }
+            ] : []),
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -6965,7 +7036,11 @@ export function StudioEditor({
             </div>
           )}
 
-          
+          {/* TAB: PHÊ DUYỆT & PHÂN QUYỀN (SUPER ADMIN) */}
+          {activeTab === 'approval' && (
+            <UserApprovalManager currentUser={currentUser} />
+          )}
+
         </main>
       </div>
 

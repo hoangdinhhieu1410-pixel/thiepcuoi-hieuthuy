@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from './data/defaultData';
 import { GuestView } from './components/GuestView';
 import { StudioEditor } from './components/StudioEditor';
+import { StudioAuthModal } from './components/StudioAuthModal';
 import { saveProfilesToStorage, loadProfilesFromStorage, getLiveSyncChannel, broadcastProfileUpdate, getAudioTrackUrl } from './utils/storage';
 
 const PROFILES_STORAGE_KEY = 'wedding_invitation_profiles_v5';
@@ -302,20 +303,55 @@ export function App() {
       if (params.get('guest_mode') === 'true') {
         return false;
       }
-      // When visiting the main website without guest parameters (owner session), ALWAYS enable Admin mode!
+      // When visiting the main website without guest parameters (owner session), enable Admin mode!
       return true;
     } catch (e) {
       return true;
     }
   });
 
-  // Whenever user is in studio, mark them as admin
+  // Current authenticated user (Gmail Auth & RBAC)
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wedding_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Periodically & on viewMode change verify authenticated user status with Upstash Redis
   useEffect(() => {
-    if (viewMode === 'studio') {
+    if (currentUser?.email) {
+      fetch(`/api/auth-users?email=${encodeURIComponent(currentUser.email)}&requester=${encodeURIComponent(currentUser.email)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.user && data.user.status === 'approved') {
+            setCurrentUser(data.user);
+            localStorage.setItem('wedding_auth_user', JSON.stringify(data.user));
+          } else {
+            // User was removed by Super Admin or is no longer approved
+            setCurrentUser(null);
+            localStorage.removeItem('wedding_auth_user');
+          }
+        })
+        .catch(err => console.warn('User status sync warning:', err));
+    }
+  }, [viewMode]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('wedding_auth_user');
+    setCurrentUser(null);
+    setViewMode('guest');
+  };
+
+  // Whenever user is in studio and approved, mark them as admin
+  useEffect(() => {
+    if (viewMode === 'studio' && currentUser?.status === 'approved') {
       localStorage.setItem('wedding_is_admin', 'true');
       setIsAdmin(true);
     }
-  }, [viewMode]);
+  }, [viewMode, currentUser]);
 
   // Synchronize document title and OpenGraph meta tags
   useEffect(() => {
@@ -697,7 +733,30 @@ export function App() {
 
   return (
     <div className="w-full min-h-screen">
-      {viewMode === 'guest' ? (
+      {/* If navigating to Studio without being approved, present StudioAuthModal */}
+      {viewMode === 'studio' && (!currentUser || currentUser.status !== 'approved') ? (
+        <StudioAuthModal
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setIsAdmin(true);
+            setViewMode('studio');
+          }}
+          onCancelToGuest={() => {
+            setViewMode('guest');
+          }}
+        />
+      ) : viewMode === 'studio' ? (
+        <StudioEditor
+          profiles={profiles}
+          activeProfileKey={activeProfileKey}
+          onSaveProfile={handleSaveProfile}
+          onSaveAllProfiles={handleSaveAllProfiles}
+          onSwitchProfile={handleSwitchProfile}
+          onCloseStudio={() => setViewMode('guest')}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+        />
+      ) : (
         <GuestView
           data={currentWeddingData}
           guestName={guestName}
@@ -707,22 +766,17 @@ export function App() {
           initialEnvelopeOpen={initialEnvelopeOpen}
           onAddWish={handleAddWish}
           onOpenStudio={() => {
-            setIsAdmin(true);
-            setViewMode('studio');
+            if (!currentUser || currentUser.status !== 'approved') {
+              setViewMode('studio');
+            } else {
+              setIsAdmin(true);
+              setViewMode('studio');
+            }
           }}
           onStyleChange={handleStyleChange}
           onUpdateData={handleUpdateCurrentData}
           onResetData={handleResetData}
-          isAdmin={isAdmin}
-        />
-      ) : (
-        <StudioEditor
-          profiles={profiles}
-          activeProfileKey={activeProfileKey}
-          onSaveProfile={handleSaveProfile}
-          onSaveAllProfiles={handleSaveAllProfiles}
-          onSwitchProfile={handleSwitchProfile}
-          onCloseStudio={() => setViewMode('guest')}
+          isAdmin={isAdmin && Boolean(currentUser && currentUser.status === 'approved')}
         />
       )}
     </div>
