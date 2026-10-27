@@ -413,22 +413,7 @@ export const DEFAULT_WEDDING_DATA = {
       "invitedSide": "Nhà Gái"
     }
   ],
-  "wishes": [
-    {
-      "id": "w1",
-      "name": "Tuấn Anh & Thu Trang",
-      "relationship": "Bạn thân chú rể (Tham dự 2 người)",
-      "message": "Chúc mừng Đình Hiếu & Thanh Thúy trăm năm hạnh phúc! Hôn lễ tuyệt vời!",
-      "createdAt": "Vừa xong"
-    },
-    {
-      "id": "w2",
-      "name": "Minh Hằng",
-      "relationship": "Đồng nghiệp cô dâu (Tham dự 1 người)",
-      "message": "Chúc cô dâu Thanh Thúy mãi rạng rỡ và hạnh phúc trọn vẹn bên chú rể!",
-      "createdAt": "1 giờ trước"
-    }
-  ]
+  "wishes": []
 };
 
 export const DEFAULT_BRIDE_WEDDING_DATA = {
@@ -834,20 +819,5 @@ export const DEFAULT_BRIDE_WEDDING_DATA = {
       "invitedSide": "Nhà Gái"
     }
   ],
-  "wishes": [
-    {
-      "id": "w1",
-      "name": "Tuấn Anh & Thu Trang",
-      "relationship": "Bạn thân chú rể (Tham dự 2 người)",
-      "message": "Chúc mừng Đình Hiếu & Thanh Thúy trăm năm hạnh phúc! Hôn lễ tuyệt vời!",
-      "createdAt": "Vừa xong"
-    },
-    {
-      "id": "w2",
-      "name": "Minh Hằng",
-      "relationship": "Đồng nghiệp cô dâu (Tham dự 1 người)",
-      "message": "Chúc cô dâu Thanh Thúy mãi rạng rỡ và hạnh phúc trọn vẹn bên chú rể!",
-      "createdAt": "1 giờ trước"
-    }
-  ]
+  "wishes": []
 };

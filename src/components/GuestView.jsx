@@ -401,25 +401,38 @@ export function GuestView({
     }
   }, [envelopeOpen, cardData.music?.enabled]);
 
-  // Load cloud wishes from server
+  // Load cloud wishes from server with live sync & instant deletion reflection
   useEffect(() => {
-    fetch('/api/wishes')
-      .then(r => r.json())
-      .then(d => {
-        if (d?.success && Array.isArray(d?.wishes) && d.wishes.length > 0) {
-          setCardData(prev => {
-            const curWishes = prev.wishes || [];
-            const existingIds = new Set(curWishes.map(w => w.id));
-            const newFromServer = d.wishes.filter(w => !existingIds.has(w.id));
-            if (newFromServer.length === 0) return prev;
-            return {
+    const syncWishes = () => {
+      fetch(`/api/wishes?_t=${Date.now()}`, { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => {
+          if (d?.success && Array.isArray(d?.wishes)) {
+            setCardData(prev => ({
               ...prev,
-              wishes: [...newFromServer, ...curWishes]
-            };
-          });
-        }
-      })
-      .catch(() => {});
+              wishes: d.wishes
+            }));
+          }
+        })
+        .catch(() => {});
+    };
+
+    syncWishes();
+
+    // Periodic refresh every 4s and on tab focus/visibility
+    const interval = setInterval(syncWishes, 4000);
+    const handleFocus = () => syncWishes();
+    window.addEventListener('focus', handleFocus);
+    const handleVis = () => {
+      if (document.visibilityState === 'visible') syncWishes();
+    };
+    document.addEventListener('visibilitychange', handleVis);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVis);
+    };
   }, []);
 
   const toggleMusic = () => {

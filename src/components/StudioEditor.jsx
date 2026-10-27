@@ -204,19 +204,69 @@ export function StudioEditor({
     };
     setAllProfiles(updatedAll);
     setFormData(p => ({ ...p, wishes: updatedWishes }));
+    setCloudWishes(updatedWishes);
     saveProfilesToStorage(updatedAll);
     broadcastProfileUpdate(updatedAll, 'studio_wishes_updated');
+    if (onSaveAllProfiles) {
+      onSaveAllProfiles(updatedAll);
+    }
   };
 
-  const handleDeleteWish = (wishId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa lời chúc này không?')) {
-      const filtered = allUniqueWishes.filter(w => w.id !== wishId);
-      handleSaveUnifiedWishes(filtered);
-      setCloudWishes(filtered);
-      fetch('/api/wishes?id=' + encodeURIComponent(wishId), { method: 'DELETE' }).catch(() => {});
-      setSaveStatus('Đã xóa lời chúc thành công!');
-      setTimeout(() => setSaveStatus(''), 2500);
+  const handleDeleteWish = async (wish) => {
+    const wishId = typeof wish === 'string' ? wish : wish?.id;
+    const wishName = typeof wish === 'object' ? wish.name : '';
+    const wishMessage = typeof wish === 'object' ? wish.message : '';
+
+    const label = wishName ? `của "${wishName}"` : 'này';
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa lời chúc ${label} không?\nLời chúc sẽ được xóa vĩnh viễn trên toàn hệ thống và thiệp mời.`)) {
+      return;
     }
+
+    const filtered = allUniqueWishes.filter(w => {
+      if (wishId && w.id === wishId) return false;
+      if (wishName && wishMessage && w.name === wishName && w.message === wishMessage) return false;
+      return true;
+    });
+
+    handleSaveUnifiedWishes(filtered);
+
+    try {
+      await fetch('/api/wishes?id=' + encodeURIComponent(wishId || ''), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: wishId, name: wishName, message: wishMessage })
+      });
+    } catch (e) {
+      console.warn('Lỗi gọi API xóa lời chúc:', e);
+    }
+
+    setSaveStatus('Đã xóa lời chúc thành công!');
+    setTimeout(() => setSaveStatus(''), 2500);
+  };
+
+  const handlePurgeAllWishes = async () => {
+    if (allUniqueWishes.length === 0) {
+      alert('Hiện không có lời chúc nào để xóa.');
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn XÓA TẤT CẢ (${allUniqueWishes.length}) lời chúc không?\nThao tác này sẽ làm sạch toàn bộ sổ lưu bút trên cả máy chủ và thiệp cưới.`)) {
+      return;
+    }
+
+    handleSaveUnifiedWishes([]);
+
+    try {
+      await fetch('/api/wishes?id=all', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'all' })
+      });
+    } catch (e) {
+      console.warn('Lỗi xóa tất cả lời chúc:', e);
+    }
+
+    setSaveStatus('Đã xóa sạch tất cả lời chúc thành công!');
+    setTimeout(() => setSaveStatus(''), 2500);
   };
 
   const handleToggleWishSide = (wishId) => {
@@ -2878,11 +2928,12 @@ export function StudioEditor({
                   </button>
                   <button
                     type="button"
-                    onClick={handlePurgeDemoWishes}
-                    className="px-2.5 py-2 rounded-xl hover:bg-rose-50 text-stone-400 hover:text-rose-600 text-xs font-medium transition-colors"
-                    title="Xóa các lời chúc mẫu chứa tên cũ"
+                    onClick={handlePurgeAllWishes}
+                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 border border-rose-200"
+                    title="Xóa tất cả lời chúc đang có trong hệ thống"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Xóa tất cả</span>
                   </button>
                 </div>
               </div>
@@ -3151,7 +3202,7 @@ export function StudioEditor({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDeleteWish(wish.id)}
+                                onClick={() => handleDeleteWish(wish)}
                                 className="p-1.5 rounded-lg hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition-colors"
                                 title="Xóa lời chúc"
                               >

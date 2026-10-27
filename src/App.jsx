@@ -556,7 +556,7 @@ export function App() {
     fetch(`/api/wishes?_t=${Date.now()}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
-        if (d?.success && Array.isArray(d?.wishes) && d.wishes.length > 0) {
+        if (d?.success && Array.isArray(d?.wishes)) {
           setProfiles(prev => {
             const serverWishes = d.wishes;
             const updated = {
