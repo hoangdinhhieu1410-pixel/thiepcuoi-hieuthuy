@@ -229,9 +229,23 @@ export function App() {
     }
   });
 
+  const getAppParams = () => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash || '';
+      const hashClean = hash.startsWith('#') ? hash.substring(1) : hash;
+      const hashParams = new URLSearchParams(hashClean.startsWith('?') ? hashClean.substring(1) : hashClean);
+      return {
+        get: (key) => searchParams.get(key) || hashParams.get(key)
+      };
+    } catch (e) {
+      return new URLSearchParams(window.location.search);
+    }
+  };
+
   const [activeProfileKey, setActiveProfileKey] = useState(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
+      const params = getAppParams();
       const side = params.get('side') || params.get('profile') || params.get('mau') || params.get('thiep');
       if (side === 'bride' || side === '2' || side === 'nhagai' || side === 'gai') return 'bride';
       if (side === 'groom' || side === '1' || side === 'nhatrai' || side === 'trai') return 'groom';
@@ -246,8 +260,8 @@ export function App() {
   });
   const [viewMode, setViewMode] = useState(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
-      // Link gửi riêng cho khách mời (có ?to=..., ?guest=..., ?name=..., hoặc ?view=guest): HIỂN THỊ THIỆP GUEST
+      const params = getAppParams();
+      // Link gửi riêng cho khách mời (có to=..., guest=..., name=..., hoặc view=guest): HIỂN THỊ THIỆP GUEST
       if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest' || params.get('view') === 'card') {
         return 'guest';
       }
@@ -263,7 +277,7 @@ export function App() {
   });
   const [guestName, setGuestName] = useState(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
+      const params = getAppParams();
       const toParam = params.get('to') || params.get('guest') || params.get('name');
       return toParam ? decodeURIComponent(toParam) : '';
     } catch (e) {
@@ -272,7 +286,7 @@ export function App() {
   });
   const [guestSalutation, setGuestSalutation] = useState(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
+      const params = getAppParams();
       const sal = params.get('salutation') || params.get('xungho');
       return sal ? decodeURIComponent(sal) : '';
     } catch (e) {
@@ -281,7 +295,7 @@ export function App() {
   });
   const [initialEnvelopeOpen, setInitialEnvelopeOpen] = useState(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
+      const params = getAppParams();
       // If URL explicitly requests open inner card (?open=1 or ?ruot=1)
       if (params.get('open') === '1' || params.get('open') === 'true' || params.get('ruot') === '1') {
         return true;
@@ -300,7 +314,7 @@ export function App() {
   // Determine if the current session is an Administrator / Owner
   const [isAdmin, setIsAdmin] = useState(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
+      const params = getAppParams();
       // If URL has guest parameters: to, guest, name, view=guest -> STRICTLY GUEST MODE!
       if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest' || params.get('view') === 'card') {
         return false;
@@ -446,7 +460,7 @@ export function App() {
   // Read URL query parameters on initial mount & Load from IndexedDB
   useEffect(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
+      const params = getAppParams();
       const toParam = params.get('to') || params.get('guest') || params.get('name');
       if (toParam) {
         setGuestName(decodeURIComponent(toParam));
@@ -528,7 +542,7 @@ export function App() {
             }));
 
             // Check URL parameters for family side isolation
-            const p = new URLSearchParams(window.location.search);
+            const p = getAppParams();
             const sideParam = p.get('side') || p.get('profile') || p.get('mau') || p.get('thiep');
             const guestNameParam = (p.get('to') || p.get('guest') || p.get('name') || '').trim();
             const isGuestAccess = Boolean(guestNameParam || p.get('view') === 'guest' || p.get('view') === 'card' || p.get('guest_mode') === 'true');

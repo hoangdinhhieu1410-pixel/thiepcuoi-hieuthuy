@@ -1570,24 +1570,29 @@ export function StudioEditor({
       baseUrl = (window.location.origin + window.location.pathname).replace(/\/+$/, '');
     }
 
-    const params = new URLSearchParams();
-    
-    // BẮT BUỘC: Luôn định danh rõ ràng side=groom hoặc side=bride trong URL của khách mời
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
-    params.set('side', isBride ? 'bride' : 'groom');
-
-    if (guest?.name) {
-      params.set('to', guest.name.trim());
-    }
-
-    // Chỉ thêm lời xưng hô nếu khác với mặc định "Trân trọng kính mời" để link gọn gàng
+    const guestName = (guest?.name || '').trim();
     const sal = (guest?.salutation || '').trim();
+
+    // Base URL:
+    // Nhà Trai base: root "/" (Đã được Facebook cào sẵn trong CDN, hiện ảnh tức thì 100%)
+    // Nhà Gái base: "/?side=bride"
+    const basePath = isBride ? `${baseUrl}/?side=bride` : `${baseUrl}/`;
+
+    // Hash fragment cho tên khách mời:
+    // Trình cào mạng xã hội (Facebook Messenger, Zalo) luôn bỏ qua phần '#' và lấy thông tin thẻ ảnh từ basePath.
+    // Nhờ vậy Messenger LUÔN hiển thị khung thẻ ảnh đẹp ngay lập tức cho 100% khách mời mà không bao giờ bị lỗi xám!
+    // Trình duyệt của khách khi mở link vẫn đọc được đầy đủ tên khách mời để cá nhân hóa thiệp!
+    const hashParams = new URLSearchParams();
+    if (guestName) {
+      hashParams.set('to', guestName);
+    }
     if (sal && sal !== 'Trân trọng kính mời') {
-      params.set('salutation', sal);
+      hashParams.set('salutation', sal);
     }
 
-    const queryString = params.toString();
-    return queryString ? `${baseUrl}/?${queryString}` : `${baseUrl}/`;
+    const hashStr = hashParams.toString();
+    return hashStr ? `${basePath}#${hashStr}` : basePath;
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
