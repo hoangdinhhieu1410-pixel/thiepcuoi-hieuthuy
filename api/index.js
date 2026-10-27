@@ -142,11 +142,12 @@ export default async function handler(req, res) {
   const safeImage = escapeAttr(ogImage);
 
   // Canonical URL & OpenGraph og:url:
-  // Using the exact requested URL preserves unique query parameters (side=bride, to=guest, v=version)
-  // so that social networks (Zalo, Facebook, Messenger) cache each link independently with its own title, description, and thumbnail.
+  // Using stable canonical paths (/co-dau for Bride, / for Groom) allows Meta (Facebook, Messenger)
+  // and Zalo to index and cache the rich preview cards permanently. All personalized guest links
+  // map directly to these canonical identities so Messenger immediately expands the rich preview card.
   const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
-  const cleanUrl = `${baseCanonical}${req.url || '/'}`;
-  const safeUrl = escapeAttr(cleanUrl);
+  const canonicalUrl = isBride ? `${baseCanonical}/co-dau` : `${baseCanonical}/`;
+  const safeCanonicalUrl = escapeAttr(canonicalUrl);
 
   // Replace Title tag & Meta description
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
@@ -159,9 +160,9 @@ export default async function handler(req, res) {
 
   // Canonical Link tag
   if (html.includes('<link rel="canonical"')) {
-    html = html.replace(/<link rel="canonical"[^>]*>/gi, `<link rel="canonical" href="${safeUrl}" />`);
+    html = html.replace(/<link rel="canonical"[^>]*>/gi, `<link rel="canonical" href="${safeCanonicalUrl}" />`);
   } else {
-    html = html.replace(/<head>/i, `<head>\n    <link rel="canonical" href="${safeUrl}" />`);
+    html = html.replace(/<head>/i, `<head>\n    <link rel="canonical" href="${safeCanonicalUrl}" />`);
   }
 
   // Replace or inject OpenGraph meta tags
@@ -171,7 +172,10 @@ export default async function handler(req, res) {
   html = html.replace(/<meta property="og:image:url"[^>]*>/gi, `<meta property="og:image:url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:secure_url"[^>]*>/gi, `<meta property="og:image:secure_url" content="${safeImage}" />`);
   html = html.replace(/<meta property="og:image:alt"[^>]*>/gi, `<meta property="og:image:alt" content="${safeTitle}" />`);
-  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeUrl}" />`);
+  html = html.replace(/<meta property="og:image:width"[^>]*>/gi, `<meta property="og:image:width" content="1200" />`);
+  html = html.replace(/<meta property="og:image:height"[^>]*>/gi, `<meta property="og:image:height" content="630" />`);
+  html = html.replace(/<meta property="og:image:type"[^>]*>/gi, `<meta property="og:image:type" content="image/jpeg" />`);
+  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeCanonicalUrl}" />`);
   html = html.replace(/<meta property="og:site_name"[^>]*>/gi, `<meta property="og:site_name" content="Thiệp Cưới Online" />`);
   html = html.replace(/<meta property="og:locale"[^>]*>/gi, `<meta property="og:locale" content="vi_VN" />`);
   html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, '');
@@ -187,10 +191,11 @@ export default async function handler(req, res) {
   const isCrawler = /facebookexternalhit|facebot|meta-externalagent|meta-externalfetcher|facebookcatalog|facebookplatform|zalo|twitterbot|pinterest|whatsapp|telegrambot|slackbot|discordbot|linkedinbot|bot|crawler|spider/i.test(userAgent);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  if (forceFresh) {
+  if (isCrawler) {
+    // Social crawlers (Facebook Messenger, Zalo, Twitter): Must provide long-lived public cache so Facebook crawler accepts and stores rich link card
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
+  } else if (forceFresh) {
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
-  } else if (isCrawler) {
-    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
   } else {
     res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, must-revalidate');
   }

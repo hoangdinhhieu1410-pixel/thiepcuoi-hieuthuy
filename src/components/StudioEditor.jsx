@@ -1561,7 +1561,9 @@ export function StudioEditor({
   };
 
   // Generate Personalized Link for a guest (Tách biệt 100% Nhà Trai / Nhà Gái qua đường dẫn riêng biệt)
-  const getGuestLink = (guest) => {
+  // Chuẩn công nghiệp (Biihappy, Thiepvip, iWedding): Sử dụng đường dẫn tĩnh sạch (/co-dau cho Nhà Gái, / cho Nhà Trai)
+  // để Facebook và Messenger ánh xạ trực tiếp đến thẻ xem trước OpenGraph đã cache, không bị lỗi domain pill xám.
+  const getGuestLink = (guest, platform = 'general') => {
     const configuredDomain = (formData.socialShare?.customDomain || '').trim();
     let baseUrl;
     if (configuredDomain) {
@@ -1574,12 +1576,11 @@ export function StudioEditor({
     const guestName = (guest?.name || '').trim();
     const sal = (guest?.salutation || '').trim();
 
+    // Clean path routing matching industry standards:
+    // Nhà Gái uses dedicated /co-dau, Nhà Trai uses /
+    const basePath = isBride ? `${baseUrl}/co-dau` : `${baseUrl}/`;
+
     const params = new URLSearchParams();
-    if (isBride) {
-      params.set('side', 'bride');
-    } else {
-      params.set('side', 'groom');
-    }
     if (guestName) {
       params.set('to', guestName);
     }
@@ -1587,16 +1588,8 @@ export function StudioEditor({
       params.set('salutation', sal);
     }
 
-    // Version parameter (v) - Chuẩn form theo mẫu người dùng (&v=hsj8b)
-    // Giúp Zalo và Facebook nhận diện đây là link mới, tự động cào lại (scrape) thẻ xem trước mới nhất
-    // mà không bị dính cache cũ từ trước
-    const vCode = guest?.id
-      ? `${(guest.id.replace(/[^a-zA-Z0-9]/g, '').slice(-3) || 'g')}${Date.now().toString(36).slice(-2)}`
-      : Date.now().toString(36).slice(-5);
-    params.set('v', vCode);
-
     const queryString = params.toString();
-    return queryString ? `${baseUrl}/?${queryString}` : `${baseUrl}/`;
+    return queryString ? `${basePath}?${queryString}` : basePath;
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
