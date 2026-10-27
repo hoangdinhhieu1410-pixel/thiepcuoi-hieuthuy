@@ -3086,6 +3086,7 @@ export function StudioEditor({
                   <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-100 bg-white">
                     {filteredGuests.map((guest) => {
                       const guestLink = getGuestLink(guest);
+                      const isBrideGuest = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
                       return (
                         <div key={guest.id} className="p-3 sm:p-4 hover:bg-stone-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                           <div className="space-y-1">
