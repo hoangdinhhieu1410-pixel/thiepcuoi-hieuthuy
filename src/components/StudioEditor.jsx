@@ -1571,11 +1571,15 @@ export function StudioEditor({
     }
 
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
-    const path = isBride ? '/co-dau' : '/chu-re';
     const guestName = (guest?.name || '').trim();
     const sal = (guest?.salutation || '').trim();
 
     const params = new URLSearchParams();
+    if (isBride) {
+      params.set('side', 'bride');
+    } else {
+      params.set('side', 'groom');
+    }
     if (guestName) {
       params.set('to', guestName);
     }
@@ -1584,33 +1588,11 @@ export function StudioEditor({
     }
 
     const queryString = params.toString();
-    return queryString ? `${baseUrl}${path}?${queryString}` : `${baseUrl}${path}`;
+    return queryString ? `${baseUrl}/?${queryString}` : `${baseUrl}/`;
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
   const [copiedMessengerId, setCopiedMessengerId] = useState('');
-
-  // Chuyển đổi tên sang ký tự Unicode Sans Bold Italic (in đậm + nghiêng thật 100% trên Zalo & Messenger, không lộ ký hiệu _*)
-  const toBoldItalic = (text) => {
-    if (!text) return '';
-    const nfd = String(text).normalize('NFD');
-    let result = '';
-    for (const char of nfd) {
-      const code = char.codePointAt(0);
-      if (code >= 0x41 && code <= 0x5A) {
-        result += String.fromCodePoint(0x1D63C + (code - 0x41));
-      } else if (code >= 0x61 && code <= 0x7A) {
-        result += String.fromCodePoint(0x1D656 + (code - 0x61));
-      } else if (char === 'Đ') {
-        result += '𝘿';
-      } else if (char === 'đ') {
-        result += '𝙙';
-      } else {
-        result += char;
-      }
-    }
-    return result;
-  };
 
   // Helper copy to clipboard with both Rich HTML and Plain text markdown
   const copyRichAndPlainText = async (plainText, htmlText) => {
@@ -1635,47 +1617,69 @@ export function StudioEditor({
     }
   };
 
-  // Format full formal Zalo invitation message (Tô đậm và in nghiêng tên khách mời bằng ký tự Unicode chuyên dụng)
-  const getGuestZaloMessage = (guest) => {
+  // Format full formal invitation message matching EXACT user sample (Nhà Trai & Nhà Gái)
+  const getGuestInvitationTemplate = (guest) => {
     const link = getGuestLink(guest);
     const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
-    const guestNameRaw = (guest?.name || 'Quý Khách').trim();
-    const guestNameStyled = toBoldItalic(guestNameRaw);
+    const guestName = (guest?.name || 'Quý Khách').trim();
     const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
     const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
     const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
     const coupleText = isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`;
     const weddingDate = formData.eventDateText || formData.saveTheDateDay || '29.11.2026';
-    const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
+    const ceremonyType = isBride ? 'lễ Vu Quy' : 'lễ Thành Hôn';
     const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
 
-    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: ${guestNameStyled}\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestNameStyled} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestNameStyled} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
+    let inviteLine = '';
+    if (salutation.toLowerCase().includes('kính mời')) {
+      inviteLine = `Đến tham dự ${ceremonyType}, chung vui cùng`;
+    } else if (salutation.toLowerCase().includes('thân mời')) {
+      inviteLine = `Trân trọng kính mời bạn đến tham dự ${ceremonyType}, chung vui cùng`;
+    } else {
+      inviteLine = `Trân trọng kính mời ${salutation ? salutation.toLowerCase() : 'quý khách'} đến tham dự ${ceremonyType}, chung vui cùng`;
+    }
 
-    const html = `<p>💌 <b>THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel})</b> 💌<br>${salutation}: <b><i>${guestNameRaw}</i></b><br>Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>📅 Ngày: ${weddingDate}<br><br>👉 Kính mời <b><i>${guestNameRaw}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br><a href="${link}">${link}</a><br><br>Sự hiện diện của <b><i>${guestNameRaw}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>Rất hân hạnh được đón tiếp!</p>`;
+    const plain = `💌 THƯ MỜI CƯỚI 💌
+— ${sideLabel} —
+
+${salutation}: ${guestName} ♡
+
+${inviteLine}
+
+🌷 ${coupleText} 🌷
+
+🗓️ Ngày ${weddingDate}
+
+──────── ❀ ────────
+
+💌 Kính mời ${guestName} bấm vào đường link dưới đây để mở thiệp cưới:
+
+🔗 ${link}
+
+──────── ❀ ────────
+
+Sự hiện diện của ${guestName} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!
+
+♡ Rất hân hạnh được đón tiếp! ♡`;
+
+    const html = `<p>💌 <b>THƯ MỜI CƯỚI</b> 💌<br>
+— <b>${sideLabel}</b> —<br><br>
+${salutation}: <b>${guestName}</b> ♡<br><br>
+${inviteLine}<br><br>
+🌷 <b>${coupleText}</b> 🌷<br><br>
+🗓️ Ngày ${weddingDate}<br><br>
+──────── ❀ ────────<br><br>
+💌 Kính mời <b>${guestName}</b> bấm vào đường link dưới đây để mở thiệp cưới:<br><br>
+🔗 <a href="${link}">${link}</a><br><br>
+──────── ❀ ────────<br><br>
+Sự hiện diện của <b>${guestName}</b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br><br>
+♡ <b>Rất hân hạnh được đón tiếp!</b> ♡</p>`;
 
     return { plain, html };
   };
 
-  // Format full formal Messenger invitation message (Tô đậm và in nghiêng tên khách mời bằng ký tự Unicode chuyên dụng)
-  const getGuestMessengerMessage = (guest) => {
-    const link = getGuestLink(guest);
-    const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
-    const guestNameRaw = (guest?.name || 'Quý Khách').trim();
-    const guestNameStyled = toBoldItalic(guestNameRaw);
-    const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
-    const groomName = formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu';
-    const brideName = formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy';
-    const coupleText = isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`;
-    const weddingDate = formData.eventDateText || formData.saveTheDateDay || '29.11.2026';
-    const ceremonyType = isBride ? 'lễ vu quy' : 'lễ thành hôn';
-    const sideLabel = isBride ? 'Nhà Gái' : 'Nhà Trai';
-
-    const plain = `💌 THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel}) 💌\n${salutation}: ${guestNameStyled}\nĐến tham dự ${ceremonyType} chung vui cùng ${coupleText}\n📅 Ngày: ${weddingDate}\n\n👉 Kính mời ${guestNameStyled} bấm vào đường link dưới đây để mở thiệp cưới:\n${link}\n\nSự hiện diện của ${guestNameStyled} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!\nRất hân hạnh được đón tiếp!`;
-
-    const html = `<p>💌 <b>THƯ MỜI CƯỚI TRÂN TRỌNG (${sideLabel})</b> 💌<br>${salutation}: <b><i>${guestNameRaw}</i></b><br>Đến tham dự ${ceremonyType} chung vui cùng ${coupleText}<br>📅 Ngày: ${weddingDate}<br><br>👉 Kính mời <b><i>${guestNameRaw}</i></b> bấm vào đường link dưới đây để mở thiệp cưới:<br><a href="${link}">${link}</a><br><br>Sự hiện diện của <b><i>${guestNameRaw}</i></b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br>Rất hân hạnh được đón tiếp!</p>`;
-
-    return { plain, html };
-  };
+  const getGuestZaloMessage = (guest) => getGuestInvitationTemplate(guest);
+  const getGuestMessengerMessage = (guest) => getGuestInvitationTemplate(guest);
 
   // Copy full Zalo message
   const copyGuestZaloMessage = async (guest) => {
@@ -3132,6 +3136,30 @@ export function StudioEditor({
                   </button>
                 </div>
               </form>
+
+              {/* PREVIEW MẪU LỜI MỜI ZALO / MESSENGER CHUẨN FORM */}
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+                    <span>💌</span>
+                    <span>Mẫu Lời Mời Gửi Qua Zalo & Messenger ({currentProfileKey === 'groom' ? 'Nhà Trai' : 'Nhà Gái'})</span>
+                  </h4>
+                  <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    ✓ Đúng chuẩn form mẫu 100%
+                  </span>
+                </div>
+
+                <div className="bg-stone-50/80 p-4 rounded-xl border border-stone-200 text-xs text-stone-800 font-sans leading-relaxed whitespace-pre-wrap select-all shadow-inner">
+                  {(() => {
+                    const sampleGuest = filteredGuests[0] || {
+                      name: currentProfileKey === 'groom' ? 'MẸ NGA ĐÍT THÚI' : 'Bạn Thúy meo meo',
+                      salutation: currentProfileKey === 'groom' ? 'Trân trọng kính mời' : 'Thân mời',
+                      side: currentProfileKey
+                    };
+                    return getGuestInvitationTemplate(sampleGuest).plain;
+                  })()}
+                </div>
+              </div>
 
               {/* SEARCH & GUEST LIST TABLE */}
               <div className="space-y-3">
