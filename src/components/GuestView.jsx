@@ -10,7 +10,7 @@ import {
   Save, Eye, RotateCcw, Sliders, Check, Plus, Trash2, Mail
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { getAudioTrackUrl } from '../utils/storage';
+import { getAudioTrackUrl, getLiveSyncChannel } from '../utils/storage';
 
 /**
  * Tính toán mốc thời gian đích cho Countdown:
@@ -272,10 +272,14 @@ export function GuestView({
 
   // Local copy of data for real-time live editing
   const [cardData, setCardData] = useState(data || {});
+  const [liveWishes, setLiveWishes] = useState(() => data?.wishes || []);
   const audioRef = useRef(null);
 
   useEffect(() => {
     setCardData(data || {});
+    if (Array.isArray(data?.wishes)) {
+      setLiveWishes(data.wishes);
+    }
   }, [data]);
 
   // Keyboard navigation & ESC to close lightbox
@@ -401,13 +405,20 @@ export function GuestView({
     }
   }, [envelopeOpen, cardData.music?.enabled]);
 
-  // Load cloud wishes from server with live sync & instant deletion reflection
+  // Load cloud wishes from server with live fast polling & instant cross-tab sync
   useEffect(() => {
     const syncWishes = () => {
-      fetch(`/api/wishes?_t=${Date.now()}`, { cache: 'no-store' })
+      fetch(`/api/wishes?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
         .then(r => r.json())
         .then(d => {
           if (d?.success && Array.isArray(d?.wishes)) {
+            setLiveWishes(d.wishes);
             setCardData(prev => ({
               ...prev,
               wishes: d.wishes
@@ -419,8 +430,8 @@ export function GuestView({
 
     syncWishes();
 
-    // Periodic refresh every 4s and on tab focus/visibility
-    const interval = setInterval(syncWishes, 4000);
+    // Fast polling every 2.5s for instant sync across devices
+    const interval = setInterval(syncWishes, 2500);
     const handleFocus = () => syncWishes();
     window.addEventListener('focus', handleFocus);
     const handleVis = () => {
@@ -428,10 +439,37 @@ export function GuestView({
     };
     document.addEventListener('visibilitychange', handleVis);
 
+    // Instant 0.001s cross-tab sync via BroadcastChannel
+    let handleChannel = null;
+    try {
+      const channel = getLiveSyncChannel();
+      if (channel) {
+        handleChannel = (e) => {
+          if (e.data?.type === 'WISH_DELETED') {
+            if (e.data?.wishes) {
+              setLiveWishes(e.data.wishes);
+              setCardData(prev => ({ ...prev, wishes: e.data.wishes }));
+            } else if (e.data?.wishId) {
+              setLiveWishes(prev => prev.filter(w => w.id !== e.data.wishId));
+              setCardData(prev => ({ ...prev, wishes: (prev.wishes || []).filter(w => w.id !== e.data.wishId) }));
+            }
+          } else if (e.data?.type === 'WISH_ADDED' && e.data?.wish) {
+            setLiveWishes(prev => [e.data.wish, ...prev.filter(w => w.id !== e.data.wish.id)]);
+            setCardData(prev => ({ ...prev, wishes: [e.data.wish, ...(prev.wishes || []).filter(w => w.id !== e.data.wish.id)] }));
+          }
+        };
+        channel.addEventListener('message', handleChannel);
+      }
+    } catch (e) {}
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVis);
+      try {
+        const channel = getLiveSyncChannel();
+        if (channel && handleChannel) channel.removeEventListener('message', handleChannel);
+      } catch (e) {}
     };
   }, []);
 
@@ -532,13 +570,23 @@ export function GuestView({
       body: JSON.stringify(newWish)
     }).catch(e => console.warn('Guest wish send error:', e));
 
+    // Update local state instantly
+    setLiveWishes(prev => [newWish, ...prev.filter(w => w.id !== newWish.id)]);
+    setCardData(prev => ({
+      ...prev,
+      wishes: [newWish, ...(prev.wishes || []).filter(w => w.id !== newWish.id)]
+    }));
+
+    // Instant 0.001s cross-tab broadcast
+    try {
+      const channel = getLiveSyncChannel();
+      if (channel) {
+        channel.postMessage({ type: 'WISH_ADDED', wish: newWish });
+      }
+    } catch (err) {}
+
     if (onAddWish) {
       onAddWish(newWish);
-    } else {
-      setCardData(prev => ({
-        ...prev,
-        wishes: [newWish, ...(prev.wishes || [])]
-      }));
     }
 
     setWishSubmitted(true);
@@ -1982,16 +2030,16 @@ export function GuestView({
             </button>
           </form>
 
-          {/* Wishes List preview */}
-          {cardData.wishes && cardData.wishes.length > 0 && (
+          {/* Wishes List preview with instant live sync */}
+          {liveWishes && liveWishes.length > 0 && (
             <div className="relative z-10 mt-7 space-y-2.5 max-w-sm mx-auto">
               <div className="flex items-center justify-between px-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#928362]">
-                  Lời chúc từ người thân & bạn bè ({cardData.wishes.length})
+                  Lời chúc từ người thân & bạn bè ({liveWishes.length})
                 </span>
               </div>
               <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin">
-                {cardData.wishes.map((w, idx) => {
+                {liveWishes.map((w, idx) => {
                   const isBrideSide = w.side === 'bride' || w.sideLabel?.toLowerCase().includes('gái');
                   return (
                     <div key={w.id || idx} className="bg-white/95 backdrop-blur-xs p-3.5 rounded-2xl border border-[#e5dec9] shadow-xs text-xs text-stone-700 space-y-1">

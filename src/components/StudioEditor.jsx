@@ -11,7 +11,7 @@ import {
 import { GuestView } from './GuestView';
 import { WeddingGiftModal } from './WeddingGiftModal';
 import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from '../data/defaultData';
-import { compressImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate } from '../utils/storage';
+import { compressImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate, getLiveSyncChannel } from '../utils/storage';
 import { UserApprovalManager } from './UserApprovalManager';
 
 export function StudioEditor({
@@ -127,11 +127,17 @@ export function StudioEditor({
     message: ''
   });
 
-  // Fetch wishes from cloud Redis backend
+  // Fetch wishes from cloud Redis backend with strict cache-busting
   const fetchCloudWishes = async (showToast = false) => {
     try {
       setIsRefreshingWishes(true);
-      const res = await fetch('/api/wishes');
+      const res = await fetch(`/api/wishes?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       const data = await res.json();
       if (data?.success && Array.isArray(data?.wishes)) {
         setCloudWishes(data.wishes);
@@ -167,8 +173,41 @@ export function StudioEditor({
     }
   };
 
+  // Real-time polling & instant cross-tab sync for wishes
   useEffect(() => {
     fetchCloudWishes(false);
+
+    // Fast polling every 2.5s for instant sync
+    const interval = setInterval(() => fetchCloudWishes(false), 2500);
+    const handleFocus = () => fetchCloudWishes(false);
+    window.addEventListener('focus', handleFocus);
+    const handleVis = () => {
+      if (document.visibilityState === 'visible') fetchCloudWishes(false);
+    };
+    document.addEventListener('visibilitychange', handleVis);
+
+    let handleChannel = null;
+    try {
+      const channel = getLiveSyncChannel();
+      if (channel) {
+        handleChannel = (e) => {
+          if (e.data?.type === 'WISH_ADDED' || e.data?.type === 'WISH_DELETED' || e.data?.type === 'WISHES_SYNC') {
+            fetchCloudWishes(false);
+          }
+        };
+        channel.addEventListener('message', handleChannel);
+      }
+    } catch (e) {}
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVis);
+      try {
+        const channel = getLiveSyncChannel();
+        if (channel && handleChannel) channel.removeEventListener('message', handleChannel);
+      } catch (e) {}
+    };
   }, []);
 
   // Unified wishes list from both profiles and cloud
@@ -230,12 +269,26 @@ export function StudioEditor({
 
     handleSaveUnifiedWishes(filtered);
 
+    // Instant 0.001s cross-tab broadcast so the wedding card updates immediately
     try {
-      await fetch('/api/wishes?id=' + encodeURIComponent(wishId || ''), {
+      const channel = getLiveSyncChannel();
+      if (channel) {
+        channel.postMessage({ type: 'WISH_DELETED', wishId, wishes: filtered });
+      }
+    } catch (e) {}
+
+    try {
+      const endpoint = `/api/wishes?id=${encodeURIComponent(wishId || '')}&name=${encodeURIComponent(wishName || '')}&message=${encodeURIComponent(wishMessage || '')}&_t=${Date.now()}`;
+      await fetch(endpoint, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: wishId, name: wishName, message: wishMessage })
+        cache: 'no-store'
       });
+      // Fallback POST action=delete for guaranteed delivery across any network proxy
+      fetch('/api/wishes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: wishId, name: wishName, message: wishMessage })
+      }).catch(() => {});
     } catch (e) {
       console.warn('Lỗi gọi API xóa lời chúc:', e);
     }
@@ -255,12 +308,24 @@ export function StudioEditor({
 
     handleSaveUnifiedWishes([]);
 
+    // Instant 0.001s cross-tab broadcast
     try {
-      await fetch('/api/wishes?id=all', {
+      const channel = getLiveSyncChannel();
+      if (channel) {
+        channel.postMessage({ type: 'WISH_DELETED', wishId: 'all', wishes: [] });
+      }
+    } catch (e) {}
+
+    try {
+      await fetch(`/api/wishes?id=all&_t=${Date.now()}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: 'all' })
+        cache: 'no-store'
       });
+      fetch('/api/wishes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: 'all' })
+      }).catch(() => {});
     } catch (e) {
       console.warn('Lỗi xóa tất cả lời chúc:', e);
     }

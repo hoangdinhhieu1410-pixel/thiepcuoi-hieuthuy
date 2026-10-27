@@ -671,22 +671,17 @@ export function App() {
 
   // Add wish to both profiles so any guest on either side sees all shared wishes
   const handleAddWish = (newWish) => {
-    const side = activeProfileKey || 'groom';
+    const side = newWish?.side || activeProfileKey || 'groom';
     const enrichedWish = {
-      id: 'wish-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+      id: newWish?.id || ('wish-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5)),
+      name: newWish?.name || '',
+      message: newWish?.message || '',
       side,
       sideLabel: side === 'bride' ? 'Nhà Gái' : 'Nhà Trai',
-      createdAt: 'Vừa xong',
-      timestamp: Date.now(),
+      createdAt: newWish?.createdAt || 'Vừa xong',
+      timestamp: newWish?.timestamp || Date.now(),
       ...newWish
     };
-
-    // Save to cloud Redis backend
-    fetch('/api/wishes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(enrichedWish)
-    }).catch(e => console.warn('Cloud wish post error:', e));
 
     setProfiles(prev => {
       const prevGroomWishes = prev?.groom?.wishes || [];
