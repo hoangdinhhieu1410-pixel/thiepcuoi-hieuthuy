@@ -14,6 +14,37 @@ import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from '../data/defaul
 import { compressImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate, getLiveSyncChannel } from '../utils/storage';
 import { UserApprovalManager } from './UserApprovalManager';
 
+export const GUEST_GROUP_CONFIG = {
+  'Bạn học': {
+    name: 'Bạn học',
+    icon: '🎓',
+    badgeClass: 'bg-sky-100 text-sky-800 border-sky-300',
+    btnSelectedClass: 'bg-sky-500 text-white shadow-md ring-2 ring-sky-300 font-bold',
+    indicatorClass: 'bg-sky-50 text-sky-800 border-sky-300'
+  },
+  'Bạn xã hội': {
+    name: 'Bạn xã hội',
+    icon: '🌟',
+    badgeClass: 'bg-purple-100 text-purple-800 border-purple-300',
+    btnSelectedClass: 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300 font-bold',
+    indicatorClass: 'bg-purple-50 text-purple-800 border-purple-300'
+  },
+  'Đồng nghiệp': {
+    name: 'Đồng nghiệp',
+    icon: '💼',
+    badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+    btnSelectedClass: 'bg-amber-500 text-white shadow-md ring-2 ring-amber-300 font-bold',
+    indicatorClass: 'bg-amber-50 text-amber-900 border-amber-300'
+  },
+  'Họ hàng': {
+    name: 'Họ hàng',
+    icon: '🏡',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    btnSelectedClass: 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-300 font-bold',
+    indicatorClass: 'bg-emerald-50 text-emerald-800 border-emerald-300'
+  }
+};
+
 export function StudioEditor({
   data,
   onUpdateData,
@@ -145,6 +176,50 @@ export function StudioEditor({
     message: ''
   });
 
+  // Helper to track permanently deleted wish keys locally to prevent resurrection from cache
+  const getDeletedWishKeys = () => {
+    try {
+      const raw = localStorage.getItem('wedding_deleted_wish_keys');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const addDeletedWishKey = (keyOrWish) => {
+    try {
+      const keys = getDeletedWishKeys();
+      if (typeof keyOrWish === 'string') {
+        if (keyOrWish && !keys.includes(keyOrWish)) keys.push(keyOrWish);
+      } else if (keyOrWish) {
+        if (keyOrWish.id && !keys.includes(keyOrWish.id)) keys.push(keyOrWish.id);
+        const nm = (keyOrWish.name?.trim() + '_' + keyOrWish.message?.trim());
+        if (nm && !keys.includes(nm)) keys.push(nm);
+      }
+      localStorage.setItem('wedding_deleted_wish_keys', JSON.stringify(keys));
+    } catch {}
+  };
+
+  // Helper to format wish date to DD/MM/YYYY
+  const formatWishDate = (w) => {
+    if (!w) return '';
+    const ts = w.timestamp || (typeof w.id === 'string' && w.id.startsWith('wish-') ? parseInt(w.id.split('-')[1], 10) : null);
+    if (ts && !isNaN(ts)) {
+      const d = new Date(ts);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+    }
+    if (w.createdAt && w.createdAt !== 'Vừa xong' && w.createdAt !== 'Mới' && w.createdAt !== 'Gần đây') {
+      return w.createdAt;
+    }
+    const now = new Date();
+    return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  };
+
   // Fetch wishes from cloud Redis backend with strict cache-busting
   const fetchCloudWishes = async (showToast = false) => {
     try {
@@ -158,25 +233,24 @@ export function StudioEditor({
       });
       const data = await res.json();
       if (data?.success && Array.isArray(data?.wishes)) {
-        setCloudWishes(data.wishes);
-        const updatedGroom = {
-          ...(allProfiles?.groom || {}),
-          wishes: data.wishes
-        };
-        const updatedBride = {
-          ...(allProfiles?.bride || {}),
-          wishes: data.wishes
-        };
-        const updatedAll = {
-          ...allProfiles,
-          groom: updatedGroom,
-          bride: updatedBride
-        };
-        setAllProfiles(updatedAll);
-        setFormData(p => ({ ...p, wishes: data.wishes }));
-        saveProfilesToStorage(updatedAll);
+        const deletedKeys = getDeletedWishKeys();
+        const activeWishes = data.wishes.filter(w => {
+          if (!w || !w.name || !w.message) return false;
+          if (w.id && deletedKeys.includes(w.id)) return false;
+          const nm = w.name.trim() + '_' + w.message.trim();
+          if (deletedKeys.includes(nm)) return false;
+          return true;
+        });
+
+        setCloudWishes(activeWishes);
+        setFormData(p => ({ ...p, wishes: activeWishes }));
+        setAllProfiles(prev => ({
+          ...prev,
+          groom: { ...(prev.groom || {}), wishes: activeWishes },
+          bride: { ...(prev.bride || {}), wishes: activeWishes }
+        }));
         if (showToast) {
-          setSaveStatus(`Đã làm mới! Đang có ${data.wishes.length} lời chúc từ khách mời.`);
+          setSaveStatus(`Đã làm mới! Đang có ${activeWishes.length} lời chúc từ khách mời.`);
           setTimeout(() => setSaveStatus(''), 3000);
         }
       }
@@ -228,45 +302,29 @@ export function StudioEditor({
     };
   }, []);
 
-  // Unified wishes list from both profiles and cloud
+  // Unified wishes list from cloud Redis (Filtered against deleted blacklists)
   const allUniqueWishes = (() => {
-    const listCurrent = formData?.wishes || [];
-    const listGroom = allProfiles?.groom?.wishes || [];
-    const listBride = allProfiles?.bride?.wishes || [];
-    const combined = [...cloudWishes, ...listCurrent, ...listGroom, ...listBride];
-    const map = new Map();
-    combined.forEach(w => {
-      if (!w || !w.name || !w.message) return;
-      const key = w.id || (w.name.trim() + '_' + w.message.trim());
-      if (!map.has(key)) {
-        map.set(key, w);
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const deletedKeys = getDeletedWishKeys();
+    const source = (cloudWishes && cloudWishes.length > 0) ? cloudWishes : (formData?.wishes || []);
+    return source.filter(w => {
+      if (!w || !w.name || !w.message) return false;
+      if (w.id && deletedKeys.includes(w.id)) return false;
+      const nm = w.name.trim() + '_' + w.message.trim();
+      if (deletedKeys.includes(nm)) return false;
+      return true;
+    }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   })();
 
   const handleSaveUnifiedWishes = (updatedWishes) => {
-    const updatedGroom = {
-      ...(allProfiles?.groom || {}),
-      wishes: updatedWishes
-    };
-    const updatedBride = {
-      ...(allProfiles?.bride || {}),
-      wishes: updatedWishes
-    };
-    const updatedAll = {
-      ...allProfiles,
-      groom: updatedGroom,
-      bride: updatedBride
-    };
-    setAllProfiles(updatedAll);
-    setFormData(p => ({ ...p, wishes: updatedWishes }));
     setCloudWishes(updatedWishes);
-    saveProfilesToStorage(updatedAll);
-    broadcastProfileUpdate(updatedAll, 'studio_wishes_updated');
-    if (onSaveAllProfiles) {
-      onSaveAllProfiles(updatedAll);
-    }
+    setFormData(p => ({ ...p, wishes: updatedWishes }));
+    setAllProfiles(prev => ({
+      ...prev,
+      groom: { ...(prev.groom || {}), wishes: updatedWishes },
+      bride: { ...(prev.bride || {}), wishes: updatedWishes }
+    }));
+    setLastSavedData(prev => prev ? ({ ...prev, wishes: updatedWishes }) : prev);
+    broadcastProfileUpdate(allProfiles, 'studio_wishes_updated');
   };
 
   const handleDeleteWish = async (wish) => {
@@ -279,15 +337,21 @@ export function StudioEditor({
       return;
     }
 
+    // 1. Blacklist immediately so it can never be resurrected
+    addDeletedWishKey(wish);
+    if (wishId) addDeletedWishKey(wishId);
+    if (wishName && wishMessage) addDeletedWishKey(wishName.trim() + '_' + wishMessage.trim());
+
+    // 2. Filter local state
     const filtered = allUniqueWishes.filter(w => {
       if (wishId && w.id === wishId) return false;
-      if (wishName && wishMessage && w.name === wishName && w.message === wishMessage) return false;
+      if (wishName && wishMessage && w.name?.trim() === wishName?.trim() && w.message?.trim() === wishMessage?.trim()) return false;
       return true;
     });
 
     handleSaveUnifiedWishes(filtered);
 
-    // Instant 0.001s cross-tab broadcast so the wedding card updates immediately
+    // 3. Instant 0.001s cross-tab broadcast so the wedding card updates immediately
     try {
       const channel = getLiveSyncChannel();
       if (channel) {
@@ -295,6 +359,7 @@ export function StudioEditor({
       }
     } catch (e) {}
 
+    // 4. Send API DELETE to server
     try {
       const endpoint = `/api/wishes?id=${encodeURIComponent(wishId || '')}&name=${encodeURIComponent(wishName || '')}&message=${encodeURIComponent(wishMessage || '')}&_t=${Date.now()}`;
       await fetch(endpoint, {
@@ -311,7 +376,7 @@ export function StudioEditor({
       console.warn('Lỗi gọi API xóa lời chúc:', e);
     }
 
-    setSaveStatus('Đã xóa lời chúc thành công!');
+    setSaveStatus('✅ Đã xóa lời chúc thành công!');
     setTimeout(() => setSaveStatus(''), 2500);
   };
 
@@ -323,6 +388,8 @@ export function StudioEditor({
     if (!window.confirm(msg)) {
       return;
     }
+
+    allUniqueWishes.forEach(w => addDeletedWishKey(w));
 
     handleSaveUnifiedWishes([]);
 
@@ -348,7 +415,7 @@ export function StudioEditor({
       console.warn('Lỗi xóa tất cả lời chúc:', e);
     }
 
-    setSaveStatus('Đã xóa sạch tất cả lời chúc thành công!');
+    setSaveStatus('✅ Đã xóa sạch tất cả lời chúc thành công!');
     setTimeout(() => setSaveStatus(''), 2500);
   };
 
@@ -373,13 +440,15 @@ export function StudioEditor({
   const handleAddManualWish = (e) => {
     e.preventDefault();
     if (!manualWish.name.trim() || !manualWish.message.trim()) return;
+    const now = new Date();
+    const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     const newWish = {
       id: 'wish-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
       name: manualWish.name.trim(),
       message: manualWish.message.trim(),
       side: manualWish.side,
       sideLabel: manualWish.side === 'bride' ? 'Nhà Gái' : 'Nhà Trai',
-      createdAt: 'Vừa xong',
+      createdAt: formattedDate,
       timestamp: Date.now()
     };
     handleSaveUnifiedWishes([newWish, ...allUniqueWishes]);
@@ -2932,15 +3001,28 @@ export function StudioEditor({
                   </div>
                 </div>
 
-                {/* Nhóm khách mời (Tick chọn: Bạn học, Bạn xã hội, Đồng nghiệp, Họ hàng) */}
+                {/* Nhóm khách mời (4 màu tươi sáng: Bạn học, Bạn xã hội, Đồng nghiệp, Họ hàng) */}
                 <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1.5">
-                    <label className="block text-stone-600 font-medium text-xs">
-                      Nhóm khách mời (Tick chọn):
-                    </label>
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <label className="block text-stone-600 font-medium text-xs">
+                        Nhóm khách mời:
+                      </label>
+                      {/* Hiển thị màu của mục đang chọn bên cạnh để nhìn dễ phân biệt */}
+                      {(() => {
+                        const activeCfg = GUEST_GROUP_CONFIG[newGuest.group || 'Bạn học'] || GUEST_GROUP_CONFIG['Bạn học'];
+                        return (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 shadow-xs transition-all ${activeCfg.badgeClass}`}>
+                            <span>{activeCfg.icon}</span>
+                            <span>Đang chọn: {activeCfg.name}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {['Bạn học', 'Bạn xã hội', 'Đồng nghiệp', 'Họ hàng'].map((groupName) => {
+                      {Object.keys(GUEST_GROUP_CONFIG).map((groupName) => {
                         const isSelected = (newGuest.group || 'Bạn học') === groupName;
+                        const cfg = GUEST_GROUP_CONFIG[groupName];
                         return (
                           <button
                             key={groupName}
@@ -2948,16 +3030,13 @@ export function StudioEditor({
                             onClick={() => setNewGuest({ ...newGuest, group: groupName })}
                             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                               isSelected
-                                ? (currentProfileKey === 'groom' ? 'bg-[#70561f] text-white shadow ring-2 ring-[#70561f]/30' : 'bg-rose-700 text-white shadow ring-2 ring-rose-400')
-                                : 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-200'
+                                ? cfg.btnSelectedClass
+                                : 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-200 shadow-xs'
                             }`}
                           >
-                            <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[9px] ${
-                              isSelected ? 'border-white bg-amber-400 text-stone-900 font-bold' : 'border-stone-400'
-                            }`}>
-                              {isSelected ? '✓' : ''}
-                            </span>
-                            <span>{groupName}</span>
+                            <span>{cfg.icon}</span>
+                            <span>{cfg.name}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 ml-0.5" />}
                           </button>
                         );
                       })}
@@ -3007,7 +3086,6 @@ export function StudioEditor({
                   <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-100 bg-white">
                     {filteredGuests.map((guest) => {
                       const guestLink = getGuestLink(guest);
-                      const isBrideGuest = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
                       return (
                         <div key={guest.id} className="p-3 sm:p-4 hover:bg-stone-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                           <div className="space-y-1">
@@ -3015,28 +3093,23 @@ export function StudioEditor({
                               <span className="font-semibold text-stone-900 text-sm">
                                 {guest.name}
                               </span>
-                              <span className="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 text-[11px] font-medium border border-stone-200">
-                                {guest.group || 'Bạn học'}
-                              </span>
-                              {isBrideGuest ? (
-                                <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-300">
-                                  👰 Thiệp Nhà Gái (?side=bride)
-                                </span>
-                              ) : (
-                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300">
-                                  🎩 Thiệp Nhà Trai (?side=groom)
-                                </span>
-                              )}
+                              {(() => {
+                                const gGroup = guest.group || 'Bạn học';
+                                const cfg = GUEST_GROUP_CONFIG[gGroup] || {
+                                  icon: '👥',
+                                  badgeClass: 'bg-stone-100 text-stone-700 border-stone-200'
+                                };
+                                return (
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 shadow-2xs ${cfg.badgeClass}`}>
+                                    <span>{cfg.icon}</span>
+                                    <span>{gGroup}</span>
+                                  </span>
+                                );
+                              })()}
                             </div>
                             <p className="text-[11px] text-stone-500">
                               {guest.salutation}: <span className="font-medium text-stone-700">{guest.name}</span>
                             </p>
-                            <div className="text-[11px] text-stone-500 font-mono flex items-center gap-1.5 pt-0.5">
-                              <span className="text-stone-400">Link mời:</span>
-                              <code className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 text-stone-700 break-all select-all font-mono text-[10px]">
-                                {guestLink}
-                              </code>
-                            </div>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-1.5 shrink-0 pt-2 sm:pt-0">
@@ -3394,7 +3467,7 @@ export function StudioEditor({
                                   {isBride ? '👰 Họ Nhà Gái' : '🤵 Họ Nhà Trai'}
                                 </span>
                               </div>
-                              <span className="text-[11px] text-stone-400 shrink-0">{wish.createdAt || 'Mới'}</span>
+                              <span className="text-[11px] text-stone-400 shrink-0">{formatWishDate(wish)}</span>
                             </div>
 
                             <p className="text-xs text-stone-700 italic bg-[#faf7f2] p-3 rounded-xl border border-[#ebdcc4] leading-relaxed">

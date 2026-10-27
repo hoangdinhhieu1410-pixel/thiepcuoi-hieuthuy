@@ -107,12 +107,6 @@ export default async function handler(req, res) {
 
       await redis.set(REDIS_KEY, JSON.stringify(configToSave));
 
-      // Sync wishes explicitly into wedding_wishes_list if provided
-      const incomingWishes = configToSave.groom?.wishes || configToSave.bride?.wishes;
-      if (Array.isArray(incomingWishes)) {
-        await redis.set('wedding_wishes_list', JSON.stringify(incomingWishes));
-      }
-
       // Dual-sync to Supabase Cloud Database (if configured)
       const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;

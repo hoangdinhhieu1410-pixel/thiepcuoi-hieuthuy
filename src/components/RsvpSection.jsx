@@ -16,12 +16,15 @@ export function RsvpSection({ wishes = [], onAddWish, groom, bride }) {
     e.preventDefault();
     if (!formData.name.trim() || !formData.message.trim()) return;
 
+    const now = new Date();
+    const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     const newWish = {
       id: 'wish-' + Date.now(),
       name: formData.name.trim(),
       relationship: formData.relationship + (formData.attending === 'yes' ? ` (Tham dự ${formData.guestCount} người)` : ' (Gửi lời chúc từ xa)'),
       message: formData.message.trim(),
-      createdAt: 'Vừa xong',
+      createdAt: formattedDate,
+      timestamp: Date.now()
     };
 
     onAddWish(newWish);
@@ -193,7 +196,20 @@ export function RsvpSection({ wishes = [], onAddWish, groom, bride }) {
                     {w.name}
                   </span>
                   <span className="text-[10px] text-stone-400 font-sans-clean">
-                    {w.createdAt || 'Gần đây'}
+                    {(() => {
+                      const ts = w.timestamp || (typeof w.id === 'string' && w.id.startsWith('wish-') ? parseInt(w.id.split('-')[1], 10) : null);
+                      if (ts && !isNaN(ts)) {
+                        const d = new Date(ts);
+                        if (!isNaN(d.getTime())) {
+                          return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                        }
+                      }
+                      if (w.createdAt && w.createdAt !== 'Vừa xong' && w.createdAt !== 'Mới' && w.createdAt !== 'Gần đây') {
+                        return w.createdAt;
+                      }
+                      const now = new Date();
+                      return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+                    })()}
                   </span>
                 </div>
                 {w.relationship && (

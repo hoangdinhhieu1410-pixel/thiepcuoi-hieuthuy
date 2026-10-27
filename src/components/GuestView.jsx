@@ -89,6 +89,25 @@ export function getCeremonyTargetDate(cardData) {
   return isNaN(result.getTime()) ? new Date(2026, 10, 29, 11, 0, 0) : result;
 }
 
+export const formatWishDate = (w) => {
+  if (!w) return '';
+  const ts = w.timestamp || (typeof w.id === 'string' && w.id.startsWith('wish-') ? parseInt(w.id.split('-')[1], 10) : null);
+  if (ts && !isNaN(ts)) {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
+  if (w.createdAt && w.createdAt !== 'Vừa xong' && w.createdAt !== 'Mới') {
+    return w.createdAt;
+  }
+  const now = new Date();
+  return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+};
+
 export function GuestView({
   data,
   guestName,
@@ -550,13 +569,15 @@ export function GuestView({
     }
 
     const side = activeProfileKey || cardData.profileType || 'groom';
+    const now = new Date();
+    const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     const newWish = {
       id: 'wish-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
       name: cleanName,
       message: cleanMessage,
       side,
       sideLabel: side === 'bride' ? 'Nhà Gái' : 'Nhà Trai',
-      createdAt: 'Vừa xong',
+      createdAt: formattedDate,
       timestamp: Date.now()
     };
 
@@ -2047,7 +2068,7 @@ export function GuestView({
                             {isBrideSide ? '👰 Họ Nhà Gái' : '🤵 Họ Nhà Trai'}
                           </span>
                         </div>
-                        <span className="text-[10px] text-stone-400 shrink-0">{w.createdAt || 'Mới'}</span>
+                        <span className="text-[10px] text-stone-400 shrink-0">{formatWishDate(w)}</span>
                       </div>
                       <p className="text-stone-700 italic leading-relaxed pt-0.5">"{w.message}"</p>
                     </div>

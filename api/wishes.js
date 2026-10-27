@@ -127,6 +127,16 @@ export default async function handler(req, res) {
           wishes = [];
         }
       }
+      // Ensure all wishes have standardized date format DD/MM/YYYY
+      wishes = wishes.map(w => {
+        let dateFormatted = w.createdAt;
+        if (!dateFormatted || dateFormatted === 'Vừa xong' || dateFormatted === 'Mới') {
+          const ts = w.timestamp || (typeof w.id === 'string' && w.id.startsWith('wish-') ? parseInt(w.id.split('-')[1], 10) : Date.now());
+          const d = new Date(ts);
+          dateFormatted = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        }
+        return { ...w, createdAt: dateFormatted };
+      });
       return res.status(200).json({ success: true, wishes });
     }
 
@@ -164,6 +174,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Thiếu họ tên hoặc lời chúc' });
       }
 
+      const now = new Date();
+      const dateFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
       const newWish = {
         id: body.id || `wish-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         name: String(name).trim(),
@@ -171,7 +184,7 @@ export default async function handler(req, res) {
         relationship: (relationship || 'Khách quý').trim(),
         side: side === 'bride' ? 'bride' : 'groom',
         sideLabel: sideLabel || (side === 'bride' ? 'Nhà Gái' : 'Nhà Trai'),
-        createdAt: 'Vừa xong',
+        createdAt: dateFormatted,
         timestamp: Date.now()
       };
 
