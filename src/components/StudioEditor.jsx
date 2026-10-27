@@ -1604,28 +1604,57 @@ export function StudioEditor({
 
   // Helper copy to clipboard with both Rich HTML and Plain text markdown
   const copyRichAndPlainText = async (plainText, htmlText) => {
-    try {
-      if (navigator.clipboard && window.ClipboardItem) {
+    let copied = false;
+    // Method 1: Modern async ClipboardItem with text/html and text/plain
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
         const item = new ClipboardItem({
-          'text/plain': new Blob([plainText], { type: 'text/plain' }),
-          'text/html': new Blob([htmlText], { type: 'text/html' })
+          'text/html': new Blob([htmlText], { type: 'text/html' }),
+          'text/plain': new Blob([plainText], { type: 'text/plain' })
         });
         await navigator.clipboard.write([item]);
-        return true;
+        copied = true;
+      } catch (e) {
+        console.warn('ClipboardItem write failed, trying fallback listener:', e);
       }
-    } catch (e) {
-      console.warn('ClipboardItem write failed, fallback to writeText:', e);
     }
-    try {
-      await navigator.clipboard.writeText(plainText);
-      return true;
-    } catch (e2) {
-      console.error('Clipboard writeText failed:', e2);
-      return false;
+
+    // Method 2: Synchronous copy event listener fallback (standard for Windows rich clipboard CF_HTML)
+    if (!copied) {
+      try {
+        const onCopy = (e) => {
+          e.clipboardData.setData('text/html', htmlText);
+          e.clipboardData.setData('text/plain', plainText);
+          e.preventDefault();
+        };
+        document.addEventListener('copy', onCopy);
+        copied = document.execCommand('copy');
+        document.removeEventListener('copy', onCopy);
+      } catch (e2) {
+        console.warn('execCommand copy failed:', e2);
+      }
     }
+
+    // Method 3: Direct writeText as final fallback
+    if (!copied) {
+      try {
+        await navigator.clipboard.writeText(plainText);
+        copied = true;
+      } catch (e3) {
+        console.error('navigator.clipboard.writeText failed:', e3);
+      }
+    }
+
+    return copied;
   };
 
   // Format full formal invitation message matching EXACT user sample (Nhà Trai & Nhà Gái)
+  // Chuẩn 100%:
+  // 1. "THƯ MỜI CƯỚI": IN ĐẬM
+  // 2. "— Nhà Trai —" / "— Nhà Gái —": IN NGHIÊNG
+  // 3. Tên khách mời: IN ĐẬM
+  // 4. Tên cô dâu & chú rể: IN ĐẬM
+  // 5. "Ngày ...": IN ĐẬM
   const getGuestInvitationTemplate = (guest) => {
     const link = getGuestLink(guest);
     const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
@@ -1647,41 +1676,45 @@ export function StudioEditor({
       inviteLine = `Trân trọng kính mời ${salutation ? salutation.toLowerCase() : 'quý khách'} đến tham dự ${ceremonyType}, chung vui cùng`;
     }
 
-    const plain = `💌 THƯ MỜI CƯỚI 💌
-— ${sideLabel} —
+    // Plain text version (sử dụng Markdown chuẩn *in đậm* và _in nghiêng_ cho Zalo, Messenger, Telegram)
+    const plain = `💌 *THƯ MỜI CƯỚI* 💌
+— _${sideLabel}_ —
 
-${salutation}: ${guestName} ♡
+${salutation}: *${guestName}* ♡
 
 ${inviteLine}
 
-🌷 ${coupleText} 🌷
+🌷 *${coupleText}* 🌷
 
-🗓️ Ngày ${weddingDate}
+🗓️ *Ngày ${weddingDate}*
 
 ──────── ❀ ────────
 
-💌 Kính mời ${guestName} bấm vào đường link dưới đây để mở thiệp cưới:
+💌 Kính mời *${guestName}* bấm vào đường link dưới đây để mở thiệp cưới:
 
 🔗 ${link}
 
 ──────── ❀ ────────
 
-Sự hiện diện của ${guestName} là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!
+Sự hiện diện của *${guestName}* là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!
 
-♡ Rất hân hạnh được đón tiếp! ♡`;
+♡ *Rất hân hạnh được đón tiếp!* ♡`;
 
-    const html = `<p>💌 <b>THƯ MỜI CƯỚI</b> 💌<br>
-— <b>${sideLabel}</b> —<br><br>
-${salutation}: <b>${guestName}</b> ♡<br><br>
+    // Rich HTML version (giữ nguyên định dạng in đậm <strong>, in nghiêng <em> khi dán vào Zalo PC / Zalo Web / Word)
+    const html = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1c1917;">
+<p>💌 <strong style="font-weight: 700;">THƯ MỜI CƯỚI</strong> 💌<br>
+— <em style="font-style: italic;">${sideLabel}</em> —<br><br>
+${salutation}: <strong style="font-weight: 700;">${guestName}</strong> ♡<br><br>
 ${inviteLine}<br><br>
-🌷 <b>${coupleText}</b> 🌷<br><br>
-🗓️ Ngày ${weddingDate}<br><br>
+🌷 <strong style="font-weight: 700;">${coupleText}</strong> 🌷<br><br>
+🗓️ <strong style="font-weight: 700;">Ngày ${weddingDate}</strong><br><br>
 ──────── ❀ ────────<br><br>
-💌 Kính mời <b>${guestName}</b> bấm vào đường link dưới đây để mở thiệp cưới:<br><br>
+💌 Kính mời <strong style="font-weight: 700;">${guestName}</strong> bấm vào đường link dưới đây để mở thiệp cưới:<br><br>
 🔗 <a href="${link}">${link}</a><br><br>
 ──────── ❀ ────────<br><br>
-Sự hiện diện của <b>${guestName}</b> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br><br>
-♡ <b>Rất hân hạnh được đón tiếp!</b> ♡</p>`;
+Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong> là niềm vinh hạnh và hạnh phúc lớn của gia đình chúng tôi!<br><br>
+♡ <strong style="font-weight: 700;">Rất hân hạnh được đón tiếp!</strong> ♡</p>
+</div>`;
 
     return { plain, html };
   };
