@@ -112,8 +112,6 @@ export function GuestView({
   const [envelopeOpen, setEnvelopeOpen] = useState(initialEnvelopeOpen);
   const [photoAnimKey, setPhotoAnimKey] = useState(0);
   const [textAnimKey, setTextAnimKey] = useState(0);
-  const [activePhotoTestNotice, setActivePhotoTestNotice] = useState('');
-  const [activeTextTestNotice, setActiveTextTestNotice] = useState('');
 
   // Reorder gallery photos directly on card
   const handleMoveGalleryPhoto = (fromIndex, toIndex) => {
@@ -233,9 +231,6 @@ export function GuestView({
       setEnvelopeOpen(true);
       if (onEnvelopeToggle) onEnvelopeToggle(true);
       setPhotoAnimKey(k => k + 1);
-      setActivePhotoTestNotice(data?.photoAnimationEffect || 'kenburns');
-      const t = setTimeout(() => setActivePhotoTestNotice(''), 4000);
-      return () => clearTimeout(t);
     }
   }, [testPhotoAnimTrigger, data?.photoAnimationEffect]);
 
@@ -245,9 +240,6 @@ export function GuestView({
       setEnvelopeOpen(true);
       if (onEnvelopeToggle) onEnvelopeToggle(true);
       setTextAnimKey(k => k + 1);
-      setActiveTextTestNotice(data?.textAnimationEffect || 'slideUp');
-      const t = setTimeout(() => setActiveTextTestNotice(''), 4000);
-      return () => clearTimeout(t);
     }
   }, [testTextAnimTrigger, data?.textAnimationEffect]);
 
@@ -255,12 +247,6 @@ export function GuestView({
     setEnvelopeOpen(true);
     setPhotoAnimKey(k => k + 1);
     setTextAnimKey(k => k + 1);
-    setActivePhotoTestNotice(data?.photoAnimationEffect || 'kenburns');
-    setActiveTextTestNotice(data?.textAnimationEffect || 'slideUp');
-    setTimeout(() => {
-      setActivePhotoTestNotice('');
-      setActiveTextTestNotice('');
-    }, 4000);
     if (onEnvelopeToggle) {
       onEnvelopeToggle(true);
     }
@@ -627,30 +613,6 @@ export function GuestView({
         : (adminToolbarVisible && isAdmin ? 'min-h-screen pt-14 pb-8' : 'min-h-screen pt-0 sm:pt-4 md:pt-6 pb-8')
     } bg-gradient-to-b from-[#181512] via-[#12100e] to-[#0a0908] flex flex-col items-center text-stone-800 font-avo selection:bg-[#70561f]/20 w-full relative overflow-x-hidden`}>
 
-      {/* Live Indicator Pill for Photo Animation testing */}
-      {activePhotoTestNotice && (
-        <div className="sticky top-2 z-[90] flex justify-center pointer-events-none px-4 animate-bounce">
-          <div className="bg-amber-950/95 text-amber-200 text-xs font-bold px-4 py-2 rounded-full shadow-2xl border border-amber-400 backdrop-blur-md flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-300 animate-spin" />
-            <span>
-              Đang xem thử ảnh: {photoEffectNameMap[cardData.photoAnimationEffect] || photoEffectNameMap.kenburns}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Live Indicator Pill for Text Animation testing */}
-      {activeTextTestNotice && (
-        <div className="sticky top-2 z-[90] flex justify-center pointer-events-none px-4 animate-bounce">
-          <div className="bg-[#70561f]/95 text-amber-100 text-xs font-bold px-4 py-2 rounded-full shadow-2xl border border-amber-300 backdrop-blur-md flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-300 animate-spin" />
-            <span>
-              Đang xem thử chữ: {textEffectNameMap[cardData.textAnimationEffect] || textEffectNameMap.slideUp}
-            </span>
-          </div>
-        </div>
-      )}
-      
       {/* 1. TOP LIVE-EDITING TOOLBAR (STICKY ON VERY TOP - Z-INDEX 100, ONLY VISIBLE TO ADMIN) */}
       {!isPreview && isAdmin && adminToolbarVisible && (
         <div className="fixed top-0 inset-x-0 z-[100] bg-stone-950/95 backdrop-blur-md shadow-2xl border-b border-amber-400/50 py-2 px-3">
