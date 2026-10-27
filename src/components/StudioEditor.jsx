@@ -1567,7 +1567,7 @@ export function StudioEditor({
     if (configuredDomain) {
       baseUrl = configuredDomain.replace(/\/+$/, '');
     } else {
-      baseUrl = window.location.origin + window.location.pathname.replace(/\/+$/, '');
+      baseUrl = (window.location.origin + window.location.pathname).replace(/\/+$/, '');
     }
 
     const params = new URLSearchParams();
@@ -1591,7 +1591,7 @@ export function StudioEditor({
     params.set('v', versionTag);
 
     const queryString = params.toString();
-    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+    return queryString ? `${baseUrl}/?${queryString}` : `${baseUrl}/`;
   };
 
   const [copiedZaloId, setCopiedZaloId] = useState('');
@@ -3228,7 +3228,17 @@ export function StudioEditor({
                               className="p-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors"
                               title="Mở thử thiệp (giao diện thực tế khách nhìn thấy, sạch 100% không menu)"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
+                            </a>
+
+                            <a
+                              href={`https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(guestLink)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition-colors"
+                              title="Xóa cache Facebook / Debug xem trước trên Messenger"
+                            >
+                              <ExternalLink className="w-4 h-4 text-blue-600" />
                             </a>
 
                             <button
@@ -5749,6 +5759,27 @@ export function StudioEditor({
                         </>
                       )}
                     </button>
+                  </div>
+
+                  <div className="max-w-sm mx-auto pt-1">
+                    <a
+                      href={`https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(
+                        formData.socialShare?.customDomain 
+                          ? (currentProfileKey === 'bride' 
+                              ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=bride` 
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?side=groom`)
+                          : (currentProfileKey === 'bride'
+                              ? `https://thiepcuoi-hieuthuy-web.vercel.app/?side=bride`
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?side=groom`)
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
+                      title="Mở Meta Sharing Debugger để ép Facebook xóa cache và tải lại thẻ xem trước ngay lập tức"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>⚡ Xóa Cache Facebook Messenger (Sharing Debugger)</span>
+                    </a>
                   </div>
 
                   {/* Clarification Notice on Why Localhost Only Shows Raw Link */}

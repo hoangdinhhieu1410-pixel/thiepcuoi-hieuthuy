@@ -122,9 +122,10 @@ export default async function handler(req, res) {
   const safeDesc = escapeAttr(description);
   const safeImage = escapeAttr(ogImage);
 
-  // Exact Canonical URL matching the current request (CRITICAL: Prevents Zalo from canonicalizing back to root!)
+  // Exact Canonical URL matching the current request (CRITICAL: Prevents Zalo & FB from canonicalizing back to root!)
   const requestUrl = req.url || '';
-  const fullCanonicalUrl = `https://thiepcuoi-hieuthuy-web.vercel.app${requestUrl.startsWith('/') ? '' : '/'}${requestUrl}`;
+  const normalizedPath = requestUrl.startsWith('/') ? requestUrl : `/${requestUrl}`;
+  const fullCanonicalUrl = `https://thiepcuoi-hieuthuy-web.vercel.app${normalizedPath}`;
   const cleanCanonicalUrl = fullCanonicalUrl.replace(/&amp;/g, '&');
 
   // Replace Title tag
@@ -139,7 +140,7 @@ export default async function handler(req, res) {
   html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${cleanCanonicalUrl}" />`);
   html = html.replace(/<meta property="og:site_name"[^>]*>/gi, `<meta property="og:site_name" content="Thiệp Cưới Online" />`);
   html = html.replace(/<meta property="og:locale"[^>]*>/gi, `<meta property="og:locale" content="vi_VN" />`);
-  html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, `<meta property="fb:app_id" content="966242223397117" />`);
+  html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, '');
 
   // Replace Twitter Card meta tags
   html = html.replace(/<meta name="twitter:title"[^>]*>/gi, `<meta name="twitter:title" content="${safeTitle}" />`);
@@ -149,16 +150,13 @@ export default async function handler(req, res) {
   // Differentiate response headers:
   // For crawlers (Facebook Messenger, Zalo, Twitter): Must provide public cache so Facebook crawler accepts and stores rich link card
   const userAgent = String(req.headers['user-agent'] || '').toLowerCase();
-  const isCrawler = /facebookexternalhit|facebot|zalo|twitterbot|pinterest|whatsapp|telegrambot|slackbot|discordbot/i.test(userAgent);
+  const isCrawler = /facebookexternalhit|facebot|meta-externalagent|meta-externalfetcher|facebookcatalog|facebookplatform|zalo|twitterbot|pinterest|whatsapp|telegrambot|slackbot|discordbot|linkedinbot|bot|crawler|spider/i.test(userAgent);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (isCrawler) {
-    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
   } else {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, must-revalidate');
   }
   res.status(200).send(html);
 }
