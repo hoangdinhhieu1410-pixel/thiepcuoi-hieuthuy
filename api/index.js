@@ -142,13 +142,11 @@ export default async function handler(req, res) {
   const safeImage = escapeAttr(ogImage);
 
   // Canonical URL & OpenGraph og:url:
-  // Using clean dedicated paths (/co-dau for Bride, /chu-re for Groom) guarantees that:
-  // 1. Zalo, Facebook and Messenger NEVER conflate Bride and Groom caches.
-  // 2. Both /co-dau, /chu-re and query params (?side=bride) work 100% reliably.
+  // Using the exact requested URL preserves unique query parameters (side=bride, to=guest, v=version)
+  // so that social networks (Zalo, Facebook, Messenger) cache each link independently with its own title, description, and thumbnail.
   const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
-  const canonicalPath = isBride ? '/co-dau' : (pathname.includes('chu-re') || pathname.includes('nha-trai') || pathname.includes('groom') ? '/chu-re' : '/');
-  const cleanCanonicalUrl = `${baseCanonical}${canonicalPath}`;
-  const safeUrl = escapeAttr(cleanCanonicalUrl);
+  const cleanUrl = `${baseCanonical}${req.url || '/'}`;
+  const safeUrl = escapeAttr(cleanUrl);
 
   // Replace Title tag & Meta description
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
@@ -189,10 +187,12 @@ export default async function handler(req, res) {
   const isCrawler = /facebookexternalhit|facebot|meta-externalagent|meta-externalfetcher|facebookcatalog|facebookplatform|zalo|twitterbot|pinterest|whatsapp|telegrambot|slackbot|discordbot|linkedinbot|bot|crawler|spider/i.test(userAgent);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  if (isCrawler) {
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
+  if (forceFresh) {
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
+  } else if (isCrawler) {
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
   } else {
-    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, must-revalidate');
+    res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, must-revalidate');
   }
 
   // Fast response for HEAD requests (after headers are set)

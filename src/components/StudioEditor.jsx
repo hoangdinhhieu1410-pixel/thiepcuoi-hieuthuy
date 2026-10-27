@@ -1587,6 +1587,14 @@ export function StudioEditor({
       params.set('salutation', sal);
     }
 
+    // Version parameter (v) - Chuẩn form theo mẫu người dùng (&v=hsj8b)
+    // Giúp Zalo và Facebook nhận diện đây là link mới, tự động cào lại (scrape) thẻ xem trước mới nhất
+    // mà không bị dính cache cũ từ trước
+    const vCode = guest?.id
+      ? `${(guest.id.replace(/[^a-zA-Z0-9]/g, '').slice(-3) || 'g')}${Date.now().toString(36).slice(-2)}`
+      : Date.now().toString(36).slice(-5);
+    params.set('v', vCode);
+
     const queryString = params.toString();
     return queryString ? `${baseUrl}/?${queryString}` : `${baseUrl}/`;
   };
@@ -3137,29 +3145,7 @@ Sự hiện diện của <b>${guestName}</b> là niềm vinh hạnh và hạnh p
                 </div>
               </form>
 
-              {/* PREVIEW MẪU LỜI MỜI ZALO / MESSENGER CHUẨN FORM */}
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-xs space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
-                    <span>💌</span>
-                    <span>Mẫu Lời Mời Gửi Qua Zalo & Messenger ({currentProfileKey === 'groom' ? 'Nhà Trai' : 'Nhà Gái'})</span>
-                  </h4>
-                  <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    ✓ Đúng chuẩn form mẫu 100%
-                  </span>
-                </div>
 
-                <div className="bg-stone-50/80 p-4 rounded-xl border border-stone-200 text-xs text-stone-800 font-sans leading-relaxed whitespace-pre-wrap select-all shadow-inner">
-                  {(() => {
-                    const sampleGuest = filteredGuests[0] || {
-                      name: currentProfileKey === 'groom' ? 'MẸ NGA ĐÍT THÚI' : 'Bạn Thúy meo meo',
-                      salutation: currentProfileKey === 'groom' ? 'Trân trọng kính mời' : 'Thân mời',
-                      side: currentProfileKey
-                    };
-                    return getGuestInvitationTemplate(sampleGuest).plain;
-                  })()}
-                </div>
-              </div>
 
               {/* SEARCH & GUEST LIST TABLE */}
               <div className="space-y-3">
