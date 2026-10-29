@@ -15,7 +15,9 @@ export function UserApprovalManager({ currentUser }) {
   // Proactive add user form state
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
-  const [newRole, setNewRole] = useState('editor'); // default to editor or viewer
+  const [newRole, setNewRole] = useState('editor'); // 'editor' or 'viewer'
+  const [newCanEditGroom, setNewCanEditGroom] = useState(true);
+  const [newCanEditBride, setNewCanEditBride] = useState(true);
 
   const showToast = (message, type = 'success') => {
     setNotification({ message, type });
@@ -45,8 +47,8 @@ export function UserApprovalManager({ currentUser }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Handle Approve user
-  const handleApprove = async (targetEmail, role) => {
+  // Handle Approve user with profile permissions
+  const handleApprove = async (targetEmail, role, allowedProfiles = ['groom', 'bride']) => {
     setActionLoading(`approve-${targetEmail}`);
     try {
       const res = await fetch('/api/auth-users', {
@@ -56,12 +58,13 @@ export function UserApprovalManager({ currentUser }) {
           action: 'approve',
           requesterEmail: SUPER_ADMIN_EMAIL,
           targetEmail,
-          role
+          role,
+          allowedProfiles: role === 'viewer' ? [] : allowedProfiles
         })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(data.message || `Đã phê duyệt ${targetEmail} với quyền ${role === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem'}`);
+        showToast(data.message || `Đã phê duyệt ${targetEmail}`);
         if (data.allUsers) setUsersList(data.allUsers);
         else fetchUsers();
       } else {
@@ -75,34 +78,42 @@ export function UserApprovalManager({ currentUser }) {
     }
   };
 
-  // Handle Change Role
-  const handleChangeRole = async (targetEmail, newRole) => {
-    setActionLoading(`role-${targetEmail}`);
+  // Handle Update Permissions (role & allowed profiles)
+  const handleUpdatePermissions = async (targetEmail, newRole, allowedProfiles) => {
+    setActionLoading(`perm-${targetEmail}`);
     try {
       const res = await fetch('/api/auth-users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'change_role',
+          action: 'update_permissions',
           requesterEmail: SUPER_ADMIN_EMAIL,
           targetEmail,
-          role: newRole
+          role: newRole,
+          allowedProfiles: newRole === 'viewer' ? [] : allowedProfiles
         })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(data.message || `Đã đổi quyền của ${targetEmail} thành ${newRole === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem'}`);
+        showToast(data.message || `Đã cập nhật quyền của ${targetEmail}`);
         if (data.allUsers) setUsersList(data.allUsers);
         else fetchUsers();
       } else {
         showToast(data.error || 'Cập nhật quyền thất bại', 'error');
       }
     } catch (err) {
-      console.error('Change role error:', err);
+      console.error('Update permissions error:', err);
       showToast('Lỗi kết nối khi cập nhật quyền', 'error');
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Handle Change Role (legacy fallback)
+  const handleChangeRole = async (targetEmail, newRole) => {
+    const current = usersList.find(u => u.email === targetEmail);
+    const profiles = newRole === 'viewer' ? [] : (current?.allowedProfiles || ['groom', 'bride']);
+    await handleUpdatePermissions(targetEmail, newRole, profiles);
   };
 
   // Handle Delete User (Revoke Access Completely)
@@ -156,6 +167,16 @@ export function UserApprovalManager({ currentUser }) {
       return;
     }
 
+    let allowed = [];
+    if (newRole === 'editor') {
+      if (newCanEditGroom) allowed.push('groom');
+      if (newCanEditBride) allowed.push('bride');
+      if (allowed.length === 0) {
+        showToast('Vui lòng chọn ít nhất một mẫu thiệp (Nhà trai hoặc Nhà gái) để phân quyền chỉnh sửa', 'error');
+        return;
+      }
+    }
+
     setActionLoading('add-new');
     try {
       const res = await fetch('/api/auth-users', {
@@ -166,12 +187,13 @@ export function UserApprovalManager({ currentUser }) {
           requesterEmail: SUPER_ADMIN_EMAIL,
           targetEmail: cleanEmail,
           name: newName.trim() || cleanEmail.split('@')[0],
-          role: newRole
+          role: newRole,
+          allowedProfiles: newRole === 'viewer' ? [] : allowed
         })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`Đã cấp quyền sẵn cho email ${cleanEmail} với quyền "${newRole === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem'}"`);
+        showToast(data.message || `Đã cấp quyền sẵn cho email ${cleanEmail}`);
         setNewEmail('');
         setNewName('');
         if (data.allUsers) setUsersList(data.allUsers);
@@ -333,24 +355,48 @@ export function UserApprovalManager({ currentUser }) {
                     <button
                       type="button"
                       disabled={isProcessing}
-                      onClick={() => handleApprove(user.email, 'viewer')}
-                      className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                      onClick={() => handleApprove(user.email, 'viewer', [])}
+                      className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs disabled:opacity-50"
                       title="Chỉ cho phép tài khoản này xem thông tin thiệp, không được lưu"
                     >
                       <Eye className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Duyệt: Chỉ Xem</span>
+                      <span>Chỉ Xem</span>
                     </button>
 
-                    {/* Approve as Editor */}
+                    {/* Approve Groom Only */}
                     <button
                       type="button"
                       disabled={isProcessing}
-                      onClick={() => handleApprove(user.email, 'editor')}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-md disabled:opacity-50"
-                      title="Cho phép tài khoản này chỉnh sửa và lưu thông tin thiệp cưới"
+                      onClick={() => handleApprove(user.email, 'editor', ['groom'])}
+                      className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Chỉ cho phép sửa Mẫu 1 (Nhà Trai)"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Sửa Mẫu 1 (Nhà Trai)</span>
+                    </button>
+
+                    {/* Approve Bride Only */}
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => handleApprove(user.email, 'editor', ['bride'])}
+                      className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Chỉ cho phép sửa Mẫu 2 (Nhà Gái)"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-rose-700" />
+                      <span>Sửa Mẫu 2 (Nhà Gái)</span>
+                    </button>
+
+                    {/* Approve Both */}
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => handleApprove(user.email, 'editor', ['groom', 'bride'])}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                      title="Cho phép sửa cả 2 mẫu Nhà Trai & Nhà Gái"
                     >
                       <Edit3 className="w-3.5 h-3.5 text-emerald-200" />
-                      <span>Duyệt: Chỉnh Sửa</span>
+                      <span>Sửa Cả 2 Mẫu</span>
                     </button>
 
                     {/* Reject / Delete */}
@@ -358,7 +404,7 @@ export function UserApprovalManager({ currentUser }) {
                       type="button"
                       disabled={isProcessing}
                       onClick={() => handleDeleteUser(user.email)}
-                      className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-rose-100 border border-stone-300 hover:border-rose-300 text-stone-600 hover:text-rose-700 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
                       title="Từ chối yêu cầu và xóa email khỏi hệ thống"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -398,9 +444,13 @@ export function UserApprovalManager({ currentUser }) {
               <tbody className="divide-y divide-stone-100">
                 {approvedUsers.map((user) => {
                   const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
-                  const isEditor = user.role === 'editor';
                   const isViewer = user.role === 'viewer';
                   const isProcessing = actionLoading?.includes(user.email);
+                  const allowed = Array.isArray(user.allowedProfiles) && user.allowedProfiles.length > 0
+                    ? user.allowedProfiles
+                    : (user.role === 'editor' ? ['groom', 'bride'] : []);
+                  const canGroom = allowed.includes('groom');
+                  const canBride = allowed.includes('bride');
 
                   return (
                     <tr key={user.email} className="hover:bg-stone-50/70 transition-colors">
@@ -413,7 +463,7 @@ export function UserApprovalManager({ currentUser }) {
                             <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
                               isSuperAdmin
                                 ? 'bg-amber-100 text-[#70561f] border border-amber-300'
-                                : isEditor
+                                : !isViewer
                                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                   : 'bg-blue-100 text-blue-800 border border-blue-200'
                             }`}>
@@ -434,33 +484,96 @@ export function UserApprovalManager({ currentUser }) {
                         </div>
                       </td>
 
-                      {/* Role Pill & Switcher */}
+                      {/* Role Pill & Profile Permissions */}
                       <td className="p-3 sm:p-4">
                         {isSuperAdmin ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-[#70561f] border border-amber-300">
                             👑 Toàn quyền hệ thống
                           </span>
                         ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                              isEditor
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                : 'bg-blue-50 text-blue-800 border-blue-300'
-                            }`}>
-                              {isEditor ? <Edit3 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                              <span>{isEditor ? 'Chỉnh sửa' : 'Chỉ xem'}</span>
-                            </span>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                                isViewer
+                                  ? 'bg-blue-50 text-blue-800 border-blue-300'
+                                  : (canGroom && canBride)
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : canGroom
+                                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                      : 'bg-rose-50 text-rose-900 border-rose-300'
+                              }`}>
+                                {isViewer ? <Eye className="w-3 h-3 text-blue-600" /> : <Edit3 className="w-3 h-3 text-emerald-600" />}
+                                <span>
+                                  {isViewer
+                                    ? 'Chỉ xem'
+                                    : (canGroom && canBride)
+                                      ? 'Sửa Cả 2 mẫu'
+                                      : canGroom
+                                        ? 'Chỉ sửa Mẫu 1 (Nhà Trai)'
+                                        : 'Chỉ sửa Mẫu 2 (Nhà Gái)'}
+                                </span>
+                              </span>
 
-                            {/* Quick Switch role button */}
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => handleChangeRole(user.email, isEditor ? 'viewer' : 'editor')}
-                              className="px-2 py-0.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-[10px] font-semibold transition-colors cursor-pointer border border-stone-200"
-                              title={`Chuyển sang quyền ${isEditor ? 'Chỉ xem' : 'Chỉnh sửa'}`}
-                            >
-                              Đổi sang: {isEditor ? 'Chỉ xem' : 'Chỉnh sửa'}
-                            </button>
+                              <button
+                                type="button"
+                                disabled={isProcessing}
+                                onClick={() => {
+                                  const nextRole = isViewer ? 'editor' : 'viewer';
+                                  const nextProfiles = isViewer ? ['groom', 'bride'] : [];
+                                  handleUpdatePermissions(user.email, nextRole, nextProfiles);
+                                }}
+                                className="px-2 py-0.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-[10px] font-semibold transition-colors cursor-pointer border border-stone-200"
+                              >
+                                {isViewer ? 'Đổi sang: Chỉnh sửa' : 'Đổi sang: Chỉ xem'}
+                              </button>
+                            </div>
+
+                            {/* Checkboxes to tick individual profiles */}
+                            {!isViewer && (
+                              <div className="flex items-center gap-2.5 bg-stone-50 p-1.5 px-2.5 rounded-xl border border-stone-200 w-fit">
+                                <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={canGroom}
+                                    disabled={isProcessing}
+                                    onChange={(e) => {
+                                      let next = [...allowed];
+                                      if (e.target.checked) {
+                                        if (!next.includes('groom')) next.push('groom');
+                                      } else {
+                                        next = next.filter(p => p !== 'groom');
+                                      }
+                                      const nextRole = next.length === 0 ? 'viewer' : 'editor';
+                                      handleUpdatePermissions(user.email, nextRole, next);
+                                    }}
+                                    className="w-3.5 h-3.5 text-[#70561f] rounded border-stone-300 focus:ring-[#70561f]"
+                                  />
+                                  <span className={canGroom ? 'font-bold text-amber-900' : 'text-stone-400'}>Mẫu 1 (Nhà trai)</span>
+                                </label>
+
+                                <span className="text-stone-300 text-xs">|</span>
+
+                                <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={canBride}
+                                    disabled={isProcessing}
+                                    onChange={(e) => {
+                                      let next = [...allowed];
+                                      if (e.target.checked) {
+                                        if (!next.includes('bride')) next.push('bride');
+                                      } else {
+                                        next = next.filter(p => p !== 'bride');
+                                      }
+                                      const nextRole = next.length === 0 ? 'viewer' : 'editor';
+                                      handleUpdatePermissions(user.email, nextRole, next);
+                                    }}
+                                    className="w-3.5 h-3.5 text-[#70561f] rounded border-stone-300 focus:ring-[#70561f]"
+                                  />
+                                  <span className={canBride ? 'font-bold text-rose-900' : 'text-stone-400'}>Mẫu 2 (Nhà gái)</span>
+                                </label>
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
@@ -559,6 +672,30 @@ export function UserApprovalManager({ currentUser }) {
               <span>Thêm Email</span>
             </button>
           </div>
+
+          {newRole === 'editor' && (
+            <div className="sm:col-span-12 flex items-center gap-4 bg-amber-50/80 p-2.5 px-3 rounded-xl border border-amber-300/80 mt-1">
+              <span className="text-xs font-bold text-amber-950">Chọn mẫu được phép chỉnh sửa:</span>
+              <label className="inline-flex items-center gap-1.5 text-xs text-amber-900 font-semibold cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={newCanEditGroom}
+                  onChange={(e) => setNewCanEditGroom(e.target.checked)}
+                  className="w-4 h-4 text-[#70561f] rounded border-stone-300"
+                />
+                <span>Mẫu 1 (Nhà trai)</span>
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-xs text-rose-900 font-semibold cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={newCanEditBride}
+                  onChange={(e) => setNewCanEditBride(e.target.checked)}
+                  className="w-4 h-4 text-[#70561f] rounded border-stone-300"
+                />
+                <span>Mẫu 2 (Nhà gái)</span>
+              </label>
+            </div>
+          )}
         </form>
       </div>
     </div>

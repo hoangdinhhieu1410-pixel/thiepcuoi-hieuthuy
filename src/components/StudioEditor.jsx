@@ -76,6 +76,29 @@ export function StudioEditor({
     return res;
   };
 
+  const isSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.email === 'hoangdinhhieu1410@gmail.com';
+
+  const userAllowedProfiles = isSuperAdmin
+    ? ['groom', 'bride']
+    : (Array.isArray(currentUser?.allowedProfiles) && currentUser.allowedProfiles.length > 0)
+      ? currentUser.allowedProfiles
+      : (currentUser?.role === 'editor' ? ['groom', 'bride'] : []);
+
+  const canEditGroom = isSuperAdmin || userAllowedProfiles.includes('groom');
+  const canEditBride = isSuperAdmin || userAllowedProfiles.includes('bride');
+
+  const [currentProfileKey, setCurrentProfileKey] = useState(() => {
+    if (activeProfileKey && userAllowedProfiles.includes(activeProfileKey)) {
+      return activeProfileKey;
+    }
+    if (userAllowedProfiles.includes('groom')) return 'groom';
+    if (userAllowedProfiles.includes('bride')) return 'bride';
+    return activeProfileKey || 'groom';
+  });
+
+  const canEditCurrentProfile = isSuperAdmin || (currentUser?.role === 'editor' && userAllowedProfiles.includes(currentProfileKey));
+  const isReadOnly = !canEditCurrentProfile;
+
   // Both profiles state
   const [allProfiles, setAllProfiles] = useState(() => {
     if (profiles && profiles.groom && profiles.bride) {
@@ -89,18 +112,15 @@ export function StudioEditor({
     });
   });
 
-  const [currentProfileKey, setCurrentProfileKey] = useState(activeProfileKey || 'groom');
-
   // Active form data being edited in real-time
   const [formData, setFormData] = useState(() => {
-    const initKey = activeProfileKey || 'groom';
+    const initKey = (!userAllowedProfiles.includes('groom') && userAllowedProfiles.includes('bride'))
+      ? 'bride'
+      : (activeProfileKey || 'groom');
     const cleaned = cleanProfileGuests(profiles);
     const target = (cleaned && cleaned[initKey]) || (data || DEFAULT_WEDDING_DATA);
     return JSON.parse(JSON.stringify(target));
   });
-
-  const isReadOnly = currentUser?.role === 'viewer';
-  const isSuperAdmin = currentUser?.role === 'super_admin' || currentUser?.email === 'hoangdinhhieu1410@gmail.com';
 
   // Customizable drag-and-drop tab order
   const DEFAULT_MENU_ORDER = [
@@ -146,8 +166,11 @@ export function StudioEditor({
 
   // Last saved data for undo / revert
   const [lastSavedData, setLastSavedData] = useState(() => {
-    const initKey = activeProfileKey || 'groom';
-    const target = (profiles && profiles[initKey]) || (data || DEFAULT_WEDDING_DATA);
+    const initKey = (!userAllowedProfiles.includes('groom') && userAllowedProfiles.includes('bride'))
+      ? 'bride'
+      : (activeProfileKey || 'groom');
+    const cleaned = cleanProfileGuests(profiles);
+    const target = (cleaned && cleaned[initKey]) || (data || DEFAULT_WEDDING_DATA);
     return JSON.parse(JSON.stringify(target));
   });
 
@@ -489,9 +512,8 @@ export function StudioEditor({
 
   // Track mount state and auto-save every edit
   const isInitialMount = useRef(true);
-  const userHasEdited = useRef(false);
 
-  // Synchronize when parent profiles prop updates (before user types or when cloud config arrives)
+  // Synchronize when parent profiles prop updates (before user types or when cloud config arrives from other accounts)
   useEffect(() => {
     if (profiles) {
       const cleaned = cleanProfileGuests(profiles);
@@ -499,7 +521,7 @@ export function StudioEditor({
       const target = cleaned[currentProfileKey] || cleaned.groom;
       if (target) {
         const cloned = JSON.parse(JSON.stringify(target));
-        // Only update formData if user hasn't made unsaved changes
+        // Only update formData if user hasn't made unsaved changes in this session
         const hasUnsavedChanges = lastSavedData && JSON.stringify(formData) !== JSON.stringify(lastSavedData);
         if (!hasUnsavedChanges) {
           setFormData(cloned);
@@ -509,32 +531,32 @@ export function StudioEditor({
     }
   }, [profiles, currentProfileKey]);
 
-  // Auto-save debounced effect (1000ms): ONLY if formData actually differs from lastSavedData!
+  // Auto-save debounced effect (1200ms): ONLY if formData actually differs from lastSavedData AND user has permission!
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    if (!lastSavedData) return;
+    if (!lastSavedData || isReadOnly) return;
     const hasUnsavedChanges = JSON.stringify(formData) !== JSON.stringify(lastSavedData);
     if (!hasUnsavedChanges) return;
 
     const timer = setTimeout(async () => {
+      setLastSavedData(JSON.parse(JSON.stringify(formData)));
       const updatedAll = {
         ...allProfiles,
         activeProfile: currentProfileKey,
         [currentProfileKey]: formData
       };
-      setLastSavedData(JSON.parse(JSON.stringify(formData)));
       broadcastProfileUpdate(updatedAll, 'studio_autosave');
-      if (onSaveAllProfiles) {
-        await onSaveAllProfiles(updatedAll);
-      } else if (onSaveProfile) {
+      if (onSaveProfile) {
         await onSaveProfile(currentProfileKey, formData);
+      } else if (onSaveAllProfiles) {
+        await onSaveAllProfiles(updatedAll);
       }
-    }, 1000);
+    }, 1200);
     return () => clearTimeout(timer);
-  }, [formData]);
+  }, [formData, isReadOnly]);
 
   // Real-time live preview state
   const [showPreview, setShowPreview] = useState(true);
@@ -1184,9 +1206,9 @@ export function StudioEditor({
     const targetCoverStyle = clonedTarget.templateStyle || clonedTarget.coverConfig?.activeStyle || 'style1';
     setEditingCoverTab(targetCoverStyle);
 
-    // Auto-persist so user never loses data when switching profiles
-    if (onSaveAllProfiles) {
-      onSaveAllProfiles(updatedAll);
+    // Auto-persist the previously edited profile if user had permission
+    if (!isReadOnly && onSaveProfile) {
+      onSaveProfile(currentProfileKey, formData);
     }
     if (onSwitchProfile) {
       onSwitchProfile(newKey);
@@ -1203,7 +1225,7 @@ export function StudioEditor({
   // Save currently active profile
   const handleSaveCurrent = async () => {
     if (isReadOnly) {
-      alert('Tài khoản của bạn có quyền "Chỉ xem". Bạn không được phép lưu hoặc sửa đổi dữ liệu!');
+      alert(`Tài khoản của bạn không có quyền lưu ${currentProfileKey === 'groom' ? 'Mẫu 1 (Nhà Trai)' : 'Mẫu 2 (Nhà Gái)'}!`);
       return;
     }
     setSaveStatus('Đang đồng bộ lên máy chủ đám mây... ⏳');
@@ -1217,10 +1239,10 @@ export function StudioEditor({
     setAllProfiles(updatedAll);
     setLastSavedData(JSON.parse(JSON.stringify(formData)));
     broadcastProfileUpdate(updatedAll, 'studio_manual_save');
-    if (onSaveAllProfiles) {
-      await onSaveAllProfiles(updatedAll);
-    } else if (onSaveProfile) {
+    if (onSaveProfile) {
       await onSaveProfile(currentProfileKey, formData);
+    } else if (onSaveAllProfiles) {
+      await onSaveAllProfiles(updatedAll);
     } else if (onUpdateData) {
       await onUpdateData(formData);
     }
@@ -1856,10 +1878,13 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   ? 'bg-[#70561f] text-white shadow-md ring-1 ring-amber-400'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
               }`}
-              title="Chuyển sang sửa Thiệp Cưới Nhà Trai (Mẫu 1)"
+              title={canEditGroom ? 'Chuyển sang sửa Thiệp Cưới Nhà Trai (Mẫu 1)' : 'Xem Thiệp Cưới Nhà Trai (Mẫu 1) - Chỉ xem'}
             >
               <span className="text-amber-300">🎩</span>
               <span>Mẫu 1 (Nhà Trai)</span>
+              {!canEditGroom && (
+                <span className="px-1.5 py-0.2 rounded-md bg-stone-200 text-stone-700 text-[10px] font-normal">Chỉ xem</span>
+              )}
             </button>
 
             <button
@@ -1869,10 +1894,13 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   ? 'bg-rose-800 text-white shadow-md ring-1 ring-rose-400'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
               }`}
-              title="Chuyển sang sửa Thiệp Cưới Nhà Gái (Mẫu 2)"
+              title={canEditBride ? 'Chuyển sang sửa Thiệp Cưới Nhà Gái (Mẫu 2)' : 'Xem Thiệp Cưới Nhà Gái (Mẫu 2) - Chỉ xem'}
             >
               <span className="text-rose-300">👰</span>
               <span>Mẫu 2 (Nhà Gái)</span>
+              {!canEditBride && (
+                <span className="px-1.5 py-0.2 rounded-md bg-stone-200 text-stone-700 text-[10px] font-normal">Chỉ xem</span>
+              )}
             </button>
           </div>
 
@@ -1880,7 +1908,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
           <button
             onClick={() => {
               if (isReadOnly) {
-                alert('Tài khoản có quyền Chỉ Xem, không thể thao tác sao chép dữ liệu!');
+                alert('Tài khoản có quyền Chỉ Xem ở mẫu này, không thể thao tác sao chép dữ liệu!');
                 return;
               }
               setShowCopyModal(true);
@@ -1929,35 +1957,43 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   ? 'bg-[#70561f] hover:bg-[#5a4417] hover:scale-102'
                   : 'bg-rose-800 hover:bg-rose-900 hover:scale-102'
             }`}
-            title={isReadOnly ? 'Tài khoản có quyền Chỉ Xem, không thể lưu' : `Lưu thay đổi cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}`}
+            title={isReadOnly ? `Không có quyền lưu ${currentProfileKey === 'groom' ? 'Mẫu 1 (Nhà Trai)' : 'Mẫu 2 (Nhà Gái)'}` : `Lưu thay đổi cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}`}
           >
             <Save className="w-3.5 h-3.5 text-amber-300" />
-            <span>Lưu {currentProfileKey === 'groom' ? 'Thiệp 1 (Nhà Trai)' : 'Thiệp 2 (Nhà Gái)'}</span>
+            <span>
+              {isReadOnly
+                ? `🔒 Chỉ xem (${currentProfileKey === 'groom' ? 'Nhà Trai' : 'Nhà Gái'})`
+                : `Lưu ${currentProfileKey === 'groom' ? 'Thiệp 1 (Nhà Trai)' : 'Thiệp 2 (Nhà Gái)'}`}
+            </span>
           </button>
 
-          {/* 5. SAVE BOTH BUTTON */}
-          <button
-            onClick={handleSaveBoth}
-            disabled={isReadOnly}
-            className={`px-2.5 py-1.5 rounded-xl text-stone-200 text-xs font-semibold shadow-sm flex items-center gap-1 transition-all ${
-              isReadOnly
-                ? 'bg-stone-700 cursor-not-allowed opacity-50'
-                : 'bg-stone-900 hover:bg-stone-800 hover:text-white'
-            }`}
-            title={isReadOnly ? 'Tài khoản có quyền Chỉ Xem, không thể lưu' : 'Lưu lại cả 2 mẫu thiệp cùng một lúc'}
-          >
-            <Save className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden xl:inline">Lưu Cả 2</span>
-          </button>
+          {/* 5. SAVE BOTH BUTTON (Chỉ hiển thị khi có quyền trên cả 2 mẫu) */}
+          {(canEditGroom && canEditBride) && (
+            <button
+              onClick={handleSaveBoth}
+              disabled={isReadOnly}
+              className="px-2.5 py-1.5 rounded-xl text-stone-200 text-xs font-semibold shadow-sm flex items-center gap-1 transition-all bg-stone-900 hover:bg-stone-800 hover:text-white"
+              title="Lưu lại cả 2 mẫu thiệp cùng một lúc"
+            >
+              <Save className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden xl:inline">Lưu Cả 2</span>
+            </button>
+          )}
 
         </div>
       </header>
 
-      {/* READ-ONLY WARNING BANNER */}
+      {/* READ-ONLY / PERMISSION RESTRICTION WARNING BANNER */}
       {isReadOnly && (
         <div className="bg-amber-500/15 border-b border-amber-400/50 px-4 py-2.5 text-center text-xs text-amber-900 font-medium flex items-center justify-center gap-2">
           <Eye className="w-4 h-4 text-amber-700 flex-shrink-0" />
-          <span><strong>Chế độ Chỉ Xem:</strong> Bạn đang đăng nhập bằng tài khoản <strong>{currentUser?.email}</strong>. Bạn có thể xem trước tất cả thông tin, thiết kế nhưng các nút Lưu dữ liệu đã bị khóa.</span>
+          <span>
+            {currentUser?.role === 'viewer' ? (
+              <><strong>Chế độ Chỉ Xem:</strong> Bạn đang đăng nhập bằng tài khoản <strong>{currentUser?.email}</strong> (Quyền Chỉ Xem). Bạn có thể xem trước tất cả thông tin nhưng không được phép lưu hoặc chỉnh sửa.</>
+            ) : (
+              <><strong>Phân quyền bị giới hạn:</strong> Bạn chỉ được phân quyền chỉnh sửa <strong>{userAllowedProfiles.includes('groom') ? 'Mẫu 1 (Nhà Trai)' : 'Mẫu 2 (Nhà Gái)'}</strong>. Mục <strong>{currentProfileKey === 'groom' ? 'Mẫu 1 (Nhà Trai)' : 'Mẫu 2 (Nhà Gái)'}</strong> đang ở chế độ <strong>Chỉ Xem</strong> (không được phép lưu).</>
+            )}
+          </span>
         </div>
       )}
 
@@ -2101,6 +2137,49 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
           {/* TAB CONTENT AREA */}
           <main className={`${showPreview ? 'lg:col-span-8 xl:col-span-8.5 2xl:col-span-9' : 'lg:col-span-8.5 2xl:col-span-9'} bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-md border border-stone-200/80`}>
           
+          {/* READ-ONLY LOCK NOTIFICATION IN TAB AREA */}
+          {isReadOnly && activeTab !== 'approval' && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  🔒
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-950 text-sm">
+                    {currentUser?.role === 'viewer'
+                      ? 'Chế độ Chỉ Xem (Read-only)'
+                      : `Mục này đang ở chế độ Chỉ Xem (${currentProfileKey === 'groom' ? 'Mẫu 1: Nhà Trai' : 'Mẫu 2: Nhà Gái'})`}
+                  </h4>
+                  <p className="text-xs text-amber-850 mt-0.5">
+                    {currentUser?.role === 'viewer'
+                      ? 'Tài khoản của bạn chỉ có quyền xem nội dung và danh sách, mọi chức năng lưu và chỉnh sửa đã được khóa an toàn.'
+                      : `Tài khoản ${currentUser?.email} được cấp quyền chỉnh sửa ${userAllowedProfiles.includes('groom') ? 'Mẫu 1 (Nhà Trai)' : 'Mẫu 2 (Nhà Gái)'}. Bạn không thể thao tác chỉnh sửa hay lưu trên ${currentProfileKey === 'groom' ? 'Mẫu 1 (Nhà Trai)' : 'Mẫu 2 (Nhà Gái)'}.`}
+                  </p>
+                </div>
+              </div>
+              {!canEditCurrentProfile && (
+                userAllowedProfiles.includes('groom') ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchProfileInternal('groom')}
+                    className="px-3.5 py-2 rounded-xl bg-[#70561f] text-white text-xs font-bold shadow-sm hover:bg-[#5a4417] transition-all cursor-pointer flex-shrink-0"
+                  >
+                    🎩 Sang Mẫu 1 (Nhà Trai) để chỉnh sửa
+                  </button>
+                ) : userAllowedProfiles.includes('bride') ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchProfileInternal('bride')}
+                    className="px-3.5 py-2 rounded-xl bg-rose-800 text-white text-xs font-bold shadow-sm hover:bg-rose-900 transition-all cursor-pointer flex-shrink-0"
+                  >
+                    👰 Sang Mẫu 2 (Nhà Gái) để chỉnh sửa
+                  </button>
+                ) : null
+              )}
+            </div>
+          )}
+
+          <fieldset disabled={isReadOnly && activeTab !== 'approval'} className="contents">
           {/* TAB: SỬA TỪNG DÒNG CHỮ (QUAN TRỌNG NHẤT - THEO YÊU CẦU NGƯỜI DÙNG) */}
           {activeTab === 'textcontent' && (
             <div className="space-y-8">
@@ -7688,6 +7767,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
               </div>
             </div>
           )}
+
+          </fieldset>
 
           {/* TAB: PHÊ DUYỆT & PHÂN QUYỀN (SUPER ADMIN) */}
           {activeTab === 'approval' && (

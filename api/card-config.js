@@ -1,6 +1,8 @@
 import Redis from 'ioredis';
 
 const REDIS_KEY = 'wedding_card_config';
+const REDIS_USERS_KEY = 'wedding_auth_users';
+const SUPER_ADMIN_EMAIL = 'hoangdinhhieu1410@gmail.com';
 const DEFAULT_REDIS_URL = 'redis://default:1CoqVoDZ9zok85R9QyvXyok7L856XXIh@palatial-clover-caring-84399.db.redis.io:17074';
 
 let redisInstance = null;
@@ -64,16 +66,48 @@ export default async function handler(req, res) {
         try { body = JSON.parse(body); } catch { body = {}; }
       }
 
-      if (!body || (!body.groom && !body.profiles)) {
+      if (!body) {
         return res.status(400).json({ success: false, error: 'Dữ liệu không hợp lệ' });
       }
 
-      const configToSave = {
-        activeProfile: body.activeProfile || body.profiles?.activeProfile || 'groom',
-        groom: body.groom || body.profiles?.groom,
-        bride: body.bride || body.profiles?.bride,
-        updatedAt: Date.now()
-      };
+      // Identify which profile is targeted: 'groom', 'bride', or 'both'
+      const targetProfile = body.targetProfile || body.profileKey || (body.groom && !body.bride ? 'groom' : (!body.groom && body.bride ? 'bride' : 'both'));
+
+      const newGroom = body.groom || (targetProfile === 'groom' ? body[body.profileKey] : null) || body.profiles?.groom;
+      const newBride = body.bride || (targetProfile === 'bride' ? body[body.profileKey] : null) || body.profiles?.bride;
+
+      if (!newGroom && !newBride && !body.profiles) {
+        return res.status(400).json({ success: false, error: 'Thiếu dữ liệu thiệp cưới để lưu' });
+      }
+
+      // Check user permissions against Redis auth database
+      const userEmail = (body.userEmail || '').trim().toLowerCase();
+      if (userEmail && userEmail !== SUPER_ADMIN_EMAIL) {
+        try {
+          const usersRaw = await redis.get(REDIS_USERS_KEY);
+          const users = usersRaw ? JSON.parse(usersRaw) : {};
+          const user = users[userEmail];
+          if (user) {
+            if (user.status !== 'approved' || user.role === 'viewer') {
+              return res.status(403).json({ success: false, error: 'Tài khoản của bạn chỉ có quyền xem, không được phép lưu thay đổi.' });
+            }
+            const allowed = Array.isArray(user.allowedProfiles) && user.allowedProfiles.length > 0 ? user.allowedProfiles : ['groom', 'bride'];
+            if (targetProfile === 'groom' && !allowed.includes('groom')) {
+              return res.status(403).json({ success: false, error: 'Bạn không có quyền chỉnh sửa Mẫu 1 (Nhà Trai).' });
+            }
+            if (targetProfile === 'bride' && !allowed.includes('bride')) {
+              return res.status(403).json({ success: false, error: 'Bạn không có quyền chỉnh sửa Mẫu 2 (Nhà Gái).' });
+            }
+          }
+        } catch (errAuth) {
+          console.warn('Auth check error in card-config:', errAuth);
+        }
+      }
+
+      // Read current config to perform atomic independent merge
+      const rawCurrent = await redis.get(REDIS_KEY);
+      let configToSave = rawCurrent ? JSON.parse(rawCurrent) : {};
+      if (!configToSave || typeof configToSave !== 'object') configToSave = {};
 
       // Sanitize dead blob urls in music to point to permanent track files
       const cleanMusic = (m) => {
@@ -102,6 +136,26 @@ export default async function handler(req, res) {
         return m;
       };
 
+      // ATOMIC MERGE:
+      // If saving groom: ONLY update groom, keeping bride completely untouched
+      // If saving bride: ONLY update bride, keeping groom completely untouched
+      // If saving both: update both
+      if (targetProfile === 'groom' && newGroom) {
+        configToSave.groom = newGroom;
+        configToSave.activeProfile = 'groom';
+      } else if (targetProfile === 'bride' && newBride) {
+        configToSave.bride = newBride;
+        configToSave.activeProfile = 'bride';
+      } else {
+        if (newGroom) configToSave.groom = newGroom;
+        if (newBride) configToSave.bride = newBride;
+        if (body.activeProfile) configToSave.activeProfile = body.activeProfile;
+      }
+
+      configToSave.updatedAt = Date.now();
+      configToSave.lastSavedProfile = targetProfile;
+      configToSave.lastSavedBy = userEmail || 'system';
+
       if (configToSave.groom?.music) configToSave.groom.music = cleanMusic(configToSave.groom.music);
       if (configToSave.bride?.music) configToSave.bride.music = cleanMusic(configToSave.bride.music);
 
@@ -123,7 +177,12 @@ export default async function handler(req, res) {
         }).catch(e => console.warn('Supabase dual-sync notice:', e.message));
       }
 
-      return res.status(200).json({ success: true, updatedAt: configToSave.updatedAt });
+      return res.status(200).json({
+        success: true,
+        updatedAt: configToSave.updatedAt,
+        lastSavedProfile: targetProfile,
+        config: configToSave
+      });
     }
 
     return res.status(405).json({ success: false, error: 'Method not allowed' });

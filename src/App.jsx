@@ -343,24 +343,34 @@ export function App() {
     }
   });
 
-  // Periodically & on viewMode change verify authenticated user status with Upstash Redis
+  // Periodically & on focus verify authenticated user status with Upstash Redis
   useEffect(() => {
-    if (currentUser?.email) {
+    if (!currentUser?.email) return;
+
+    const verifyUser = () => {
       fetch(`/api/auth-users?email=${encodeURIComponent(currentUser.email)}&requester=${encodeURIComponent(currentUser.email)}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.user && data.user.status === 'approved') {
             setCurrentUser(data.user);
             localStorage.setItem('wedding_auth_user', JSON.stringify(data.user));
-          } else {
+          } else if (data.success && (!data.user || data.user.status !== 'approved')) {
             // User was removed by Super Admin or is no longer approved
             setCurrentUser(null);
             localStorage.removeItem('wedding_auth_user');
           }
         })
         .catch(err => console.warn('User status sync warning:', err));
-    }
-  }, [viewMode]);
+    };
+
+    verifyUser();
+    const interval = setInterval(verifyUser, 6000);
+    window.addEventListener('focus', verifyUser);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', verifyUser);
+    };
+  }, [currentUser?.email, viewMode]);
 
   const handleLogout = () => {
     localStorage.removeItem('wedding_auth_user');
@@ -610,8 +620,8 @@ export function App() {
       setIsStorageReady(true);
     });
 
-    // Real-time background sync: poll every 4s and revalidate on tab focus
-    const syncInterval = setInterval(fetchLatestCloudConfig, 4000);
+    // Real-time background sync: poll every 3s and revalidate on tab focus
+    const syncInterval = setInterval(fetchLatestCloudConfig, 3000);
     const handleTabFocus = () => fetchLatestCloudConfig();
     window.addEventListener('focus', handleTabFocus);
     const handleVisibility = () => {
@@ -666,11 +676,25 @@ export function App() {
       const res = await fetch('/api/card-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
+        body: JSON.stringify({
+          targetProfile: profileKey,
+          profileKey: profileKey,
+          [profileKey]: profileData,
+          activeProfile: profileKey,
+          userEmail: currentUser?.email
+        })
       });
       const data = await res.json();
       if (data?.updatedAt) {
         lastCloudUpdatedAt.current = data.updatedAt;
+      }
+      if (data?.config) {
+        setProfiles(prev => ({
+          ...prev,
+          groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...data.config.groom }, DEFAULT_WEDDING_DATA),
+          bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...data.config.bride }, DEFAULT_BRIDE_WEDDING_DATA),
+          updatedAt: data.updatedAt
+        }));
       }
       return data;
     } catch (e) {
@@ -693,11 +717,25 @@ export function App() {
       const res = await fetch('/api/card-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(enriched)
+        body: JSON.stringify({
+          targetProfile: 'both',
+          groom: updatedProfiles.groom,
+          bride: updatedProfiles.bride,
+          activeProfile: updatedProfiles.activeProfile || 'groom',
+          userEmail: currentUser?.email
+        })
       });
       const data = await res.json();
       if (data?.updatedAt) {
         lastCloudUpdatedAt.current = data.updatedAt;
+      }
+      if (data?.config) {
+        setProfiles(prev => ({
+          ...prev,
+          groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...data.config.groom }, DEFAULT_WEDDING_DATA),
+          bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...data.config.bride }, DEFAULT_BRIDE_WEDDING_DATA),
+          updatedAt: data.updatedAt
+        }));
       }
       return data;
     } catch (e) {

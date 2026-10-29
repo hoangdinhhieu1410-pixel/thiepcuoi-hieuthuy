@@ -31,14 +31,16 @@ async function loadUsers(redis) {
         email: SUPER_ADMIN_EMAIL,
         name: 'Hoàng Đình Hiếu',
         role: 'super_admin',
+        allowedProfiles: ['groom', 'bride'],
         status: 'approved',
         createdAt: Date.now(),
         approvedAt: Date.now()
       };
       await redis.set(REDIS_USERS_KEY, JSON.stringify(users));
-    } else if (users[SUPER_ADMIN_EMAIL].role !== 'super_admin' || users[SUPER_ADMIN_EMAIL].status !== 'approved') {
+    } else if (users[SUPER_ADMIN_EMAIL].role !== 'super_admin' || users[SUPER_ADMIN_EMAIL].status !== 'approved' || !users[SUPER_ADMIN_EMAIL].allowedProfiles) {
       users[SUPER_ADMIN_EMAIL].role = 'super_admin';
       users[SUPER_ADMIN_EMAIL].status = 'approved';
+      users[SUPER_ADMIN_EMAIL].allowedProfiles = ['groom', 'bride'];
       await redis.set(REDIS_USERS_KEY, JSON.stringify(users));
     }
 
@@ -64,6 +66,7 @@ async function saveUsers(redis, users) {
     email: SUPER_ADMIN_EMAIL,
     name: 'Hoàng Đình Hiếu',
     role: 'super_admin',
+    allowedProfiles: ['groom', 'bride'],
     status: 'approved'
   };
   await redis.set(REDIS_USERS_KEY, JSON.stringify(users));
@@ -230,31 +233,55 @@ export default async function handler(req, res) {
         });
       }
 
-      // ACTION 2: APPROVE USER
+      // ACTION 2: APPROVE USER / PRE-APPROVE USER
       if (action === 'approve') {
-        if (!normTarget || !users[normTarget]) {
-          return res.status(404).json({ success: false, error: 'Không tìm thấy tài khoản cần phê duyệt' });
+        if (!normTarget) {
+          return res.status(400).json({ success: false, error: 'Thiếu email cần phê duyệt' });
         }
 
-        const assignRole = (role === 'editor') ? 'editor' : 'viewer';
+        const assignRole = (role === 'viewer') ? 'viewer' : 'editor';
+        const { allowedProfiles: reqProfiles, profileScope } = body;
+        let finalProfiles = ['groom', 'bride'];
+        if (Array.isArray(reqProfiles)) {
+          finalProfiles = reqProfiles.filter(p => p === 'groom' || p === 'bride');
+        } else if (profileScope === 'groom') {
+          finalProfiles = ['groom'];
+        } else if (profileScope === 'bride') {
+          finalProfiles = ['bride'];
+        } else if (profileScope === 'both') {
+          finalProfiles = ['groom', 'bride'];
+        }
+        if (finalProfiles.length === 0) finalProfiles = ['groom', 'bride'];
+
+        const existing = users[normTarget] || {};
         users[normTarget] = {
-          ...users[normTarget],
+          ...existing,
+          email: normTarget,
+          name: resolvedName || existing.name || normTarget.split('@')[0],
+          picture: existing.picture || null,
           status: 'approved',
           role: assignRole,
+          allowedProfiles: assignRole === 'viewer' ? [] : finalProfiles,
           approvedAt: Date.now(),
           approvedBy: SUPER_ADMIN_EMAIL
         };
         await saveUsers(redis, users);
 
+        const profileScopeDesc = assignRole === 'viewer'
+          ? 'Chỉ xem'
+          : (finalProfiles.length === 2
+              ? 'Chỉnh sửa Cả 2 mẫu (Nhà trai & Nhà gái)'
+              : (finalProfiles.includes('groom') ? 'Chỉnh sửa Mẫu 1 (Nhà trai)' : 'Chỉnh sửa Mẫu 2 (Nhà gái)'));
+
         return res.status(200).json({
           success: true,
-          message: `Đã phê duyệt tài khoản ${normTarget} với quyền "${assignRole === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem'}"`,
+          message: `Đã phê duyệt tài khoản ${normTarget} với quyền: "${profileScopeDesc}"`,
           allUsers: Object.values(users)
         });
       }
 
-      // ACTION 3: CHANGE ROLE
-      if (action === 'change_role') {
+      // ACTION 3: CHANGE ROLE / UPDATE PERMISSIONS
+      if (action === 'change_role' || action === 'update_permissions') {
         if (!normTarget || !users[normTarget]) {
           return res.status(404).json({ success: false, error: 'Không tìm thấy tài khoản' });
         }
@@ -262,13 +289,33 @@ export default async function handler(req, res) {
           return res.status(400).json({ success: false, error: 'Không thể thay đổi quyền của Super Admin' });
         }
 
-        const assignRole = (role === 'editor') ? 'editor' : 'viewer';
+        const assignRole = (role === 'viewer') ? 'viewer' : 'editor';
+        const { allowedProfiles: reqProfiles, profileScope } = body;
+        let finalProfiles = users[normTarget].allowedProfiles || ['groom', 'bride'];
+        if (Array.isArray(reqProfiles)) {
+          finalProfiles = reqProfiles.filter(p => p === 'groom' || p === 'bride');
+        } else if (profileScope === 'groom') {
+          finalProfiles = ['groom'];
+        } else if (profileScope === 'bride') {
+          finalProfiles = ['bride'];
+        } else if (profileScope === 'both') {
+          finalProfiles = ['groom', 'bride'];
+        }
+        if (finalProfiles.length === 0 && assignRole === 'editor') finalProfiles = ['groom', 'bride'];
+
         users[normTarget].role = assignRole;
+        users[normTarget].allowedProfiles = assignRole === 'viewer' ? [] : finalProfiles;
         await saveUsers(redis, users);
+
+        const profileScopeDesc = assignRole === 'viewer'
+          ? 'Chỉ xem'
+          : (finalProfiles.length === 2
+              ? 'Chỉnh sửa Cả 2 mẫu (Nhà trai & Nhà gái)'
+              : (finalProfiles.includes('groom') ? 'Chỉnh sửa Mẫu 1 (Nhà trai)' : 'Chỉnh sửa Mẫu 2 (Nhà gái)'));
 
         return res.status(200).json({
           success: true,
-          message: `Đã cập nhật quyền của ${normTarget} thành "${assignRole === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem'}"`,
+          message: `Đã cập nhật quyền của ${normTarget} thành "${profileScopeDesc}"`,
           allUsers: Object.values(users)
         });
       }
