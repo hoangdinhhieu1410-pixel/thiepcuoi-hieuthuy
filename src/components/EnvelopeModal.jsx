@@ -20,16 +20,17 @@ export function EnvelopeModal({
       setIsOpening(true);
       const timer = setTimeout(() => {
         setIsOpening(false);
-      }, 2400); // 2.4s to clearly view the slow, emphasized animation
+      }, animEffect === 'vip' ? 2800 : 2400); // 2.8s for VIP to view full opening
       return () => clearTimeout(timer);
     }
-  }, [testAnimationTrigger]);
+  }, [testAnimationTrigger, animEffect]);
 
   const handleOpenClick = () => {
     setIsOpening(true);
+    const duration = animEffect === 'vip' ? 2000 : 1600; // 2.0s slow, majestic opening for VIP
     setTimeout(() => {
       onOpen();
-    }, 1600); // 1.6s slow, majestic opening
+    }, duration);
   };
 
   const isBrideCover = data.profileType === 'bride' || data.profileName?.toLowerCase().includes('gái');
@@ -45,7 +46,7 @@ export function EnvelopeModal({
 
   // Active cover style
   const activeStyle = data.templateStyle || data.coverConfig?.activeStyle || currentStyle || 'style1';
-  const animEffect = data.coverConfig?.coverAnimationEffect || 'waxFlap';
+  const animEffect = data.coverConfig?.coverAnimationEffect || (activeStyle === 'style4' ? 'vip' : 'waxFlap');
   const c1 = data.coverConfig?.style1 || {};
   const c2 = data.coverConfig?.style2 || {};
   const c3 = data.coverConfig?.style3 || {};
@@ -134,12 +135,16 @@ export function EnvelopeModal({
 
   const coverPhoto = (c1.photo && !c1.photo.includes('/templates/007/images/hero_banner.jpg'))
     ? c1.photo
-    : (data.heroBannerPhoto || data.gallery?.[0]?.url || '/templates/007/images/hero_banner.jpg');
+    : (c4.photo || data.heroBannerPhoto || data.gallery?.[0]?.url || '/templates/007/images/hero_banner.jpg');
 
-  // 8 Distinct Opening Animation Classes based on animEffect (Slow & Emphasized ~1600ms)
+  // 9 Distinct Opening Animation Classes based on animEffect (Slow & Emphasized ~1600ms - 2000ms)
   let openingEffectClasses = '';
   if (isOpening) {
-    if (animEffect === 'zoomFade') {
+    if (animEffect === 'vip') {
+      // VIP: Bìa Sáp Tách Cánh Mở Sang 2 Bên (Chuẩn Video Mẫu)
+      // Giữ khung bìa cố định để 2 cánh trượt mở sang 2 bên hé lộ ruột thiệp mượt mà
+      openingEffectClasses = 'pointer-events-none transition-all duration-[2000ms]';
+    } else if (animEffect === 'zoomFade') {
       // 1. Phóng To Điện Ảnh Hollywood: Deep scale up, soft blur & cinematic fade
       openingEffectClasses = 'opacity-0 scale-160 blur-md pointer-events-none transition-all duration-[1600ms] ease-out';
     } else if (animEffect === 'splitDoor') {
@@ -176,6 +181,7 @@ export function EnvelopeModal({
     : `${isAbsolute ? 'absolute' : 'fixed'} inset-0 z-40 flex items-center justify-center p-3 sm:p-4 bg-stone-900/85 backdrop-blur-md transition-all ${openingEffectClasses}`;
 
   const effectNames = {
+    vip: 'VIP: Bìa Sáp Tách Cánh Mở Sang 2 Bên (Như Video)',
     waxFlap: '1. Mở Nắp Sáp Hoàng Gia 3D (Cocohappii)',
     splitDoor: '2. Cổng Đôi Cung Đình Mở 2 Bên (27BigGroup A9)',
     flowerBloom: '3. Cánh Hoa Rơi & Nở Bung Rực Rỡ (LoveCard 26)',
@@ -195,6 +201,30 @@ export function EnvelopeModal({
           <div className="bg-stone-950/95 text-amber-300 text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-2xl border border-amber-400/90 backdrop-blur-md flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" />
             <span>Đang mở thử: {effectNames[animEffect] || 'Hiệu Ứng Mở Bìa'} (Chậm & Rõ Nét)</span>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY VIP: CỔNG ĐÔI HOÀNG GIA (Áp dụng cho Style 1, 2, 3 khi chọn hiệu ứng VIP) */}
+      {animEffect === 'vip' && activeStyle !== 'style4' && isOpening && (
+        <div className="absolute inset-0 pointer-events-none z-50 flex overflow-hidden rounded-[32px]">
+          <div
+            style={{
+              backgroundColor: coverBg,
+              transition: 'transform 2000ms cubic-bezier(0.25, 1, 0.5, 1)'
+            }}
+            className="w-1/2 h-full border-r-2 border-amber-300 shadow-2xl flex items-center justify-end pr-3 -translate-x-[105%]"
+          >
+            <div className="w-1.5 h-20 rounded-full bg-amber-400/90 shadow"></div>
+          </div>
+          <div
+            style={{
+              backgroundColor: coverBg,
+              transition: 'transform 2000ms cubic-bezier(0.25, 1, 0.5, 1)'
+            }}
+            className="w-1/2 h-full border-l-2 border-amber-300 shadow-2xl flex items-center justify-start pl-3 translate-x-[105%]"
+          >
+            <div className="w-1.5 h-20 rounded-full bg-amber-400/90 shadow"></div>
           </div>
         </div>
       )}
@@ -567,92 +597,121 @@ export function EnvelopeModal({
       {/* STYLE 4: MINIMALIST BOTANICAL WAX SEAL (Ảnh 1 & 5 - Save our date / Đình Hiếu & Thanh Thúy) */}
       {activeStyle === 'style4' && (
         <div
-          style={{ backgroundColor: style4Bg }}
-          className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-[#e8dcd0] text-center animate-fade-in flex flex-col justify-between min-h-[500px] sm:min-h-[550px] p-6 sm:p-7 transition-colors duration-500"
+          className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-[#e8dcd0] min-h-[500px] sm:min-h-[550px] select-none flex flex-col justify-between"
         >
-          {/* Vertical Pale Blue Ribbon Line on the right (Dòng kẻ thẳng) */}
-          <div className="absolute top-0 bottom-0 right-[16%] -translate-x-1/2 w-[2px] bg-[#dbe5ee] pointer-events-none"></div>
+          {/* UNDERNEATH SNEAK PEEK (Photo of Bride & Groom revealed as flaps part) */}
+          <div className="absolute inset-0 z-0 bg-stone-900 overflow-hidden">
+            <img
+              src={coverPhoto}
+              alt="Wedding Preview"
+              className={`w-full h-full object-cover transition-transform duration-[2000ms] ease-out ${
+                isOpening ? 'scale-100 brightness-100' : 'scale-105 brightness-95'
+              }`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-950/60 via-transparent to-stone-950/20 pointer-events-none"></div>
+          </div>
 
-          {/* Interactive Antique Bronze Circular Wax Seal centered directly ON the vertical line (Nằm đè lên dòng kẻ dọc giống cái khuy/cúc) */}
+          {/* LEFT FLAP: 84% width, slides LEFT when opening (VIP Opening Effect) */}
           <div
-            className="absolute right-[16%] translate-x-1/2 top-1/2 -translate-y-1/2 z-20 w-16 h-16 sm:w-18 sm:h-18 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
-            onClick={handleOpenClick}
-            title="Nhấn để mở thiệp"
+            style={{
+              backgroundColor: style4Bg,
+              transform: (isOpening && animEffect === 'vip') ? 'translateX(-106%)' : 'translateX(0)',
+              boxShadow: (isOpening && animEffect === 'vip') ? '8px 0 28px rgba(0,0,0,0.3)' : 'none',
+              transition: 'transform 2000ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 1000ms ease-out'
+            }}
+            className="absolute top-0 bottom-0 left-0 w-[84%] z-20 flex flex-col justify-between p-6 sm:p-7 pr-4 border-r-2 border-[#dbe5ee] origin-left"
           >
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
-              <defs>
-                <radialGradient id="waxSealBronze" cx="38%" cy="38%" r="62%">
-                  <stop offset="0%" stopColor="#d9b876" />
-                  <stop offset="40%" stopColor="#ab8343" />
-                  <stop offset="80%" stopColor="#7a541c" />
-                  <stop offset="100%" stopColor="#4e340d" />
-                </radialGradient>
-                <radialGradient id="waxSealInner" cx="42%" cy="42%" r="58%">
-                  <stop offset="0%" stopColor="#c5a25d" />
-                  <stop offset="60%" stopColor="#8d6624" />
-                  <stop offset="100%" stopColor="#5d3f10" />
-                </radialGradient>
-              </defs>
-              <circle cx="50" cy="50" r="46" fill="url(#waxSealBronze)" />
-              <circle cx="50" cy="50" r="40" fill="url(#waxSealInner)" stroke="#deb977" strokeWidth="1.2" />
-              <g fill="#4e340d" stroke="#e6c888" strokeWidth="0.8">
-                <path d="M50,80 C50,60 50,40 50,22" stroke="#e6c888" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-                <path d="M50,70 C42,66 38,58 44,56 C48,58 50,64 50,70 Z" fill="#6f4f1a" />
-                <path d="M50,70 C58,66 62,58 56,56 C52,58 50,64 50,70 Z" fill="#6f4f1a" />
-                <path d="M50,54 C40,50 36,42 42,40 C46,42 50,48 50,54 Z" fill="#6f4f1a" />
-                <path d="M50,54 C60,50 64,42 58,40 C54,42 50,48 50,54 Z" fill="#6f4f1a" />
-                <path d="M50,38 C42,34 38,26 44,24 C48,26 50,32 50,38 Z" fill="#6f4f1a" />
-                <path d="M50,38 C58,34 62,26 56,24 C52,26 50,32 50,38 Z" fill="#6f4f1a" />
-                <path d="M50,23 C47,16 53,16 50,23 Z" fill="#6f4f1a" />
-              </g>
-            </svg>
-          </div>
-
-          {/* Top-Left: "Save our date" cạnh nhau liền mạch nằm trước dòng kẻ thẳng */}
-          <div className="w-full text-left pr-[20%] select-none z-10 pt-2 pl-1">
-            <span className="font-motherland text-2xl sm:text-[30px] text-[#6f563d] block whitespace-nowrap leading-none">
-              Save our date
-            </span>
-          </div>
-
-          {/* Middle Section: Names stacked on left + MỞ THIỆP Button (Nằm gọn gàng bên trái dòng kẻ) */}
-          <div className="relative w-full my-auto pr-[20%] text-left select-none z-10 py-3 pl-1">
-            <span className="font-motherland text-2xl sm:text-[28px] text-[#483827] leading-tight block whitespace-nowrap">
-              {style4Person1}
-            </span>
-            <div className="font-serif-elegant italic text-base text-amber-700 my-1 pl-1">
-              &
-            </div>
-            <span className="font-motherland text-2xl sm:text-[28px] text-[#483827] leading-tight block whitespace-nowrap">
-              {style4Person2}
-            </span>
-
-            {/* MỞ THIỆP Button right under names (Chuẩn Ảnh 5) */}
-            <div className="mt-4">
-              <button
-                onClick={handleOpenClick}
-                className="py-2 px-5 rounded-full bg-gradient-to-r from-[#eddab0] via-[#faeed1] to-[#eddab0] hover:brightness-105 shadow-md border border-[#c29c55] text-[#543d14] font-avo tracking-[0.18em] text-[10px] sm:text-[11px] font-bold uppercase transition-all cursor-pointer inline-flex items-center gap-1.5"
-              >
-                <span>{c4.buttonText || 'MỞ THIỆP'}</span>
-                <span className="text-xs">›</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Bottom-Left: Salutation & Guest Name (Nằm gọn gàng bên trái dòng kẻ, viết liền 1 dòng) */}
-          <div className="w-full text-left pr-[18%] pb-2 pt-2 select-none relative z-10">
-            <p className="font-avo text-[11px] text-stone-600 mb-1">
-              {salutation || c4.greetingLabel || 'Trân trọng kính mời'}
-            </p>
-            <div className="inline-block px-4 py-1.5 rounded-full bg-[#f4ebe1] border border-[#e2d2c2] max-w-full">
-              <span className="font-avo font-semibold text-[#483827] text-xs sm:text-[13px] block whitespace-nowrap overflow-hidden text-ellipsis">
-                {displayGuest || c4.guestText || 'Quý khách'}
+            {/* Top-Left: "Save our date" */}
+            <div className="w-full text-left select-none pt-2 pl-1">
+              <span className="font-motherland text-2xl sm:text-[30px] text-[#6f563d] block whitespace-nowrap leading-none">
+                Save our date
               </span>
             </div>
+
+            {/* Middle Section: Names stacked on left + MỞ THIỆP Button */}
+            <div className="relative w-full my-auto text-left select-none py-3 pl-1">
+              <span className="font-motherland text-2xl sm:text-[28px] text-[#483827] leading-tight block whitespace-nowrap">
+                {style4Person1}
+              </span>
+              <div className="font-serif-elegant italic text-base text-amber-700 my-1 pl-1">
+                &
+              </div>
+              <span className="font-motherland text-2xl sm:text-[28px] text-[#483827] leading-tight block whitespace-nowrap">
+                {style4Person2}
+              </span>
+
+              {/* MỞ THIỆP Button right under names */}
+              <div className="mt-4">
+                <button
+                  onClick={handleOpenClick}
+                  className="py-2 px-5 rounded-full bg-gradient-to-r from-[#eddab0] via-[#faeed1] to-[#eddab0] hover:brightness-105 shadow-md border border-[#c29c55] text-[#543d14] font-avo tracking-[0.18em] text-[10px] sm:text-[11px] font-bold uppercase transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95"
+                >
+                  <span>{c4.buttonText || 'MỞ THIỆP'}</span>
+                  <span className="text-xs">›</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom-Left: Salutation & Guest Name */}
+            <div className="w-full text-left pb-2 pt-2 select-none relative z-10">
+              <p className="font-avo text-[11px] text-stone-600 mb-1">
+                {salutation || c4.greetingLabel || 'Trân trọng kính mời'}
+              </p>
+              <div className="inline-block px-4 py-1.5 rounded-full bg-[#f4ebe1] border border-[#e2d2c2] max-w-full">
+                <span className="font-avo font-semibold text-[#483827] text-xs sm:text-[13px] block whitespace-nowrap overflow-hidden text-ellipsis">
+                  {displayGuest || c4.guestText || 'Quý khách'}
+                </span>
+              </div>
+            </div>
+
+            {/* Antique Bronze Circular Wax Seal centered directly ON the vertical line */}
+            <div
+              className="absolute -right-8 sm:-right-9 top-1/2 -translate-y-1/2 z-30 w-16 h-16 sm:w-18 sm:h-18 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
+              onClick={handleOpenClick}
+              title="Nhấn để mở thiệp"
+            >
+              <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_8px_18px_rgba(0,0,0,0.35)]">
+                <defs>
+                  <radialGradient id="waxSealBronze" cx="38%" cy="38%" r="62%">
+                    <stop offset="0%" stopColor="#d9b876" />
+                    <stop offset="40%" stopColor="#ab8343" />
+                    <stop offset="80%" stopColor="#7a541c" />
+                    <stop offset="100%" stopColor="#4e340d" />
+                  </radialGradient>
+                  <radialGradient id="waxSealInner" cx="42%" cy="42%" r="58%">
+                    <stop offset="0%" stopColor="#c5a25d" />
+                    <stop offset="60%" stopColor="#8d6624" />
+                    <stop offset="100%" stopColor="#5d3f10" />
+                  </radialGradient>
+                </defs>
+                <circle cx="50" cy="50" r="46" fill="url(#waxSealBronze)" />
+                <circle cx="50" cy="50" r="40" fill="url(#waxSealInner)" stroke="#deb977" strokeWidth="1.2" />
+                <g fill="#4e340d" stroke="#e6c888" strokeWidth="0.8">
+                  <path d="M50,80 C50,60 50,40 50,22" stroke="#e6c888" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+                  <path d="M50,70 C42,66 38,58 44,56 C48,58 50,64 50,70 Z" fill="#6f4f1a" />
+                  <path d="M50,70 C58,66 62,58 56,56 C52,58 50,64 50,70 Z" fill="#6f4f1a" />
+                  <path d="M50,54 C40,50 36,42 42,40 C46,42 50,48 50,54 Z" fill="#6f4f1a" />
+                  <path d="M50,54 C60,50 64,42 58,40 C54,42 50,48 50,54 Z" fill="#6f4f1a" />
+                  <path d="M50,38 C42,34 38,26 44,24 C48,26 50,32 50,38 Z" fill="#6f4f1a" />
+                  <path d="M50,38 C58,34 62,26 56,24 C52,26 50,32 50,38 Z" fill="#6f4f1a" />
+                  <path d="M50,23 C47,16 53,16 50,23 Z" fill="#6f4f1a" />
+                </g>
+              </svg>
+            </div>
           </div>
 
-          {/* Bottom vignette */}
-          <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-stone-900/10 to-transparent pointer-events-none"></div>
+          {/* RIGHT FLAP: 16% width, slides RIGHT when opening (VIP Opening Effect) */}
+          <div
+            style={{
+              backgroundColor: style4Bg,
+              transform: (isOpening && animEffect === 'vip') ? 'translateX(106%)' : 'translateX(0)',
+              boxShadow: (isOpening && animEffect === 'vip') ? '-8px 0 28px rgba(0,0,0,0.3)' : 'none',
+              transition: 'transform 2000ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 1000ms ease-out'
+            }}
+            className="absolute top-0 bottom-0 right-0 w-[16%] z-10 origin-right"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-stone-900/5 to-transparent pointer-events-none"></div>
+          </div>
         </div>
       )}
 

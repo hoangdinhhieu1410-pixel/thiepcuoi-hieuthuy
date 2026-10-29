@@ -607,19 +607,36 @@ export function StudioEditor({
   const [importFile, setImportFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Trigger preview opening animation test (Slow, emphasized 1.6s)
-  const triggerOpeningAnimationTest = (effectId) => {
-    setFormData(prev => ({
-      ...prev,
+  // Trigger preview opening animation test (Slow, emphasized 1.6s - 2.0s)
+  const triggerOpeningAnimationTest = async (effectId) => {
+    const updatedForm = {
+      ...formData,
       coverConfig: {
-        ...(prev.coverConfig || {}),
+        ...(formData.coverConfig || {}),
         coverAnimationEffect: effectId
       }
-    }));
+    };
+    setFormData(updatedForm);
     setPreviewEnvelopeOpen(false);
     setTimeout(() => {
       setTestAnimationCount(c => c + 1);
     }, 150);
+
+    // Persist immediately to all profiles & cloud Redis so choice is saved
+    const updatedAll = {
+      ...allProfiles,
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updatedForm
+    };
+    setAllProfiles(updatedAll);
+    if (onSaveProfile) {
+      await onSaveProfile(currentProfileKey, updatedForm);
+    } else if (onSaveAllProfiles) {
+      await onSaveAllProfiles(updatedAll);
+    }
+    if (typeof broadcastProfileUpdate === 'function') {
+      broadcastProfileUpdate(updatedAll, 'studio_animation_changed');
+    }
   };
 
   // Trigger preview photo animation test
@@ -6684,14 +6701,15 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   <div>
                     <h3 className="font-bold text-xs uppercase tracking-wider text-[#70561f] flex items-center gap-2">
                       <Film className="w-4 h-4 text-amber-700" />
-                      <span>8 Hiệu Ứng Chuyển Cảnh Khi Mở Bìa Phong Bì (Cover Opening Animation)</span>
+                      <span>9 Hiệu Ứng Chuyển Cảnh Khi Mở Bìa Phong Bì (Cover Opening Animation)</span>
                     </h3>
                     <p className="text-[11px] text-stone-500 mt-0.5">
-                      Tổng hợp 8 mẫu hiệu ứng mở bìa phong bì độc quyền, di chuyển chậm rãi (1.6s) rõ nét tạo điểm nhấn tuyệt đẹp
+                      Tổng hợp 9 mẫu hiệu ứng mở bìa phong bì độc quyền, di chuyển chậm rãi (1.6s - 2.0s) rõ nét tạo điểm nhấn tuyệt đẹp
                     </p>
                   </div>
                   <span className="text-xs font-bold text-amber-900 px-2.5 py-1 bg-amber-100/80 rounded-xl border border-amber-300">
                     Đang chọn: {
+                      formData.coverConfig?.coverAnimationEffect === 'vip' ? 'VIP: Bìa Sáp Tách Cánh Mở 2 Bên' :
                       formData.coverConfig?.coverAnimationEffect === 'waxFlap' ? '1. Mở Nắp Sáp 3D (Cocohappii)' :
                       formData.coverConfig?.coverAnimationEffect === 'splitDoor' ? '2. Cổng Cung Đình (27BigGroup A9)' :
                       formData.coverConfig?.coverAnimationEffect === 'flowerBloom' ? '3. Cánh Hoa Rơi (LoveCard 26)' :
@@ -6714,6 +6732,13 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 pt-1">
                   {[
+                    {
+                      id: 'vip',
+                      title: 'VIP: Bìa Sáp Tách Cánh Mở 2 Bên (Như Video)',
+                      badge: 'VIP',
+                      badgeColor: 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700 text-white font-extrabold shadow-sm',
+                      desc: 'Hiệu ứng mở bìa chuẩn video mẫu: Cánh bìa sáp tối giản tách đôi tại đường chỉ dọc, trượt mở êm ái sang 2 bên để lộ ruột thiệp lộng lẫy.'
+                    },
                     {
                       id: 'waxFlap',
                       title: '1. Mở Nắp Sáp 3D Hoàng Gia',
