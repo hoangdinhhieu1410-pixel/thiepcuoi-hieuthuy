@@ -512,6 +512,7 @@ export function StudioEditor({
 
   // Track mount state and auto-save every edit
   const isInitialMount = useRef(true);
+  const userHasEdited = useRef(false);
 
   // Synchronize when parent profiles prop updates (before user types or when cloud config arrives from other accounts)
   useEffect(() => {
@@ -973,6 +974,7 @@ export function StudioEditor({
   const [copiedLink, setCopiedLink] = useState('');
   const [guestSearch, setGuestSearch] = useState('');
   const [previewAudio, setPreviewAudio] = useState(null);
+  const [previewTrackId, setPreviewTrackId] = useState(null);
   const [previewGiftModal, setPreviewGiftModal] = useState(false);
   const audioPreviewRef = useRef(null);
 
@@ -1506,6 +1508,41 @@ export function StudioEditor({
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
+  // Select music track for the current card (Mẫu 1 Nhà Trai hoặc Mẫu 2 Nhà Gái)
+  const handleSelectTrack = async (track) => {
+    if (!track) return;
+    const selectedTrackUrl = track.url || `/templates/007/tracks/${track.id}.m4a`;
+    const updatedMusic = {
+      ...(formData.music || {}),
+      activeTrackId: track.id,
+      customTrackUrl: selectedTrackUrl,
+      customTrackName: track.title,
+      enabled: true
+    };
+    const updated = {
+      ...formData,
+      music: updatedMusic
+    };
+    userHasEdited.current = true;
+    setFormData(updated);
+
+    const updatedAll = {
+      ...allProfiles,
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updated
+    };
+    setAllProfiles(updatedAll);
+    setSaveStatus(`Đang lưu bài hát [${track.title}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}... ⏳`);
+    if (onSaveProfile) {
+      await onSaveProfile(currentProfileKey, updated);
+    } else if (onSaveAllProfiles) {
+      await onSaveAllProfiles(updatedAll);
+    }
+    broadcastProfileUpdate(updatedAll, 'studio_music_changed');
+    setSaveStatus(`✅ Đã chọn bài hát: ${track.title} cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}!`);
+    setTimeout(() => setSaveStatus(''), 3000);
+  };
+
   // Audio preview play
   const togglePreviewPlay = async (trackOrUrl) => {
     let playUrl = typeof trackOrUrl === 'string' ? trackOrUrl : trackOrUrl?.url;
@@ -1518,14 +1555,16 @@ export function StudioEditor({
     }
     if (!playUrl) return;
 
-    if (previewAudio === playUrl) {
+    if (previewTrackId === trackId || previewAudio === playUrl) {
       audioPreviewRef.current?.pause();
       setPreviewAudio(null);
+      setPreviewTrackId(null);
     } else {
       if (audioPreviewRef.current) {
         audioPreviewRef.current.src = playUrl;
         audioPreviewRef.current.play().catch(e => console.log('Audio preview error:', e));
         setPreviewAudio(playUrl);
+        setPreviewTrackId(trackId);
       }
     }
   };
@@ -1797,7 +1836,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-800 flex flex-col font-sans-clean">
-      <audio ref={audioPreviewRef} onEnded={() => setPreviewAudio(null)} />
+      <audio ref={audioPreviewRef} onEnded={() => { setPreviewAudio(null); setPreviewTrackId(null); }} />
 
       {/* TOP HEADER: INCLUDES PROFILE SWITCHER, LIVE PREVIEW TOGGLE & SAVE BUTTONS (KHUNG ĐỎ) */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200 px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
@@ -5535,44 +5574,14 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
                 <div className="space-y-2.5">
                   {(formData.music?.presetTracks || []).map((track) => {
-                    const isSelected = formData.music?.activeTrackId === track.id ||
-                      (formData.music?.customTrackUrl && formData.music?.customTrackUrl === track.url);
-                    const isPreviewing = previewAudio === track.url;
+                    const isSelected = formData.music?.activeTrackId
+                      ? formData.music.activeTrackId === track.id
+                      : Boolean(formData.music?.customTrackUrl && (formData.music.customTrackUrl === track.url || formData.music.customTrackName === track.title));
+                    const isPreviewing = (previewTrackId && previewTrackId === track.id) || previewAudio === track.url;
                     return (
                       <div
                         key={track.id}
-                        onClick={async () => {
-                          const staticTrackUrl = `/templates/007/tracks/${track.id}.m4a`;
-                          const updatedMusic = {
-                            ...(formData.music || {}),
-                            activeTrackId: track.id,
-                            customTrackUrl: staticTrackUrl,
-                            customTrackName: track.title,
-                            enabled: true
-                          };
-                          const updated = {
-                            ...formData,
-                            music: updatedMusic
-                          };
-                          userHasEdited.current = true;
-                          setFormData(updated);
-
-                          const updatedAll = {
-                            ...allProfiles,
-                            activeProfile: currentProfileKey,
-                            [currentProfileKey]: updated
-                          };
-                          setAllProfiles(updatedAll);
-                          setSaveStatus(`Đang đồng bộ bài hát [${track.title}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}... ⏳`);
-                          if (onSaveProfile) {
-                            await onSaveProfile(currentProfileKey, updated);
-                          } else if (onSaveAllProfiles) {
-                            await onSaveAllProfiles(updatedAll);
-                          }
-                          broadcastProfileUpdate(updatedAll, 'studio_music_changed');
-                          setSaveStatus(`✅ Đã chọn bài hát: ${track.title} cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}!`);
-                          setTimeout(() => setSaveStatus(''), 3000);
-                        }}
+                        onClick={() => handleSelectTrack(track)}
                         className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 text-xs ${
                           isSelected
                             ? 'bg-amber-50/80 border-[#70561f] ring-2 ring-amber-300/80 shadow-md'
@@ -5584,7 +5593,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             type="radio"
                             name="musicTrackSelection"
                             checked={isSelected}
-                            onChange={() => {}} // Handled by outer div
+                            onChange={() => handleSelectTrack(track)}
                             className="w-4 h-4 accent-[#70561f] cursor-pointer shrink-0"
                           />
                           <div className="min-w-0">
