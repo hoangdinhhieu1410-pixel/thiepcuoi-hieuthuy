@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Heart, Sparkles, ChevronRight } from 'lucide-react';
 
 export function EnvelopeModal({
-  data,
+  data = {},
   guestName,
   salutation,
   onOpen,
@@ -12,6 +12,22 @@ export function EnvelopeModal({
   isInline = false,
   testAnimationTrigger = 0
 }) {
+  const safeData = data || {};
+  const isBrideCover = safeData.profileType === 'bride' || safeData.profileName?.toLowerCase().includes('gái');
+  const groomName = safeData.groom?.nickname || safeData.groom?.name || 'Đình Hiếu';
+  const brideName = safeData.bride?.nickname || safeData.bride?.name || 'Thanh Thúy';
+  const defaultCoupleNames = isBrideCover ? `${brideName} ♥ ${groomName}` : `${groomName} ♥ ${brideName}`;
+  const displayGuest = guestName || 'Quý Khách và Người Thương';
+  const weddingDay = (safeData.saveTheDateDay && safeData.saveTheDateDay !== '26.12.2026') ? safeData.saveTheDateDay : (safeData.eventDateText || '29.11.2026');
+  const getCleanDate = (dateVal) => {
+    if (!dateVal || dateVal === '26.12.2026') return weddingDay;
+    return dateVal;
+  };
+
+  // Active cover style & animation effect (Declared first to avoid TDZ / ReferenceError)
+  const activeStyle = safeData.templateStyle || safeData.coverConfig?.activeStyle || currentStyle || 'style1';
+  const animEffect = safeData.coverConfig?.coverAnimationEffect || (activeStyle === 'style4' ? 'vip' : 'waxFlap');
+
   const [isOpening, setIsOpening] = useState(false);
 
   // Trigger test replay when requested from Studio Editor
@@ -29,29 +45,15 @@ export function EnvelopeModal({
     setIsOpening(true);
     const duration = animEffect === 'vip' ? 2000 : 1600; // 2.0s slow, majestic opening for VIP
     setTimeout(() => {
-      onOpen();
+      if (onOpen) onOpen();
     }, duration);
   };
 
-  const isBrideCover = data.profileType === 'bride' || data.profileName?.toLowerCase().includes('gái');
-  const groomName = data.groom?.nickname || data.groom?.name || 'Đình Hiếu';
-  const brideName = data.bride?.nickname || data.bride?.name || 'Thanh Thúy';
-  const defaultCoupleNames = isBrideCover ? `${brideName} ♥ ${groomName}` : `${groomName} ♥ ${brideName}`;
-  const displayGuest = guestName || 'Quý Khách và Người Thương';
-  const weddingDay = (data.saveTheDateDay && data.saveTheDateDay !== '26.12.2026') ? data.saveTheDateDay : (data.eventDateText || '29.11.2026');
-  const getCleanDate = (dateVal) => {
-    if (!dateVal || dateVal === '26.12.2026') return weddingDay;
-    return dateVal;
-  };
-
-  // Active cover style
-  const activeStyle = data.templateStyle || data.coverConfig?.activeStyle || currentStyle || 'style1';
-  const animEffect = data.coverConfig?.coverAnimationEffect || (activeStyle === 'style4' ? 'vip' : 'waxFlap');
-  const c1 = data.coverConfig?.style1 || {};
-  const c2 = data.coverConfig?.style2 || {};
-  const c3 = data.coverConfig?.style3 || {};
-  const c4 = data.coverConfig?.style4 || {};
-  const cCustom = data.coverConfig?.[activeStyle] || {};
+  const c1 = safeData.coverConfig?.style1 || {};
+  const c2 = safeData.coverConfig?.style2 || {};
+  const c3 = safeData.coverConfig?.style3 || {};
+  const c4 = safeData.coverConfig?.style4 || {};
+  const cCustom = safeData.coverConfig?.[activeStyle] || {};
 
   // Style-specific background colors (Each of the 4 styles has its own independent color)
   const style1Bg = c1.bgColor || '#fbe8ea';
@@ -135,7 +137,7 @@ export function EnvelopeModal({
 
   const coverPhoto = (c1.photo && !c1.photo.includes('/templates/007/images/hero_banner.jpg'))
     ? c1.photo
-    : (c4.photo || data.heroBannerPhoto || data.gallery?.[0]?.url || '/templates/007/images/hero_banner.jpg');
+    : (c4.photo || safeData.heroBannerPhoto || safeData.gallery?.[0]?.url || '/templates/007/images/hero_banner.jpg');
 
   // 9 Distinct Opening Animation Classes based on animEffect (Slow & Emphasized ~1600ms - 2000ms)
   let openingEffectClasses = '';
@@ -724,7 +726,7 @@ export function EnvelopeModal({
           {/* Custom Background Photo (if provided from uploaded image / link) */}
           <div className="absolute inset-0 overflow-hidden">
             <img
-              src={cCustom.photo || data.heroBannerPhoto || '/templates/007/images/hero_banner.jpg'}
+              src={cCustom.photo || safeData.heroBannerPhoto || '/templates/007/images/hero_banner.jpg'}
               alt="Custom cover background"
               className="w-full h-full object-cover filter brightness-[0.95] scale-105"
             />
