@@ -1792,30 +1792,30 @@ export function GuestView({
         )}
 
         {/* ================= SECTION 6: CARD-GALLERY (OUR MEMORIES) ================= */}
-        <div id="card-gallery" className="relative px-5 py-10 border-b border-[#e5dec9] overflow-hidden">
-          {/* Flower sketch decorations in gallery corners */}
+        <div id="card-gallery" className="relative px-5 pt-12 pb-10 sm:pt-14 sm:pb-12 border-b border-[#e5dec9] overflow-hidden">
+          {/* Flower sketch decorations in gallery corners - shifted & softened so they never overlap the title */}
           <img
             src="/templates/007/images/decor-flower1.png"
             alt=""
-            className="absolute -top-6 -left-12 w-48 pointer-events-none opacity-75 rotate-[-10deg] z-0 select-none"
+            className="absolute -top-12 -left-16 w-36 pointer-events-none opacity-20 rotate-[-10deg] z-0 select-none"
           />
           <img
             src="/templates/007/images/decor-flower3.png"
             alt=""
-            className="absolute -bottom-6 -right-12 w-48 pointer-events-none opacity-75 rotate-[15deg] z-0 select-none"
+            className="absolute -bottom-8 -right-14 w-40 pointer-events-none opacity-30 rotate-[15deg] z-0 select-none"
           />
 
-          <div className="relative z-10 text-center mb-6">
-            <h2 className={`text-3xl font-motherland text-[#928362] whitespace-nowrap ${textAnimClass}`}>
+          <div className="relative z-10 text-center mb-7 sm:mb-8 px-3">
+            <h2 className={`text-4xl min-[390px]:text-[42px] sm:text-5xl font-motherland text-[#82714c] leading-normal pt-2 pb-1 whitespace-nowrap select-none drop-shadow-xs ${textAnimClass}`}>
               <EditableText
                 value={cardData.galleryHeading || 'Our Memories'}
                 onChange={(v) => updateField('galleryHeading', v)}
                 isEditing={isLiveEditing}
                 placeholder="Our Memories"
-                className="text-[#928362] whitespace-nowrap"
+                className="text-[#82714c] whitespace-nowrap"
               />
             </h2>
-            <div className="w-12 h-[2px] bg-[#928362] mx-auto mt-2"></div>
+            <div className="w-14 h-[2px] bg-[#82714c] mx-auto mt-2.5 rounded-full opacity-80"></div>
           </div>
 
           {/* Quick guide in preview/admin mode */}
