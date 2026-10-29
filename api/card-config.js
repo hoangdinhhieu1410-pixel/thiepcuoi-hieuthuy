@@ -5,6 +5,20 @@ const REDIS_USERS_KEY = 'wedding_auth_users';
 const SUPER_ADMIN_EMAIL = 'hoangdinhhieu1410@gmail.com';
 const DEFAULT_REDIS_URL = 'redis://default:1CoqVoDZ9zok85R9QyvXyok7L856XXIh@palatial-clover-caring-84399.db.redis.io:17074';
 
+const BUNDLED_TRACK_IDS = new Set([
+  'track-1793025564857',
+  'track-1793025562301',
+  'track-1793025559560',
+  'track-1793025556997',
+  'track-1793025553990',
+  'track-1793025550442',
+  'track-1793025546087',
+  'track-1793025543609',
+  'track-1793025541372',
+  'track-1793025538163',
+  'track-1793025527552'
+]);
+
 let redisInstance = null;
 
 function getRedis() {
@@ -109,24 +123,42 @@ export default async function handler(req, res) {
       let configToSave = rawCurrent ? JSON.parse(rawCurrent) : {};
       if (!configToSave || typeof configToSave !== 'object') configToSave = {};
 
-      // Sanitize dead blob urls in music to point to permanent track files
+      // Sanitize dead blob urls in music to point to permanent track files or streaming endpoint
       const cleanMusic = (m) => {
         if (!m) return m;
         const activeId = m.activeTrackId;
         if (!m.customTrackUrl || m.customTrackUrl.startsWith('blob:')) {
-          if (activeId && activeId.startsWith('track-')) {
+          if (activeId && BUNDLED_TRACK_IDS.has(activeId)) {
             m.customTrackUrl = `/templates/007/tracks/${activeId}.m4a`;
+          } else if (activeId) {
+            m.customTrackUrl = `/api/audio-track?id=${activeId}`;
           } else {
             m.customTrackUrl = '/templates/007/music.m4a';
           }
+        } else if (m.customTrackUrl.includes('/templates/007/tracks/')) {
+          const match = m.customTrackUrl.match(/track-[0-9]+/);
+          if (match && !BUNDLED_TRACK_IDS.has(match[0])) {
+            m.customTrackUrl = `/api/audio-track?id=${match[0]}`;
+          }
         }
+
         if (Array.isArray(m.presetTracks)) {
           m.presetTracks = m.presetTracks.map(t => {
-            const trackUrl = (t.url && !t.url.startsWith('blob:') && t.url !== '/templates/007/music.m4a')
-              ? t.url
-              : (t.id && t.id.startsWith('track-'))
-                ? `/templates/007/tracks/${t.id}.m4a`
-                : '/templates/007/music.m4a';
+            let trackUrl = t.url;
+            if (!trackUrl || trackUrl.startsWith('blob:')) {
+              if (t.id && BUNDLED_TRACK_IDS.has(t.id)) {
+                trackUrl = `/templates/007/tracks/${t.id}.m4a`;
+              } else if (t.id) {
+                trackUrl = `/api/audio-track?id=${t.id}`;
+              } else {
+                trackUrl = '/templates/007/music.m4a';
+              }
+            } else if (trackUrl.includes('/templates/007/tracks/')) {
+              const match = trackUrl.match(/track-[0-9]+/);
+              if (match && !BUNDLED_TRACK_IDS.has(match[0])) {
+                trackUrl = `/api/audio-track?id=${match[0]}`;
+              }
+            }
             return {
               ...t,
               url: trackUrl

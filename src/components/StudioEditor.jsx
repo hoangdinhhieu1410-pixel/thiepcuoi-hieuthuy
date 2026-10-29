@@ -1357,9 +1357,9 @@ export function StudioEditor({
     }
   };
 
-  // Upload custom MP3 / MP4 file with native IndexedDB Blob storage
+  // Upload custom MP3 / MP4 file with native IndexedDB Blob storage & Cloud Sync
   const handleMusicUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     setSaveStatus('⏳ Đang lưu file nhạc MP3/MP4 vào bộ nhớ hệ thống...');
     try {
@@ -1367,18 +1367,43 @@ export function StudioEditor({
       const trackTitle = file.name.replace(/\.[^/.]+$/, '');
       const trackId = 'track-' + Date.now();
 
-      // 1. Save binary Blob directly into dedicated IndexedDB audio store
+      // 1. Save binary Blob directly into dedicated IndexedDB audio store for instant local preview
       const blobUrl = await saveAudioTrackBlob(trackId, file);
+      const cloudUrl = `/api/audio-track?id=${trackId}`;
 
-      // 2. Track metadata for the list (lightweight, no base64 memory bloat)
+      // 2. Read as base64 to sync to cloud (/api/audio-track) so guests on phones can also hear it
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64Data = ev.target?.result;
+        if (base64Data) {
+          try {
+            await fetch('/api/audio-track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: trackId,
+                title: trackTitle,
+                mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mpeg'),
+                data: base64Data
+              })
+            });
+          } catch (err) {
+            console.warn('Audio cloud sync error:', err);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+
+      // 3. Track metadata for the list
       const newTrack = {
         id: trackId,
         title: trackTitle,
         artist: isVideo ? 'File video MP4 từ máy tính' : 'File nhạc MP3 từ máy tính',
-        url: blobUrl || '',
+        url: blobUrl || cloudUrl,
+        cloudUrl: cloudUrl,
         isCustom: true,
         hasBlob: true,
-        mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mp3')
+        mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mpeg')
       };
 
       const currentTracks = formData.music?.presetTracks || [];
@@ -1387,7 +1412,7 @@ export function StudioEditor({
         ...(formData.music || {}),
         presetTracks: updatedTracks,
         activeTrackId: newTrack.id,
-        customTrackUrl: blobUrl || '',
+        customTrackUrl: blobUrl || cloudUrl,
         customTrackName: trackTitle,
         enabled: true
       };
@@ -1400,7 +1425,7 @@ export function StudioEditor({
       userHasEdited.current = true;
       setFormData(updatedFormData);
 
-      // 3. Immediately persist to storage
+      // 4. Immediately persist to storage
       if (onSaveProfile) {
         onSaveProfile(currentProfileKey, updatedFormData);
       }
@@ -1508,10 +1533,37 @@ export function StudioEditor({
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
+  // 11 bundled default tracks that physically exist on disk in /templates/007/tracks/
+  const BUNDLED_TRACK_IDS = new Set([
+    'track-1793025564857',
+    'track-1793025562301',
+    'track-1793025559560',
+    'track-1793025556997',
+    'track-1793025553990',
+    'track-1793025550442',
+    'track-1793025546087',
+    'track-1793025543609',
+    'track-1793025541372',
+    'track-1793025538163',
+    'track-1793025527552'
+  ]);
+
   // Select music track for the current card (Mẫu 1 Nhà Trai hoặc Mẫu 2 Nhà Gái)
   const handleSelectTrack = async (track) => {
     if (!track) return;
-    const selectedTrackUrl = track.url || `/templates/007/tracks/${track.id}.m4a`;
+    let selectedTrackUrl = track.url;
+    if (track.id && BUNDLED_TRACK_IDS.has(track.id)) {
+      selectedTrackUrl = `/templates/007/tracks/${track.id}.m4a`;
+    } else {
+      // If custom uploaded track, check local IndexedDB first for instant local playback
+      const localBlob = await getAudioTrackUrl(track.id);
+      if (localBlob) {
+        selectedTrackUrl = localBlob;
+      } else if (!selectedTrackUrl || selectedTrackUrl.includes('/templates/007/tracks/')) {
+        selectedTrackUrl = `/api/audio-track?id=${track.id}`;
+      }
+    }
+
     const updatedMusic = {
       ...(formData.music || {}),
       activeTrackId: track.id,
@@ -1547,11 +1599,15 @@ export function StudioEditor({
   const togglePreviewPlay = async (trackOrUrl) => {
     let playUrl = typeof trackOrUrl === 'string' ? trackOrUrl : trackOrUrl?.url;
     const trackId = typeof trackOrUrl === 'object' ? trackOrUrl?.id : null;
-    if (trackId && (trackId.startsWith('track-') || trackOrUrl?.isCustom)) {
+    if (trackId && BUNDLED_TRACK_IDS.has(trackId)) {
+      playUrl = `/templates/007/tracks/${trackId}.m4a`;
+    } else if (trackId) {
       const fresh = await getAudioTrackUrl(trackId);
-      if (fresh) playUrl = fresh;
-    } else if (!playUrl && trackId) {
-      playUrl = await getAudioTrackUrl(trackId);
+      if (fresh) {
+        playUrl = fresh;
+      } else if (!playUrl || playUrl.includes('/templates/007/tracks/')) {
+        playUrl = `/api/audio-track?id=${trackId}`;
+      }
     }
     if (!playUrl) return;
 

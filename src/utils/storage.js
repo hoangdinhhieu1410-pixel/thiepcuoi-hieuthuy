@@ -151,13 +151,13 @@ function createLightweightProfileCopy(profiles) {
       if (p.music?.presetTracks) {
         p.music.presetTracks = p.music.presetTracks.map(t => {
           if (t.isCustom && t.url && t.url.startsWith('data:')) {
-            return { ...t, url: '' }; // keep metadata, actual file is safely in IndexedDB
+            return { ...t, url: t.cloudUrl || (t.id ? `/api/audio-track?id=${t.id}` : '') };
           }
           return t;
         });
       }
       if (p.music?.customTrackUrl && p.music.customTrackUrl.startsWith('data:')) {
-        p.music.customTrackUrl = '';
+        p.music.customTrackUrl = p.music.activeTrackId ? `/api/audio-track?id=${p.music.activeTrackId}` : '';
       }
       p.heroBannerPhoto = stripBigBase64(p.heroBannerPhoto, '/templates/007/images/hero_banner.jpg');
       p.timelineBgPhoto = stripBigBase64(p.timelineBgPhoto, '/templates/007/images/timeline_bg.jpg');

@@ -356,21 +356,39 @@ export function GuestView({
     return () => clearInterval(timer);
   }, [cardData.weddingDate, cardData.events, cardData.calendarYear]);
 
-  // Audio track URL with support for custom IndexedDB Blobs (MP3 & MP4)
+  // 11 bundled default tracks that physically exist on disk in /templates/007/tracks/
+  const BUNDLED_TRACK_IDS = new Set([
+    'track-1793025564857',
+    'track-1793025562301',
+    'track-1793025559560',
+    'track-1793025556997',
+    'track-1793025553990',
+    'track-1793025550442',
+    'track-1793025546087',
+    'track-1793025543609',
+    'track-1793025541372',
+    'track-1793025538163',
+    'track-1793025527552'
+  ]);
+
+  // Audio track URL with support for custom IndexedDB Blobs (MP3 & MP4) and cloud streaming
   const [resolvedAudioUrl, setResolvedAudioUrl] = useState('');
 
   const getStaticTrackUrl = (music) => {
     if (!music) return '/templates/007/music.m4a';
     const activeId = music.activeTrackId;
-    if (activeId && activeId.startsWith('track-')) {
+    if (activeId && BUNDLED_TRACK_IDS.has(activeId)) {
       return `/templates/007/tracks/${activeId}.m4a`;
     }
-    if (music.customTrackUrl && !music.customTrackUrl.startsWith('blob:') && music.customTrackUrl !== '/templates/007/music.m4a') {
+    if (music.customTrackUrl && !music.customTrackUrl.includes('/templates/007/tracks/') && music.customTrackUrl !== '/templates/007/music.m4a') {
       return music.customTrackUrl;
     }
     const preset = music.presetTracks?.find(t => t.id === activeId);
-    if (preset?.url && !preset.url.startsWith('blob:') && preset.url !== '/templates/007/music.m4a') {
+    if (preset?.url && !preset.url.includes('/templates/007/tracks/') && preset.url !== '/templates/007/music.m4a') {
       return preset.url;
+    }
+    if (activeId) {
+      return `/api/audio-track?id=${activeId}`;
     }
     return '/templates/007/music.m4a';
   };
@@ -379,18 +397,12 @@ export function GuestView({
     let isMounted = true;
     const resolveAudio = async () => {
       const activeId = cardData.music?.activeTrackId;
-      // 1. If server has static track matching ID, use it immediately
-      if (activeId && activeId.startsWith('track-')) {
+      // 1. If server has bundled static track matching ID, use it immediately
+      if (activeId && BUNDLED_TRACK_IDS.has(activeId)) {
         if (isMounted) setResolvedAudioUrl(`/templates/007/tracks/${activeId}.m4a`);
         return;
       }
-      // 2. If track has a static valid URL
-      const customUrl = cardData.music?.customTrackUrl;
-      if (customUrl && !customUrl.startsWith('blob:')) {
-        if (isMounted) setResolvedAudioUrl(customUrl);
-        return;
-      }
-      // 3. Try to load live blob from IndexedDB if running on device that has it
+      // 2. Try to load live blob from local IndexedDB if running on device that uploaded it (instant preview & zero lag)
       try {
         const blobUrl = await getAudioTrackUrl(activeId);
         if (blobUrl && isMounted) {
@@ -400,6 +412,22 @@ export function GuestView({
       } catch (e) {
         console.warn('Audio blob load error:', e);
       }
+      // 3. If track has custom URL (not dead static track path)
+      const customUrl = cardData.music?.customTrackUrl;
+      if (customUrl && !customUrl.startsWith('blob:') && !customUrl.includes('/templates/007/tracks/')) {
+        if (isMounted) setResolvedAudioUrl(customUrl);
+        return;
+      }
+      const preset = cardData.music?.presetTracks?.find(t => t.id === activeId);
+      if (preset?.url && !preset.url.startsWith('blob:') && !preset.url.includes('/templates/007/tracks/')) {
+        if (isMounted) setResolvedAudioUrl(preset.url);
+        return;
+      }
+      // 4. Cloud streaming endpoint fallback
+      if (activeId) {
+        if (isMounted) setResolvedAudioUrl(`/api/audio-track?id=${activeId}`);
+        return;
+      }
       if (isMounted) {
         setResolvedAudioUrl('/templates/007/music.m4a');
       }
@@ -408,9 +436,22 @@ export function GuestView({
     return () => { isMounted = false; };
   }, [cardData.music?.activeTrackId, cardData.music?.customTrackUrl, cardData.music?.presetTracks]);
 
-  // Ensure activeMusicUrl is ALWAYS the user's selected track
-  const activeMusicUrl = (resolvedAudioUrl && !resolvedAudioUrl.startsWith('blob:') ? resolvedAudioUrl : null) ||
-    getStaticTrackUrl(cardData.music);
+  // Ensure activeMusicUrl is ALWAYS the user's selected track (including instant local blob)
+  const activeMusicUrl = resolvedAudioUrl || getStaticTrackUrl(cardData.music);
+
+  // When activeMusicUrl changes, update audio element seamlessly
+  useEffect(() => {
+    if (audioRef.current && activeMusicUrl) {
+      const wasPlaying = isPlaying;
+      audioRef.current.src = activeMusicUrl;
+      audioRef.current.load();
+      if (wasPlaying && cardData.music?.enabled) {
+        audioRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch(e => console.log('Track switch play error:', e));
+      }
+    }
+  }, [activeMusicUrl]);
 
   // Autoplay on envelope open
   useEffect(() => {
@@ -875,7 +916,15 @@ export function GuestView({
       ) : (
         <>
           {/* 3. AUDIO ELEMENT & FLOATING CONTROLS */}
-          <audio ref={audioRef} src={activeMusicUrl} loop preload={isPreview ? "none" : "auto"} />
+          <audio
+            ref={audioRef}
+            src={activeMusicUrl}
+            loop
+            preload="auto"
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onError={(e) => console.warn('Audio tag playback error:', e)}
+          />
 
           {/* Floating Audio Button (Docked near card on desktop, bottom-right on mobile) */}
           <button
