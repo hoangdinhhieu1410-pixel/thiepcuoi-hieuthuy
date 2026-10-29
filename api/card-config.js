@@ -142,14 +142,16 @@ export default async function handler(req, res) {
       // If saving both: update both
       if (targetProfile === 'groom' && newGroom) {
         configToSave.groom = newGroom;
-        configToSave.activeProfile = 'groom';
       } else if (targetProfile === 'bride' && newBride) {
         configToSave.bride = newBride;
-        configToSave.activeProfile = 'bride';
       } else {
         if (newGroom) configToSave.groom = newGroom;
         if (newBride) configToSave.bride = newBride;
-        if (body.activeProfile) configToSave.activeProfile = body.activeProfile;
+      }
+      if (body.activeProfile) {
+        configToSave.activeProfile = body.activeProfile;
+      } else if (!configToSave.activeProfile) {
+        configToSave.activeProfile = 'groom';
       }
 
       configToSave.updatedAt = Date.now();

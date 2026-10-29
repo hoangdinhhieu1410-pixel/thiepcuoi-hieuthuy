@@ -599,9 +599,6 @@ export function App() {
                 setActiveProfileKey(resolved);
               }
               // STRICT GUARD: When viewing as a guest, NEVER let cloudConfig.activeProfile change activeProfileKey!
-            } else if (cloudConfig.activeProfile) {
-              // Only update activeProfileKey for studio/owner view without explicit ?side=
-              setActiveProfileKey(cloudConfig.activeProfile);
             }
             saveProfilesToStorage(cloudConfig);
           }

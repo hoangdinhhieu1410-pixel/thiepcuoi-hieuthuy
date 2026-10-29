@@ -872,10 +872,10 @@ export function StudioEditor({
     };
     setAllProfiles(updatedAll);
     setSaveStatus(`Đang đồng bộ mẫu bìa [${styleId}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'} lên đám mây... ⏳`);
-    if (onSaveAllProfiles) {
-      await onSaveAllProfiles(updatedAll);
-    } else if (onSaveProfile) {
+    if (onSaveProfile) {
       await onSaveProfile(currentProfileKey, updatedForm);
+    } else if (onSaveAllProfiles) {
+      await onSaveAllProfiles(updatedAll);
     }
     broadcastProfileUpdate(updatedAll, 'studio_cover_changed');
 
@@ -986,10 +986,10 @@ export function StudioEditor({
           activeProfile: currentProfileKey,
           [currentProfileKey]: updated
         };
-        if (onSaveAllProfiles) {
-          onSaveAllProfiles(updatedAll);
-        } else if (onSaveProfile) {
+        if (onSaveProfile) {
           onSaveProfile(currentProfileKey, updated);
+        } else if (onSaveAllProfiles) {
+          onSaveAllProfiles(updatedAll);
         }
         return updatedAll;
       });
@@ -1172,10 +1172,10 @@ export function StudioEditor({
           activeProfile: currentProfileKey,
           [currentProfileKey]: updated
         };
-        if (onSaveAllProfiles) {
-          onSaveAllProfiles(updatedAll);
-        } else if (onSaveProfile) {
+        if (onSaveProfile) {
           onSaveProfile(currentProfileKey, updated);
+        } else if (onSaveAllProfiles) {
+          onSaveAllProfiles(updatedAll);
         }
         return updatedAll;
       });
@@ -1206,10 +1206,6 @@ export function StudioEditor({
     const targetCoverStyle = clonedTarget.templateStyle || clonedTarget.coverConfig?.activeStyle || 'style1';
     setEditingCoverTab(targetCoverStyle);
 
-    // Auto-persist the previously edited profile if user had permission
-    if (!isReadOnly && onSaveProfile) {
-      onSaveProfile(currentProfileKey, formData);
-    }
     if (onSwitchProfile) {
       onSwitchProfile(newKey);
     }
@@ -1749,8 +1745,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
     if (onSaveProfile) {
       onSaveProfile(currentProfileKey, updatedForm);
-    }
-    if (onSaveAllProfiles) {
+    } else if (onSaveAllProfiles) {
       onSaveAllProfiles(updatedAll);
     }
 
@@ -1776,8 +1771,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
       setAllProfiles(updatedAll);
       if (onSaveProfile) {
         onSaveProfile(currentProfileKey, updatedForm);
-      }
-      if (onSaveAllProfiles) {
+      } else if (onSaveAllProfiles) {
         onSaveAllProfiles(updatedAll);
       }
       setSaveStatus('Đã xóa khách mời khỏi danh sách!');
@@ -5570,10 +5564,10 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           };
                           setAllProfiles(updatedAll);
                           setSaveStatus(`Đang đồng bộ bài hát [${track.title}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}... ⏳`);
-                          if (onSaveAllProfiles) {
-                            await onSaveAllProfiles(updatedAll);
-                          } else if (onSaveProfile) {
+                          if (onSaveProfile) {
                             await onSaveProfile(currentProfileKey, updated);
+                          } else if (onSaveAllProfiles) {
+                            await onSaveAllProfiles(updatedAll);
                           }
                           broadcastProfileUpdate(updatedAll, 'studio_music_changed');
                           setSaveStatus(`✅ Đã chọn bài hát: ${track.title} cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}!`);
@@ -6829,10 +6823,10 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     [currentProfileKey]: updatedForm
                   };
                   setAllProfiles(updatedAll);
-                  if (onSaveAllProfiles) {
-                    await onSaveAllProfiles(updatedAll);
-                  } else if (onSaveProfile) {
+                  if (onSaveProfile) {
                     await onSaveProfile(currentProfileKey, updatedForm);
+                  } else if (onSaveAllProfiles) {
+                    await onSaveAllProfiles(updatedAll);
                   }
                   if (typeof broadcastProfileUpdate === 'function') {
                     broadcastProfileUpdate(updatedAll, 'studio_color_changed');
