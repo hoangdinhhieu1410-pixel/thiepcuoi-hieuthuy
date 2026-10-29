@@ -630,23 +630,23 @@ export function EnvelopeModal({
               </span>
             </div>
 
-            {/* Middle Section: Names stacked on left + MỞ THIỆP Button */}
-            <div className="relative w-full my-auto text-left select-none py-3 pl-1">
-              <span className="font-motherland text-2xl sm:text-[28px] text-[#483827] leading-tight block whitespace-nowrap">
+            {/* Middle Section: Names stacked on left + MỞ THIỆP Button (Khoảng cách rộng rãi, thoáng đãng, tinh tế) */}
+            <div className="relative w-full my-auto text-left select-none py-4 sm:py-6 pl-1">
+              <span className="font-motherland text-[28px] sm:text-[34px] text-[#483827] leading-normal pt-1.5 pb-1 block whitespace-nowrap tracking-wide">
                 {style4Person1}
               </span>
-              <div className="font-serif-elegant italic text-base text-amber-700 my-1 pl-1">
+              <div className="font-serif-elegant italic text-lg sm:text-xl text-amber-700/90 my-2.5 sm:my-3.5 pl-1.5 select-none">
                 &
               </div>
-              <span className="font-motherland text-2xl sm:text-[28px] text-[#483827] leading-tight block whitespace-nowrap">
+              <span className="font-motherland text-[28px] sm:text-[34px] text-[#483827] leading-normal pt-1 pb-1.5 block whitespace-nowrap tracking-wide">
                 {style4Person2}
               </span>
 
               {/* MỞ THIỆP Button right under names */}
-              <div className="mt-4">
+              <div className="mt-5 sm:mt-6">
                 <button
                   onClick={handleOpenClick}
-                  className="py-2 px-5 rounded-full bg-gradient-to-r from-[#eddab0] via-[#faeed1] to-[#eddab0] hover:brightness-105 shadow-md border border-[#c29c55] text-[#543d14] font-avo tracking-[0.18em] text-[10px] sm:text-[11px] font-bold uppercase transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95"
+                  className="py-2.5 px-6 rounded-full bg-gradient-to-r from-[#eddab0] via-[#faeed1] to-[#eddab0] hover:brightness-105 shadow-md border border-[#c29c55] text-[#543d14] font-avo tracking-[0.18em] text-[10px] sm:text-[11px] font-bold uppercase transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95"
                 >
                   <span>{c4.buttonText || 'MỞ THIỆP'}</span>
                   <span className="text-xs">›</span>

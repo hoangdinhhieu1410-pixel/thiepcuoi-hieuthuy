@@ -6557,9 +6557,9 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
                         {/* Middle: Stacked names and wax seal on vertical line */}
                         <div className="relative flex items-center justify-between my-auto pl-1 pr-2">
-                          <div className="text-left font-motherland text-xs text-[#483827] leading-tight select-none pr-8">
+                          <div className="text-left font-motherland text-xs text-[#483827] leading-normal select-none pr-8 py-1">
                             <p className="truncate max-w-[85px]">{formData.groom?.nickname || 'Đình Hiếu'}</p>
-                            <p className="font-serif-elegant italic text-[10px] text-amber-700 my-0.5">&</p>
+                            <p className="font-serif-elegant italic text-[11px] text-amber-700 my-1">&</p>
                             <p className="truncate max-w-[85px]">{formData.bride?.nickname || 'Thanh Thúy'}</p>
                           </div>
 
