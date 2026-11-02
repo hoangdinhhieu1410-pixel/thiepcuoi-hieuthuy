@@ -44,12 +44,29 @@ function syncLocalDataPlugin() {
               try {
                 const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
                 if (redis) {
-                  await redis.set('wedding_card_config', JSON.stringify({
-                    activeProfile: body.activeProfile || body.profiles?.activeProfile || 'groom',
-                    groom: body.groom || body.profiles?.groom,
-                    bride: body.bride || body.profiles?.bride,
-                    updatedAt: Date.now()
-                  }));
+                  const currentRaw = await redis.get('wedding_card_config');
+                  let currentConfig = currentRaw ? JSON.parse(currentRaw) : {};
+                  if (!currentConfig || typeof currentConfig !== 'object') currentConfig = {};
+
+                  const targetProfile = body.targetProfile || body.profileKey || (body.groom && !body.bride ? 'groom' : (!body.groom && body.bride ? 'bride' : 'both'));
+                  const newGroom = body.groom || (targetProfile === 'groom' ? body[body.profileKey] : null) || body.profiles?.groom;
+                  const newBride = body.bride || (targetProfile === 'bride' ? body[body.profileKey] : null) || body.profiles?.bride;
+
+                  if (targetProfile === 'groom' && newGroom) {
+                    currentConfig.groom = newGroom;
+                  } else if (targetProfile === 'bride' && newBride) {
+                    currentConfig.bride = newBride;
+                  } else {
+                    if (newGroom) currentConfig.groom = newGroom;
+                    if (newBride) currentConfig.bride = newBride;
+                  }
+                  if (body.activeProfile) {
+                    currentConfig.activeProfile = body.activeProfile;
+                  }
+                  currentConfig.updatedAt = Date.now();
+                  await redis.set('wedding_card_config', JSON.stringify(currentConfig));
+                  res.writeHead(200);
+                  return res.end(JSON.stringify({ success: true, updatedAt: currentConfig.updatedAt, config: currentConfig }));
                 }
                 res.writeHead(200);
                 res.end(JSON.stringify({ success: true }));

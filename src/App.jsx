@@ -114,8 +114,13 @@ const sanitizeProfile = (profile, defaultData) => {
   }
 
   // 3. Sanitize Footer Signature
-  if (isDemoSampleName(merged.footerSignature)) {
-    merged.footerSignature = defaultData.footerSignature || 'Hiếu + Thúy';
+  if (!merged.footerSignature || isDemoSampleName(merged.footerSignature)) {
+    merged.footerSignature = defaultData.footerSignature || (isBride ? 'Thúy + Hiếu' : 'Hiếu + Thúy');
+  }
+
+  // 3.1 Sanitize Gift Subtitle to ensure correct spelling
+  if (!merged.giftSubtitle || merged.giftSubtitle === 'Cảm ơn tình cảm của mọi người đã dành cho chúng mình!') {
+    merged.giftSubtitle = 'Cảm ơn tình cảm chân quý của mọi người đã dành cho chúng mình!';
   }
 
   // 4. Sanitize Banking Account Names
@@ -170,6 +175,7 @@ const sanitizeProfile = (profile, defaultData) => {
 export function App() {
   const [isStorageReady, setIsStorageReady] = useState(false);
   const lastCloudUpdatedAt = useRef(0);
+  const hasReceivedCloudData = useRef(false);
   // Profiles store both groom (Mẫu 1: Nhà Trai) and bride (Mẫu 2: Nhà Gái)
   const [profiles, setProfiles] = useState(() => {
     try {
@@ -492,13 +498,10 @@ export function App() {
         saveProfilesToStorage(resetObj);
         setIsStorageReady(true);
       } else {
-        // Asynchronously load rich data from IndexedDB (fallback, does not overwrite newer cloud data)
+        // Asynchronously load rich data from IndexedDB (optimistic fallback before cloud arrives)
         loadProfilesFromStorage().then(dbProfiles => {
           if (dbProfiles && dbProfiles.groom && dbProfiles.bride) {
-            const dbTime = dbProfiles.updatedAt || 0;
-            // Only use dbProfiles if it is strictly NEWER than what cloud provided
-            if (dbTime > lastCloudUpdatedAt.current) {
-              lastCloudUpdatedAt.current = dbTime;
+            if (!hasReceivedCloudData.current) {
               setProfiles(prev => ({
                 activeProfile: dbProfiles.activeProfile || prev?.activeProfile || 'groom',
                 groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...dbProfiles.groom }, DEFAULT_WEDDING_DATA),
@@ -526,9 +529,10 @@ export function App() {
         });
         const d = await res.json();
         if (d?.success && d?.config?.groom && d?.config?.bride) {
+          hasReceivedCloudData.current = true;
           const cloudConfig = d.config;
-          const cloudTime = cloudConfig.updatedAt || 0;
-          if (cloudTime >= lastCloudUpdatedAt.current) {
+          const cloudTime = cloudConfig.updatedAt || Date.now();
+          if (cloudTime >= (lastCloudUpdatedAt.current || 0) || !lastCloudUpdatedAt.current) {
             lastCloudUpdatedAt.current = cloudTime;
 
             // Mutual QR fallback: Ensure banking QR images are NEVER blank if present in either profile
@@ -617,8 +621,10 @@ export function App() {
       setIsStorageReady(true);
     });
 
-    // Real-time background sync: poll every 3s and revalidate on tab focus
-    const syncInterval = setInterval(fetchLatestCloudConfig, 3000);
+    // Real-time background sync: poll every 6s when tab is visible and revalidate on tab focus
+    const syncInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchLatestCloudConfig();
+    }, 6000);
     const handleTabFocus = () => fetchLatestCloudConfig();
     window.addEventListener('focus', handleTabFocus);
     const handleVisibility = () => {

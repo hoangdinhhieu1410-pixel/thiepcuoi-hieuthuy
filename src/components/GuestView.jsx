@@ -2179,7 +2179,7 @@ export function GuestView({
             </p>
             <p className="text-lg sm:text-xl md:text-2xl font-brownsugar font-bold text-white uppercase tracking-wider drop-shadow-md whitespace-nowrap">
               <EditableText
-                value={cardData.footerSignature || `${groomName} & ${brideName}`}
+                value={cardData.footerSignature || (isBrideCard ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`)}
                 onChange={(v) => updateField('footerSignature', v)}
                 isEditing={isLiveEditing}
                 className="text-white uppercase whitespace-nowrap"

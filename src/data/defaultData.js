@@ -645,7 +645,7 @@ export const DEFAULT_BRIDE_WEDDING_DATA = {
   ],
   "galleryEffect": "kenburns",
   "giftHeading": "Hộp mừng cưới",
-  "giftSubtitle": "Cảm ơn tình cảm của mọi người đã dành cho chúng mình!",
+  "giftSubtitle": "Cảm ơn tình cảm chân quý của mọi người đã dành cho chúng mình!",
   "giftButtonLabel": "Mở Hộp Mừng Cưới",
   "banking": {
     "groomBank": {
@@ -676,7 +676,7 @@ export const DEFAULT_BRIDE_WEDDING_DATA = {
     "seconds": "Giây"
   },
   "footerThankYou": "Rất hân hạnh được đón tiếp!",
-  "footerSignature": "Hiếu + Thúy",
+  "footerSignature": "Thúy + Hiếu",
   "music": {
     "enabled": true,
     "autoplayOnOpen": true,

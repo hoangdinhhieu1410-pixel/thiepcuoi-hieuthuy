@@ -210,6 +210,23 @@ export default async function handler(req, res) {
         configToSave.bride.banking.brideBank.qrImage = sharedBrideQr;
       }
 
+      // Ensure couple gift text is synchronized between both profiles so neither profile loses it
+      const sharedGiftHeading = configToSave.groom?.giftHeading || configToSave.bride?.giftHeading;
+      if (sharedGiftHeading) {
+        if (configToSave.groom) configToSave.groom.giftHeading = sharedGiftHeading;
+        if (configToSave.bride) configToSave.bride.giftHeading = sharedGiftHeading;
+      }
+      const sharedGiftButtonLabel = configToSave.groom?.giftButtonLabel || configToSave.bride?.giftButtonLabel;
+      if (sharedGiftButtonLabel) {
+        if (configToSave.groom) configToSave.groom.giftButtonLabel = sharedGiftButtonLabel;
+        if (configToSave.bride) configToSave.bride.giftButtonLabel = sharedGiftButtonLabel;
+      }
+      const sharedGiftSubtitle = configToSave.groom?.giftSubtitle || configToSave.bride?.giftSubtitle;
+      if (sharedGiftSubtitle) {
+        if (configToSave.groom) configToSave.groom.giftSubtitle = sharedGiftSubtitle;
+        if (configToSave.bride) configToSave.bride.giftSubtitle = sharedGiftSubtitle;
+      }
+
       // Share custom uploaded music tracks between groom and bride preset lists so both profiles can choose from them
       const groomCustom = (configToSave.groom?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));
       const brideCustom = (configToSave.bride?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));

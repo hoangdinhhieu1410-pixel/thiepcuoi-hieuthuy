@@ -522,9 +522,9 @@ export function StudioEditor({
       const target = cleaned[currentProfileKey] || cleaned.groom;
       if (target) {
         const cloned = JSON.parse(JSON.stringify(target));
-        // Only update formData if user hasn't made unsaved changes in this session
+        // Only update formData if user hasn't made unsaved changes in this session and hasn't started editing
         const hasUnsavedChanges = lastSavedData && JSON.stringify(formData) !== JSON.stringify(lastSavedData);
-        if (!hasUnsavedChanges) {
+        if (!hasUnsavedChanges && !userHasEdited.current) {
           setFormData(cloned);
           setLastSavedData(cloned);
         }
@@ -997,6 +997,7 @@ export function StudioEditor({
 
   // Helper to update media field (Album ảnh, hình nền...) hoàn toàn độc lập cho từng mẫu thiệp
   const updateMediaField = (field, value) => {
+    userHasEdited.current = true;
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       setAllProfiles(prevAll => {
@@ -1012,6 +1013,53 @@ export function StudioEditor({
         }
         return updatedAll;
       });
+      return updated;
+    });
+  };
+
+  // Universal field updater for text, settings, and options with allProfiles & auto-save sync
+  const updateGeneralField = (field, value, isSharedCouple = false) => {
+    userHasEdited.current = true;
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      setAllProfiles(prevAll => {
+        let updatedAll = {
+          ...prevAll,
+          activeProfile: currentProfileKey,
+          [currentProfileKey]: updated
+        };
+        if (isSharedCouple) {
+          const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
+          if (updatedAll[otherKey]) {
+            updatedAll[otherKey] = {
+              ...updatedAll[otherKey],
+              [field]: value
+            };
+          }
+        }
+        return updatedAll;
+      });
+      return updated;
+    });
+  };
+
+  // Helper to update nested fields like groom.nickname, bride.father, etc.
+  const updateNestedField = (parent, child, value) => {
+    userHasEdited.current = true;
+    setFormData(prev => {
+      const parentObj = prev[parent] || {};
+      const updated = {
+        ...prev,
+        [parent]: {
+          ...parentObj,
+          [child]: value
+        }
+      };
+      setAllProfiles(prevAll => ({
+        ...prevAll,
+        activeProfile: currentProfileKey,
+        [currentProfileKey]: updated
+      }));
       return updated;
     });
   };
@@ -1206,14 +1254,25 @@ export function StudioEditor({
   const handleSwitchProfileInternal = (newKey) => {
     if (newKey === currentProfileKey) return;
     // Auto-save currently edited formData to allProfiles[currentProfileKey]
-    // TUYỆT ĐỐI KHÔNG COPY/ĐỒNG BỘ NỘI DUNG SANG newKey (Nhà Trai và Nhà Gái hoàn toàn độc lập 100%)
+    const currentFormSnapshot = JSON.parse(JSON.stringify(formData));
     let updatedAll = {
       ...allProfiles,
       activeProfile: newKey,
-      [currentProfileKey]: formData
+      [currentProfileKey]: currentFormSnapshot
     };
     updatedAll = cleanProfileGuests(updatedAll);
     setAllProfiles(updatedAll);
+
+    // Save pending edits of current profile to cloud immediately before switching
+    if (userHasEdited.current && !isReadOnly) {
+      if (onSaveProfile) {
+        onSaveProfile(currentProfileKey, currentFormSnapshot).catch(e => console.warn('Save on switch profile:', e));
+      } else if (onSaveAllProfiles) {
+        onSaveAllProfiles(updatedAll).catch(e => console.warn('Save all on switch profile:', e));
+      }
+    }
+
+    userHasEdited.current = false;
     setCurrentProfileKey(newKey);
     const target = updatedAll[newKey] || (newKey === 'bride' ? DEFAULT_BRIDE_WEDDING_DATA : DEFAULT_WEDDING_DATA);
     target.profileType = newKey;
@@ -2499,7 +2558,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={formData.invitationGreeting || ''}
-                          onChange={(e) => setFormData({ ...formData, invitationGreeting: e.target.value })}
+                          onChange={(e) => updateGeneralField('invitationGreeting', e.target.value)}
                           placeholder="Trân trọng kính mời"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                         />
@@ -2510,7 +2569,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={formData.invitationSub || ''}
-                          onChange={(e) => setFormData({ ...formData, invitationSub: e.target.value })}
+                          onChange={(e) => updateGeneralField('invitationSub', e.target.value)}
                           placeholder="đến tham dự lễ cưới của"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                         />
@@ -2525,10 +2584,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             <input
                               type="text"
                               value={formData.bride?.nickname || ''}
-                              onChange={(e) => setFormData({
-                                ...formData,
-                                bride: { ...formData.bride, nickname: e.target.value }
-                              })}
+                              onChange={(e) => updateNestedField('bride', 'nickname', e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                             />
                           </div>
@@ -2538,10 +2594,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             <input
                               type="text"
                               value={formData.groom?.nickname || ''}
-                              onChange={(e) => setFormData({
-                                ...formData,
-                                groom: { ...formData.groom, nickname: e.target.value }
-                              })}
+                              onChange={(e) => updateNestedField('groom', 'nickname', e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                             />
                           </div>
@@ -2553,10 +2606,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             <input
                               type="text"
                               value={formData.groom?.nickname || ''}
-                              onChange={(e) => setFormData({
-                                ...formData,
-                                groom: { ...formData.groom, nickname: e.target.value }
-                              })}
+                              onChange={(e) => updateNestedField('groom', 'nickname', e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                             />
                           </div>
@@ -2566,10 +2616,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             <input
                               type="text"
                               value={formData.bride?.nickname || ''}
-                              onChange={(e) => setFormData({
-                                ...formData,
-                                bride: { ...formData.bride, nickname: e.target.value }
-                              })}
+                              onChange={(e) => updateNestedField('bride', 'nickname', e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                             />
                           </div>
@@ -2910,7 +2957,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.saveTheDateText || 'Save the date'}
-                      onChange={(e) => setFormData({ ...formData, saveTheDateText: e.target.value })}
+                      onChange={(e) => updateGeneralField('saveTheDateText', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -2919,8 +2966,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <label className="block text-stone-700 font-semibold mb-1">Ngày Save the date:</label>
                     <input
                       type="text"
-                      value={formData.saveTheDateDay || '26.12.2026'}
-                      onChange={(e) => setFormData({ ...formData, saveTheDateDay: e.target.value })}
+                      value={formData.saveTheDateDay || '29.11.2026'}
+                      onChange={(e) => updateGeneralField('saveTheDateDay', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                     />
                   </div>
@@ -2943,7 +2990,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         max="220"
                         step="4"
                         value={formData.saveTheDateFlowerSize || 112}
-                        onChange={(e) => setFormData({ ...formData, saveTheDateFlowerSize: Number(e.target.value) })}
+                        onChange={(e) => updateGeneralField('saveTheDateFlowerSize', Number(e.target.value))}
                         className="flex-1 accent-[#70561f] cursor-pointer"
                       />
                     </div>
@@ -2952,7 +2999,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       <span className="text-[11px] text-stone-500">Chọn nhanh:</span>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, saveTheDateFlowerSize: 96 })}
+                        onClick={() => updateGeneralField('saveTheDateFlowerSize', 96)}
                         className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
                           formData.saveTheDateFlowerSize === 96
                             ? 'bg-[#70561f] text-white'
@@ -2963,7 +3010,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, saveTheDateFlowerSize: 112 })}
+                        onClick={() => updateGeneralField('saveTheDateFlowerSize', 112)}
                         className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
                           (formData.saveTheDateFlowerSize || 112) === 112
                             ? 'bg-[#70561f] text-white'
@@ -2974,7 +3021,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, saveTheDateFlowerSize: 140 })}
+                        onClick={() => updateGeneralField('saveTheDateFlowerSize', 140)}
                         className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
                           formData.saveTheDateFlowerSize === 140
                             ? 'bg-[#70561f] text-white'
@@ -2991,7 +3038,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.galleryHeading || 'Our Memories'}
-                      onChange={(e) => setFormData({ ...formData, galleryHeading: e.target.value })}
+                      onChange={(e) => updateGeneralField('galleryHeading', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -3001,7 +3048,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.giftHeading || 'Hộp mừng cưới'}
-                      onChange={(e) => setFormData({ ...formData, giftHeading: e.target.value })}
+                      onChange={(e) => updateGeneralField('giftHeading', e.target.value, true)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -3011,7 +3058,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.commentsHeading || 'Sổ lưu bút'}
-                      onChange={(e) => setFormData({ ...formData, commentsHeading: e.target.value })}
+                      onChange={(e) => updateGeneralField('commentsHeading', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -3021,7 +3068,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.countdownHeading || 'Countdown'}
-                      onChange={(e) => setFormData({ ...formData, countdownHeading: e.target.value })}
+                      onChange={(e) => updateGeneralField('countdownHeading', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -3031,7 +3078,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.footerThankYou || 'Rất hân hạnh được đón tiếp!'}
-                      onChange={(e) => setFormData({ ...formData, footerThankYou: e.target.value })}
+                      onChange={(e) => updateGeneralField('footerThankYou', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -3040,8 +3087,9 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <label className="block text-stone-700 font-semibold mb-1">Chữ ký chân thiệp:</label>
                     <input
                       type="text"
-                      value={formData.footerSignature || 'Toàn + Phương'}
-                      onChange={(e) => setFormData({ ...formData, footerSignature: e.target.value })}
+                      value={formData.footerSignature || (currentProfileKey === 'bride' ? 'Thúy + Hiếu' : 'Hiếu + Thúy')}
+                      onChange={(e) => updateGeneralField('footerSignature', e.target.value, false)}
+                      placeholder={currentProfileKey === 'bride' ? 'Thúy + Hiếu' : 'Hiếu + Thúy'}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                     />
                   </div>
@@ -4719,7 +4767,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         {formData.footerThankYou || 'Rất hân hạnh được đón tiếp!'}
                       </p>
                       <p className="text-xs text-[#e6b685] font-motherland truncate">
-                        {formData.footerSignature || `${formData.groom?.nickname || 'Hiếu'} + ${formData.bride?.nickname || 'Thúy'}`}
+                        {formData.footerSignature || (currentProfileKey === 'bride' ? `${formData.bride?.nickname || 'Thúy'} + ${formData.groom?.nickname || 'Hiếu'}` : `${formData.groom?.nickname || 'Hiếu'} + ${formData.bride?.nickname || 'Thúy'}`)}
                       </p>
                     </div>
                   </div>
@@ -4775,10 +4823,10 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         </label>
                         <input
                           type="text"
-                          value={formData.footerSignature ?? `${formData.groom?.nickname || 'Hiếu'} + ${formData.bride?.nickname || 'Thúy'}`}
-                          placeholder={`${formData.groom?.nickname || 'Hiếu'} + ${formData.bride?.nickname || 'Thúy'}`}
+                          value={formData.footerSignature || (currentProfileKey === 'bride' ? `${formData.bride?.nickname || 'Thúy'} + ${formData.groom?.nickname || 'Hiếu'}` : `${formData.groom?.nickname || 'Hiếu'} + ${formData.bride?.nickname || 'Thúy'}`)}
+                          placeholder={currentProfileKey === 'bride' ? `${formData.bride?.nickname || 'Thúy'} + ${formData.groom?.nickname || 'Hiếu'}` : `${formData.groom?.nickname || 'Hiếu'} + ${formData.bride?.nickname || 'Thúy'}`}
                           onChange={(e) => {
-                            updateMediaField('footerSignature', e.target.value);
+                            updateGeneralField('footerSignature', e.target.value, false);
                           }}
                           className="w-full px-3 py-1.5 text-xs border border-stone-200 rounded-xl bg-white focus:outline-hidden focus:ring-1 focus:ring-amber-400"
                         />
@@ -5237,7 +5285,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.giftHeading || 'Hộp mừng cưới'}
-                      onChange={(e) => setFormData({ ...formData, giftHeading: e.target.value })}
+                      onChange={(e) => updateGeneralField('giftHeading', e.target.value, true)}
                       placeholder="Hộp mừng cưới"
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-stone-900"
                     />
@@ -5250,7 +5298,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.giftButtonLabel || 'Mở Hộp Mừng Cưới'}
-                      onChange={(e) => setFormData({ ...formData, giftButtonLabel: e.target.value })}
+                      onChange={(e) => updateGeneralField('giftButtonLabel', e.target.value, true)}
                       placeholder="Mở Hộp Mừng Cưới"
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-semibold text-stone-900"
                     />
@@ -5263,9 +5311,9 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   </label>
                   <textarea
                     rows={2}
-                    value={formData.giftSubtitle || 'Cảm ơn tình cảm của mọi người đã dành cho chúng mình!'}
-                    onChange={(e) => setFormData({ ...formData, giftSubtitle: e.target.value })}
-                    placeholder="Cảm ơn tình cảm của mọi người đã dành cho chúng mình!"
+                    value={formData.giftSubtitle || 'Cảm ơn tình cảm chân quý của mọi người đã dành cho chúng mình!'}
+                    onChange={(e) => updateGeneralField('giftSubtitle', e.target.value, true)}
+                    placeholder="Cảm ơn tình cảm chân quý của mọi người đã dành cho chúng mình!"
                     className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                   />
                 </div>
@@ -6679,9 +6727,9 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         {/* Middle: Stacked names and wax seal on vertical line */}
                         <div className="relative flex items-center justify-between my-auto pl-1 pr-2">
                           <div className="text-left font-motherland text-xs text-[#483827] leading-normal select-none pr-8 py-1">
-                            <p className="truncate max-w-[85px]">{formData.groom?.nickname || 'Đình Hiếu'}</p>
+                            <p className="truncate max-w-[85px]">{currentProfileKey === 'bride' ? (formData.bride?.nickname || 'Thanh Thúy') : (formData.groom?.nickname || 'Đình Hiếu')}</p>
                             <p className="font-serif-elegant italic text-[11px] text-amber-700 my-1">&</p>
-                            <p className="truncate max-w-[85px]">{formData.bride?.nickname || 'Thanh Thúy'}</p>
+                            <p className="truncate max-w-[85px]">{currentProfileKey === 'bride' ? (formData.groom?.nickname || 'Đình Hiếu') : (formData.bride?.nickname || 'Thanh Thúy')}</p>
                           </div>
 
                           {/* Mini bronze wax seal centered directly ON vertical line */}
