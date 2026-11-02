@@ -67,31 +67,8 @@ const sanitizeProfile = (profile, defaultData) => {
     });
   }
 
-  // 1.2 Sanitize Events if still demo 25/26 December
-  if (merged.events && Array.isArray(merged.events)) {
-    merged.events = merged.events.map(ev => {
-      if (ev.month === 'Tháng 12' && (ev.date === '25' || ev.date === '26')) {
-        if (ev.date === '25') {
-          return {
-            ...ev,
-            date: '28',
-            month: 'Tháng 11',
-            dayOfWeek: 'Thứ Bảy',
-            lunarDate: '(Tức ngày 20 tháng 10 năm Bính Ngọ)'
-          };
-        } else {
-          return {
-            ...ev,
-            date: '29',
-            month: 'Tháng 11',
-            dayOfWeek: 'Chủ Nhật',
-            lunarDate: '(Tức ngày 21 tháng 10 năm Bính Ngọ)'
-          };
-        }
-      }
-      return ev;
-    });
-  }
+  // 1.2 Preserve events directly as customized by user without hardcoded overriding
+  // (Removed legacy forced date overriding to allow users to add/edit/delete wedding events freely)
 
   // 1.3 Sanitize Timeline
   if (!merged.timelineHeading || merged.timelineHeading === 'TIMELINE') {
@@ -553,10 +530,33 @@ export function App() {
           const cloudTime = cloudConfig.updatedAt || 0;
           if (cloudTime >= lastCloudUpdatedAt.current) {
             lastCloudUpdatedAt.current = cloudTime;
+
+            // Mutual QR fallback: Ensure banking QR images are NEVER blank if present in either profile
+            const rawGroom = cloudConfig.groom || {};
+            const rawBride = cloudConfig.bride || {};
+            const sharedGroomQr = rawGroom.banking?.groomBank?.qrImage || rawBride.banking?.groomBank?.qrImage || '';
+            const sharedBrideQr = rawGroom.banking?.brideBank?.qrImage || rawBride.banking?.brideBank?.qrImage || '';
+            if (sharedGroomQr) {
+              if (!rawGroom.banking) rawGroom.banking = {};
+              if (!rawGroom.banking.groomBank) rawGroom.banking.groomBank = {};
+              rawGroom.banking.groomBank.qrImage = sharedGroomQr;
+              if (!rawBride.banking) rawBride.banking = {};
+              if (!rawBride.banking.groomBank) rawBride.banking.groomBank = {};
+              rawBride.banking.groomBank.qrImage = sharedGroomQr;
+            }
+            if (sharedBrideQr) {
+              if (!rawGroom.banking) rawGroom.banking = {};
+              if (!rawGroom.banking.brideBank) rawGroom.banking.brideBank = {};
+              rawGroom.banking.brideBank.qrImage = sharedBrideQr;
+              if (!rawBride.banking) rawBride.banking = {};
+              if (!rawBride.banking.brideBank) rawBride.banking.brideBank = {};
+              rawBride.banking.brideBank.qrImage = sharedBrideQr;
+            }
+
             setProfiles(prev => ({
               activeProfile: cloudConfig.activeProfile || prev?.activeProfile || 'groom',
-              groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...cloudConfig.groom }, DEFAULT_WEDDING_DATA),
-              bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...cloudConfig.bride }, DEFAULT_BRIDE_WEDDING_DATA)
+              groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...rawGroom }, DEFAULT_WEDDING_DATA),
+              bride: sanitizeProfile({ ...DEFAULT_BRIDE_WEDDING_DATA, ...rawBride }, DEFAULT_BRIDE_WEDDING_DATA)
             }));
 
             // Check URL parameters & pathname for family side isolation

@@ -1374,62 +1374,153 @@ export function StudioEditor({
     }
   };
 
-  // Upload custom MP3 / MP4 file with native IndexedDB Blob storage & Cloud Sync
+  // Dynamic Wedding Events Management (Add, Edit, Delete with Cloud & Profile Synchronization)
+  const handleUpdateEventField = (index, field, value) => {
+    const updatedEvents = (formData.events || []).map((ev, i) => {
+      if (i !== index) return ev;
+      return { ...ev, [field]: value };
+    });
+    const updatedForm = { ...formData, events: updatedEvents };
+    userHasEdited.current = true;
+    setFormData(updatedForm);
+    const updatedAll = {
+      ...allProfiles,
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updatedForm
+    };
+    setAllProfiles(updatedAll);
+  };
+
+  const handleAddEvent = () => {
+    const newEv = {
+      id: 'event-' + Date.now(),
+      title: 'SỰ KIỆN CƯỚI MỚI',
+      time: '11 GIỜ 00',
+      date: '29',
+      month: 'Tháng 11',
+      year: 'Năm 2026',
+      dayOfWeek: 'Chủ Nhật',
+      lunarDate: '(Tức ngày 21 tháng 10 năm Bính Ngọ)',
+      venue: 'Tại Tư gia...',
+      address: 'Địa chỉ: Xã Sóc Sơn - TP. Hà Nội',
+      mapBtnText: 'Chỉ đường',
+      mapUrl: 'https://maps.google.com'
+    };
+    const updatedEvents = [...(formData.events || []), newEv];
+    const updatedForm = { ...formData, events: updatedEvents };
+    userHasEdited.current = true;
+    setFormData(updatedForm);
+    const updatedAll = {
+      ...allProfiles,
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updatedForm
+    };
+    setAllProfiles(updatedAll);
+    setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
+    if (onSaveProfile) {
+      onSaveProfile(currentProfileKey, updatedForm);
+    } else if (onSaveAllProfiles) {
+      onSaveAllProfiles(updatedAll);
+    }
+    setSaveStatus('🎉 Đã thêm sự kiện cưới mới thành công!');
+    setTimeout(() => setSaveStatus(''), 2500);
+  };
+
+  const handleDeleteEvent = (index, title) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa [${title || `Sự kiện ${index + 1}`}] khỏi thiệp cưới?`)) {
+      return;
+    }
+    const updatedEvents = (formData.events || []).filter((_, i) => i !== index);
+    const updatedForm = { ...formData, events: updatedEvents };
+    userHasEdited.current = true;
+    setFormData(updatedForm);
+    const updatedAll = {
+      ...allProfiles,
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updatedForm
+    };
+    setAllProfiles(updatedAll);
+    setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
+    if (onSaveProfile) {
+      onSaveProfile(currentProfileKey, updatedForm);
+    } else if (onSaveAllProfiles) {
+      onSaveAllProfiles(updatedAll);
+    }
+    setSaveStatus(`Đã xóa [${title || 'sự kiện'}] khỏi thiệp!`);
+    setTimeout(() => setSaveStatus(''), 2500);
+  };
+
+  // Upload custom MP3 / MP4 file with native Chunked Upload & IndexedDB Blob storage & Cloud Sync
   const handleMusicUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSaveStatus('⏳ Đang lưu file nhạc MP3/MP4 vào bộ nhớ hệ thống...');
+    setSaveStatus('⏳ Đang xử lý file nhạc MP3/MP4...');
     try {
       const isVideo = file.type.includes('video') || file.name.toLowerCase().endsWith('.mp4');
       const trackTitle = file.name.replace(/\.[^/.]+$/, '');
       const trackId = 'track-' + Date.now();
 
-      // 1. Save binary Blob directly into dedicated IndexedDB audio store for instant local preview
-      const blobUrl = await saveAudioTrackBlob(trackId, file);
-      const cloudUrl = `/api/audio-track?id=${trackId}`;
+      // 1. Save binary Blob directly into dedicated IndexedDB audio store for instant zero-lag local preview
+      await saveAudioTrackBlob(trackId, file);
 
-      // 2. Read as base64 to sync to cloud (/api/audio-track) so guests on phones can also hear it
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const base64Data = ev.target?.result;
-        if (base64Data) {
-          try {
-            await fetch('/api/audio-track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id: trackId,
-                title: trackTitle,
-                mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mpeg'),
-                data: base64Data
-              })
-            });
-          } catch (err) {
-            console.warn('Audio cloud sync error:', err);
-          }
+      // 2. Read as Data URL (base64) to sync to cloud (/api/audio-track)
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target?.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      if (!base64Data) {
+        throw new Error('Không đọc được dữ liệu file');
+      }
+
+      // 3. Chunked Upload: Split base64 into safe 1.2MB chunks to bypass Vercel 4.5MB serverless limit
+      const CHUNK_SIZE = 1000000; // ~1MB characters per chunk
+      const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
+
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = base64Data.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        setSaveStatus(`⏳ Đang tải bài hát lên máy chủ (${Math.round(((i + 1) / totalChunks) * 100)}%)...`);
+        const chunkRes = await fetch('/api/audio-track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: trackId,
+            title: trackTitle,
+            mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mpeg'),
+            chunkIndex: i,
+            totalChunks,
+            data: chunk
+          })
+        });
+        const chunkData = await chunkRes.json();
+        if (!chunkRes.ok || !chunkData.success) {
+          throw new Error(chunkData.error || `Lỗi tải phân đoạn ${i + 1}/${totalChunks}`);
         }
-      };
-      reader.readAsDataURL(file);
+      }
 
-      // 3. Track metadata for the list
+      const permanentCloudUrl = `/api/audio-track?id=${trackId}`;
+
+      // 4. Track metadata for the list
       const newTrack = {
         id: trackId,
         title: trackTitle,
         artist: isVideo ? 'File video MP4 từ máy tính' : 'File nhạc MP3 từ máy tính',
-        url: blobUrl || cloudUrl,
-        cloudUrl: cloudUrl,
+        url: permanentCloudUrl,
+        cloudUrl: permanentCloudUrl,
         isCustom: true,
         hasBlob: true,
         mimeType: file.type || (isVideo ? 'video/mp4' : 'audio/mpeg')
       };
 
       const currentTracks = formData.music?.presetTracks || [];
-      const updatedTracks = [newTrack, ...currentTracks];
+      const updatedTracks = [newTrack, ...currentTracks.filter(t => t.id !== trackId)];
       const updatedMusic = {
         ...(formData.music || {}),
         presetTracks: updatedTracks,
         activeTrackId: newTrack.id,
-        customTrackUrl: blobUrl || cloudUrl,
+        customTrackUrl: permanentCloudUrl,
         customTrackName: trackTitle,
         enabled: true
       };
@@ -1439,20 +1530,45 @@ export function StudioEditor({
         music: updatedMusic
       };
 
+      // Also share uploaded track with other profile preset tracks
+      const otherSide = currentProfileKey === 'groom' ? 'bride' : 'groom';
+      const otherData = allProfiles?.[otherSide] || {};
+      const otherPresetTracks = otherData.music?.presetTracks || [];
+      const otherUpdatedTracks = [newTrack, ...otherPresetTracks.filter(t => t.id !== trackId)];
+
+      const updatedAll = {
+        ...allProfiles,
+        activeProfile: currentProfileKey,
+        [currentProfileKey]: updatedFormData,
+        [otherSide]: {
+          ...otherData,
+          music: {
+            ...(otherData.music || {}),
+            presetTracks: otherUpdatedTracks
+          }
+        }
+      };
+
       userHasEdited.current = true;
       setFormData(updatedFormData);
+      setAllProfiles(updatedAll);
+      setLastSavedData(JSON.parse(JSON.stringify(updatedFormData)));
 
-      // 4. Immediately persist to storage
+      // 5. Immediately persist to storage & cloud
       if (onSaveProfile) {
-        onSaveProfile(currentProfileKey, updatedFormData);
+        await onSaveProfile(currentProfileKey, updatedFormData);
       }
+      if (onSaveAllProfiles) {
+        await onSaveAllProfiles(updatedAll);
+      }
+      broadcastProfileUpdate(updatedAll, 'studio_music_changed');
 
-      setSaveStatus(`🎉 Đã tải lên và lưu vĩnh viễn bài: ${trackTitle}`);
-      setTimeout(() => setSaveStatus(''), 4000);
+      setSaveStatus(`🎉 Đã tải lên và chọn ngay bài: ${trackTitle}! Link thiệp mời cưới đã đồng bộ.`);
+      setTimeout(() => setSaveStatus(''), 4500);
     } catch (err) {
       console.error('Lỗi tải nhạc:', err);
-      setSaveStatus('Có lỗi khi lưu file nhạc. Vui lòng thử lại!');
-      setTimeout(() => setSaveStatus(''), 4000);
+      setSaveStatus(`Có lỗi khi lưu file nhạc: ${err.message || 'Vui lòng thử lại!'}`);
+      setTimeout(() => setSaveStatus(''), 4500);
     }
   };
 
@@ -1464,8 +1580,13 @@ export function StudioEditor({
     if (!window.confirm(`Bạn có chắc chắn muốn xóa bài hát "${trackToDelete?.title || 'này'}" khỏi danh sách nhạc?`)) {
       return;
     }
-    if (trackToDelete?.isCustom) {
-      await deleteAudioTrackBlob(trackId);
+    if (trackToDelete?.isCustom || !BUNDLED_TRACK_IDS.has(trackId)) {
+      try {
+        await deleteAudioTrackBlob(trackId);
+        await fetch(`/api/audio-track?id=${trackId}`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn('Audio delete error:', err);
+      }
     }
     const updatedTracks = currentTracks.filter(t => t.id !== trackId);
     let newActiveId = formData.music?.activeTrackId;
@@ -1495,10 +1616,33 @@ export function StudioEditor({
       }
     };
 
+    const otherSide = currentProfileKey === 'groom' ? 'bride' : 'groom';
+    const otherData = allProfiles?.[otherSide] || {};
+    const otherPresetTracks = (otherData.music?.presetTracks || []).filter(t => t.id !== trackId);
+
+    const updatedAll = {
+      ...allProfiles,
+      activeProfile: currentProfileKey,
+      [currentProfileKey]: updatedForm,
+      [otherSide]: {
+        ...otherData,
+        music: {
+          ...(otherData.music || {}),
+          presetTracks: otherPresetTracks
+        }
+      }
+    };
+
     userHasEdited.current = true;
     setFormData(updatedForm);
+    setAllProfiles(updatedAll);
+    setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
+
     if (onSaveProfile) {
-      onSaveProfile(currentProfileKey, updatedForm);
+      await onSaveProfile(currentProfileKey, updatedForm);
+    }
+    if (onSaveAllProfiles) {
+      await onSaveAllProfiles(updatedAll);
     }
 
     if (previewAudio === trackToDelete?.url) {
@@ -1571,14 +1715,8 @@ export function StudioEditor({
     let selectedTrackUrl = track.url;
     if (track.id && BUNDLED_TRACK_IDS.has(track.id)) {
       selectedTrackUrl = `/templates/007/tracks/${track.id}.m4a`;
-    } else {
-      // If custom uploaded track, check local IndexedDB first for instant local playback
-      const localBlob = await getAudioTrackUrl(track.id);
-      if (localBlob) {
-        selectedTrackUrl = localBlob;
-      } else if (!selectedTrackUrl || selectedTrackUrl.includes('/templates/007/tracks/')) {
-        selectedTrackUrl = `/api/audio-track?id=${track.id}`;
-      }
+    } else if (track.id) {
+      selectedTrackUrl = `/api/audio-track?id=${track.id}`;
     }
 
     const updatedMusic = {
@@ -1601,6 +1739,8 @@ export function StudioEditor({
       [currentProfileKey]: updated
     };
     setAllProfiles(updatedAll);
+    setLastSavedData(JSON.parse(JSON.stringify(updated)));
+
     setSaveStatus(`Đang lưu bài hát [${track.title}] cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}... ⏳`);
     if (onSaveProfile) {
       await onSaveProfile(currentProfileKey, updated);
@@ -1608,7 +1748,7 @@ export function StudioEditor({
       await onSaveAllProfiles(updatedAll);
     }
     broadcastProfileUpdate(updatedAll, 'studio_music_changed');
-    setSaveStatus(`✅ Đã chọn bài hát: ${track.title} cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}!`);
+    setSaveStatus(`✅ Đã chọn bài hát: ${track.title} cho ${currentProfileKey === 'groom' ? 'Thiệp Nhà Trai' : 'Thiệp Nhà Gái'}! Link thiệp mời cưới đã đồng bộ.`);
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
@@ -2448,30 +2588,14 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       <span>2 & 3. Các Sự Kiện Cưới (Tiệc Cưới, Lễ Thành Hôn, Vu Quy...)</span>
                     </h3>
                     <p className="text-[11px] text-stone-500">
-                      Tự do thêm mới hoặc xóa bớt các sự kiện theo đúng lịch cưới thực tế của bạn.
+                      Tự do thêm mới hoặc xóa bớt các sự kiện theo đúng lịch cưới thực tế của bạn. Mọi chỉnh sửa được đồng bộ ngay lập tức!
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      const newEv = {
-                        id: 'event-' + Date.now(),
-                        title: 'LỄ VU QUY',
-                        time: '11 GIỜ',
-                        date: '26',
-                        month: 'Tháng 12',
-                        year: 'Năm 2026',
-                        dayOfWeek: 'Thứ Bảy',
-                        lunarDate: '(Tức ngày 18 tháng 11 năm Bính Ngọ)',
-                        venue: 'Tại Tư gia...',
-                        address: 'Địa chỉ: Xã Sóc Sơn - TP. Hà Nội',
-                        mapBtnText: 'Chỉ đường',
-                        mapUrl: 'https://maps.google.com'
-                      };
-                      setFormData(p => ({ ...p, events: [...(p.events || []), newEv] }));
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm transition-all"
+                    onClick={handleAddEvent}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Thêm Sự Kiện Cưới Mới</span>
@@ -2487,17 +2611,12 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
                       <button
                         type="button"
-                        onClick={() => {
-                          if (window.confirm(`Bạn có chắc muốn xóa [${ev.title || `Sự kiện ${index + 1}`}] khỏi thiệp?`)) {
-                            const updated = (formData.events || []).filter((_, i) => i !== index);
-                            setFormData({ ...formData, events: updated });
-                          }
-                        }}
-                        className="text-stone-400 hover:text-rose-600 flex items-center gap-1 text-[11px] font-semibold transition-colors"
+                        onClick={() => handleDeleteEvent(index, ev.title)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 flex items-center gap-1 text-[11px] font-semibold transition-colors active:scale-95 cursor-pointer"
                         title="Xóa hẳn sự kiện này khỏi thiệp"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                        <span className="text-rose-600">Xóa sự kiện này</span>
+                        <span>Xóa sự kiện này</span>
                       </button>
                     </div>
 
@@ -2507,11 +2626,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.title || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].title = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'title', e.target.value)}
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold"
                         />
                       </div>
@@ -2521,11 +2636,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.time || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].time = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'time', e.target.value)}
                           placeholder="16 GIỜ"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                         />
@@ -2538,12 +2649,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.dayOfWeek || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].dayOfWeek = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
-                          placeholder="Thứ Sáu"
+                          onChange={(e) => handleUpdateEventField(index, 'dayOfWeek', e.target.value)}
+                          placeholder="Thứ Bảy"
                           className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs"
                         />
                       </div>
@@ -2553,12 +2660,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.date || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].date = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
-                          placeholder="25"
+                          onChange={(e) => handleUpdateEventField(index, 'date', e.target.value)}
+                          placeholder="29"
                           className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs font-bold"
                         />
                       </div>
@@ -2568,12 +2671,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.month || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].month = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
-                          placeholder="Tháng 12"
+                          onChange={(e) => handleUpdateEventField(index, 'month', e.target.value)}
+                          placeholder="Tháng 11"
                           className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs"
                         />
                       </div>
@@ -2583,11 +2682,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.year || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].year = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'year', e.target.value)}
                           placeholder="Năm 2026"
                           className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs"
                         />
@@ -2599,12 +2694,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       <input
                         type="text"
                         value={ev.lunarDate || ''}
-                        onChange={(e) => {
-                          const newEv = [...formData.events];
-                          newEv[index].lunarDate = e.target.value;
-                          setFormData({ ...formData, events: newEv });
-                        }}
-                        placeholder="(Tức ngày 17 tháng 11 năm Bính Ngọ)"
+                        onChange={(e) => handleUpdateEventField(index, 'lunarDate', e.target.value)}
+                        placeholder="(Tức ngày 21 tháng 10 năm Bính Ngọ)"
                         className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                       />
                     </div>
@@ -2615,11 +2706,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.venue || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].venue = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'venue', e.target.value)}
                           placeholder="Tại Nhà văn hoá..."
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-semibold"
                         />
@@ -2630,11 +2717,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.address || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].address = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'address', e.target.value)}
                           placeholder="Địa chỉ: xã Sóc Sơn - Tp. Hà Nội"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                         />
@@ -2647,11 +2730,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.mapBtnText || 'Chỉ đường'}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].mapBtnText = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'mapBtnText', e.target.value)}
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                         />
                       </div>
@@ -2661,11 +2740,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         <input
                           type="text"
                           value={ev.mapUrl || ''}
-                          onChange={(e) => {
-                            const newEv = [...formData.events];
-                            newEv[index].mapUrl = e.target.value;
-                            setFormData({ ...formData, events: newEv });
-                          }}
+                          onChange={(e) => handleUpdateEventField(index, 'mapUrl', e.target.value)}
                           placeholder="https://maps.app.goo.gl/..."
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                         />
@@ -4003,90 +4078,172 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
           {/* TAB: SỰ KIỆN & ĐỊA ĐIỂM */}
           {activeTab === 'events' && (
             <div className="space-y-6">
-              <h2 className="text-xl font-serif-elegant font-bold text-stone-900 flex items-center gap-2 border-b border-stone-200 pb-3">
-                <Calendar className="w-5 h-5 text-[#70561f]" />
-                <span>Lịch Trình Sự Kiện & Địa Điểm Google Maps</span>
-              </h2>
+              <div className="border-b border-stone-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-serif-elegant font-bold text-stone-900 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-[#70561f]" />
+                    <span>Lịch Trình Sự Kiện & Địa Điểm Google Maps</span>
+                  </h2>
+                  <p className="text-xs text-stone-500 mt-1">
+                    Thêm, sửa, xóa các sự kiện cưới (Tiệc cưới, Lễ thành hôn, Vu quy...). Tự động đồng bộ ngay lập tức!
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddEvent}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Thêm Sự Kiện Cưới Mới</span>
+                </button>
+              </div>
 
               <div className="space-y-4">
                 {(formData.events || []).map((ev, index) => (
-                  <div key={ev.id || index} className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3 text-xs sm:text-sm">
-                    <span className="font-bold text-[#70561f] uppercase tracking-wider text-xs">
-                      Sự kiện #{index + 1}: {ev.title}
-                    </span>
+                  <div key={ev.id || index} className="p-4 sm:p-5 rounded-2xl bg-stone-50 border border-stone-200 space-y-3.5 relative group">
+                    <div className="flex items-center justify-between border-b border-stone-200 pb-2.5">
+                      <span className="font-bold text-[#70561f] uppercase tracking-wider text-xs flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Sự kiện #{index + 1}: {ev.title || 'TIỆC CƯỚI'}</span>
+                      </span>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-stone-600 font-medium mb-1">Tên sự kiện</label>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteEvent(index, ev.title)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 flex items-center gap-1 text-[11px] font-semibold transition-colors active:scale-95 cursor-pointer"
+                        title="Xóa hẳn sự kiện này khỏi thiệp"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Xóa sự kiện này</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="sm:col-span-2">
+                        <label className="block text-stone-700 font-semibold mb-1">Tên sự kiện:</label>
                         <input
                           type="text"
-                          value={ev.title}
-                          onChange={(e) => {
-                            const newEvents = [...formData.events];
-                            newEvents[index].title = e.target.value;
-                            setFormData({ ...formData, events: newEvents });
-                          }}
+                          value={ev.title || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'title', e.target.value)}
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-stone-600 font-medium mb-1">Thời gian</label>
+                        <label className="block text-stone-700 font-semibold mb-1">Thời gian / Giờ tổ chức:</label>
                         <input
                           type="text"
-                          value={ev.time}
-                          onChange={(e) => {
-                            const newEvents = [...formData.events];
-                            newEvents[index].time = e.target.value;
-                            setFormData({ ...formData, events: newEvents });
-                          }}
+                          value={ev.time || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'time', e.target.value)}
+                          placeholder="11 GIỜ 00"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-[#70561f]"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                       <div>
-                        <label className="block text-stone-600 font-medium mb-1">Địa điểm / Tên nhà hàng</label>
+                        <label className="block text-stone-600 mb-1">Thứ:</label>
                         <input
                           type="text"
-                          value={ev.venue}
-                          onChange={(e) => {
-                            const newEvents = [...formData.events];
-                            newEvents[index].venue = e.target.value;
-                            setFormData({ ...formData, events: newEvents });
-                          }}
-                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
+                          value={ev.dayOfWeek || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'dayOfWeek', e.target.value)}
+                          placeholder="Chủ Nhật"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-stone-600 font-medium mb-1">Địa chỉ chi tiết</label>
+                        <label className="block text-stone-600 mb-1">Ngày (số to):</label>
                         <input
                           type="text"
-                          value={ev.address}
-                          onChange={(e) => {
-                            const newEvents = [...formData.events];
-                            newEvents[index].address = e.target.value;
-                            setFormData({ ...formData, events: newEvents });
-                          }}
+                          value={ev.date || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'date', e.target.value)}
+                          placeholder="29"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-stone-600 mb-1">Tháng:</label>
+                        <input
+                          type="text"
+                          value={ev.month || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'month', e.target.value)}
+                          placeholder="Tháng 11"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-stone-600 mb-1">Năm:</label>
+                        <input
+                          type="text"
+                          value={ev.year || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'year', e.target.value)}
+                          placeholder="Năm 2026"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-xs">
+                      <label className="block text-stone-700 font-semibold mb-1">Ngày âm lịch:</label>
+                      <input
+                        type="text"
+                        value={ev.lunarDate || ''}
+                        onChange={(e) => handleUpdateEventField(index, 'lunarDate', e.target.value)}
+                        placeholder="(Tức ngày 21 tháng 10 năm Bính Ngọ)"
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <label className="block text-stone-700 font-semibold mb-1">Địa điểm / Tên nhà hàng / Tư gia:</label>
+                        <input
+                          type="text"
+                          value={ev.venue || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'venue', e.target.value)}
+                          placeholder="Tại Tư gia..."
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-stone-700 font-semibold mb-1">Địa chỉ chi tiết:</label>
+                        <input
+                          type="text"
+                          value={ev.address || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'address', e.target.value)}
+                          placeholder="Địa chỉ: xã Sóc Sơn - Tp. Hà Nội"
                           className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-stone-600 font-medium mb-1">Link chỉ đường Google Maps</label>
-                      <input
-                        type="text"
-                        value={ev.mapUrl || ''}
-                        onChange={(e) => {
-                          const newEvents = [...formData.events];
-                          newEvents[index].mapUrl = e.target.value;
-                          setFormData({ ...formData, events: newEvents });
-                        }}
-                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                      <div>
+                        <label className="block text-stone-700 font-semibold mb-1">Chữ nút bấm bản đồ:</label>
+                        <input
+                          type="text"
+                          value={ev.mapBtnText || 'Chỉ đường'}
+                          onChange={(e) => handleUpdateEventField(index, 'mapBtnText', e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-stone-700 font-semibold mb-1">Link chỉ đường Google Maps:</label>
+                        <input
+                          type="text"
+                          value={ev.mapUrl || ''}
+                          onChange={(e) => handleUpdateEventField(index, 'mapUrl', e.target.value)}
+                          placeholder="https://maps.app.goo.gl/..."
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -5115,446 +5272,410 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
               </div>
 
               {/* CARD 2: TÀI KHOẢN & ẢNH MÃ QR NGÂN HÀNG CỦA CHÚ RỂ (NHÀ TRAI) */}
-              <div className="p-5 rounded-2xl bg-stone-50 border-2 border-amber-200/80 space-y-4">
-                <div className="flex items-center justify-between border-b border-amber-200 pb-2">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-amber-900 flex items-center gap-2">
-                    <span className="text-base">🤵</span>
-                    <span>2. ẢNH SỐ TÀI KHOẢN & MÃ QR CHÚ RỂ (HỌ NHÀ TRAI)</span>
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                    {formData.groom?.nickname || formData.groom?.name || 'Chú rể'}
-                  </span>
-                </div>
+              {(() => {
+                const groomQr = formData.banking?.groomBank?.qrImage || allProfiles?.groom?.banking?.groomBank?.qrImage || allProfiles?.bride?.banking?.groomBank?.qrImage || '';
+                const brideQr = formData.banking?.brideBank?.qrImage || allProfiles?.bride?.banking?.brideBank?.qrImage || allProfiles?.groom?.banking?.brideBank?.qrImage || '';
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-                  {/* Upload Image Box */}
-                  <div className="md:col-span-5 flex flex-col items-center">
-                    <label className="block text-stone-700 font-semibold text-xs mb-2 self-start">
-                      Ảnh số tài khoản / Mã QR Chú Rể:
-                    </label>
+                const syncBankingField = (bankSide, field, value) => {
+                  setFormData(prev => {
+                    const currentBankObj = prev.banking?.[bankSide] || {};
+                    const updatedBanking = {
+                      ...(prev.banking || {}),
+                      [bankSide]: {
+                        ...currentBankObj,
+                        [field]: value
+                      }
+                    };
+                    const updatedForm = { ...prev, banking: updatedBanking };
+                    setAllProfiles(prevAll => ({
+                      ...prevAll,
+                      groom: {
+                        ...(prevAll?.groom || {}),
+                        banking: {
+                          ...(prevAll?.groom?.banking || {}),
+                          [bankSide]: {
+                            ...(prevAll?.groom?.banking?.[bankSide] || {}),
+                            [field]: value
+                          }
+                        }
+                      },
+                      bride: {
+                        ...(prevAll?.bride || {}),
+                        banking: {
+                          ...(prevAll?.bride?.banking || {}),
+                          [bankSide]: {
+                            ...(prevAll?.bride?.banking?.[bankSide] || {}),
+                            [field]: value
+                          }
+                        }
+                      }
+                    }));
+                    return updatedForm;
+                  });
+                };
 
-                    {formData.banking?.groomBank?.qrImage ? (
-                      <div className="w-full bg-white p-3 rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col items-center">
-                        <div className="w-full max-h-52 overflow-hidden rounded-xl flex items-center justify-center bg-stone-50 mb-3 border border-stone-100">
-                          <img
-                            src={formData.banking.groomBank.qrImage}
-                            alt="Ảnh số tài khoản Chú Rể"
-                            className="w-full max-h-52 object-contain rounded-lg"
-                          />
-                        </div>
+                const updateGroomQrImage = (base64) => {
+                  setFormData(prev => {
+                    const updatedForm = {
+                      ...prev,
+                      banking: {
+                        ...(prev.banking || {}),
+                        groomBank: {
+                          ...(prev.banking?.groomBank || {}),
+                          qrImage: base64
+                        }
+                      }
+                    };
+                    const updatedAll = {
+                      ...allProfiles,
+                      groom: {
+                        ...(allProfiles?.groom || {}),
+                        banking: {
+                          ...(allProfiles?.groom?.banking || {}),
+                          groomBank: {
+                            ...(allProfiles?.groom?.banking?.groomBank || {}),
+                            qrImage: base64
+                          }
+                        }
+                      },
+                      bride: {
+                        ...(allProfiles?.bride || {}),
+                        banking: {
+                          ...(allProfiles?.bride?.banking || {}),
+                          groomBank: {
+                            ...(allProfiles?.bride?.banking?.groomBank || {}),
+                            qrImage: base64
+                          }
+                        }
+                      }
+                    };
+                    setAllProfiles(updatedAll);
+                    setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
+                    if (onSaveProfile) onSaveProfile(currentProfileKey, updatedForm);
+                    if (onSaveAllProfiles) onSaveAllProfiles(updatedAll);
+                    return updatedForm;
+                  });
+                  setSaveStatus(base64 ? '🎉 Đã cập nhật ảnh tài khoản Chú Rể và đồng bộ cả 2 mẫu!' : 'Đã xóa ảnh tài khoản Chú Rể!');
+                  setTimeout(() => setSaveStatus(''), 3000);
+                };
 
-                        <div className="flex items-center gap-2 w-full">
-                          <label className="flex-1 py-1.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-[#70561f] text-xs font-semibold text-center cursor-pointer transition-all">
-                            <span>Đổi ảnh khác</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                handleFileUpload(e, (base64) => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    banking: {
-                                      ...(prev.banking || {}),
-                                      groomBank: {
-                                        ...(prev.banking?.groomBank || {}),
-                                        qrImage: base64
-                                      }
-                                    }
-                                  }));
-                                  setSaveStatus('Đã cập nhật ảnh số tài khoản Chú Rể!');
-                                  setTimeout(() => setSaveStatus(''), 2500);
-                                });
-                              }}
-                            />
+                const updateBrideQrImage = (base64) => {
+                  setFormData(prev => {
+                    const updatedForm = {
+                      ...prev,
+                      banking: {
+                        ...(prev.banking || {}),
+                        brideBank: {
+                          ...(prev.banking?.brideBank || {}),
+                          qrImage: base64
+                        }
+                      }
+                    };
+                    const updatedAll = {
+                      ...allProfiles,
+                      groom: {
+                        ...(allProfiles?.groom || {}),
+                        banking: {
+                          ...(allProfiles?.groom?.banking || {}),
+                          brideBank: {
+                            ...(allProfiles?.groom?.banking?.brideBank || {}),
+                            qrImage: base64
+                          }
+                        }
+                      },
+                      bride: {
+                        ...(allProfiles?.bride || {}),
+                        banking: {
+                          ...(allProfiles?.bride?.banking || {}),
+                          brideBank: {
+                            ...(allProfiles?.bride?.banking?.brideBank || {}),
+                            qrImage: base64
+                          }
+                        }
+                      }
+                    };
+                    setAllProfiles(updatedAll);
+                    setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
+                    if (onSaveProfile) onSaveProfile(currentProfileKey, updatedForm);
+                    if (onSaveAllProfiles) onSaveAllProfiles(updatedAll);
+                    return updatedForm;
+                  });
+                  setSaveStatus(base64 ? '🎉 Đã cập nhật ảnh tài khoản Cô Dâu và đồng bộ cả 2 mẫu!' : 'Đã xóa ảnh tài khoản Cô Dâu!');
+                  setTimeout(() => setSaveStatus(''), 3000);
+                };
+
+                return (
+                  <>
+                    {/* CARD 2: CHÚ RỂ */}
+                    <div className="p-5 rounded-2xl bg-stone-50 border-2 border-amber-200/80 space-y-4">
+                      <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-amber-900 flex items-center gap-2">
+                          <span className="text-base">🤵</span>
+                          <span>2. ẢNH SỐ TÀI KHOẢN & MÃ QR CHÚ RỂ (HỌ NHÀ TRAI)</span>
+                        </h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                          {formData.groom?.nickname || formData.groom?.name || 'Chú rể'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                        {/* Upload Image Box */}
+                        <div className="md:col-span-5 flex flex-col items-center">
+                          <label className="block text-stone-700 font-semibold text-xs mb-2 self-start">
+                            Ảnh số tài khoản / Mã QR Chú Rể:
                           </label>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                banking: {
-                                  ...(prev.banking || {}),
-                                  groomBank: {
-                                    ...(prev.banking?.groomBank || {}),
-                                    qrImage: ''
-                                  }
-                                }
-                              }));
-                              setSaveStatus('Đã xóa ảnh tài khoản Chú Rể!');
-                              setTimeout(() => setSaveStatus(''), 2000);
-                            }}
-                            className="p-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 hover:text-rose-600 text-stone-500 border border-stone-200 transition-all"
-                            title="Xóa ảnh này"
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-500" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label className="w-full cursor-pointer border-2 border-dashed border-amber-300 hover:border-[#70561f] rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-white hover:bg-amber-50/50 transition-all group">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                          <QrCode className="w-6 h-6 text-[#70561f]" />
-                        </div>
-                        <span className="text-xs font-bold text-stone-800 group-hover:text-[#70561f]">
-                          Tải lên ảnh số tài khoản / QR Chú Rể
-                        </span>
-                        <span className="text-[11px] text-stone-500 mt-1">
-                          Hỗ trợ ảnh chụp màn hình ngân hàng, ảnh mã QR (JPG, PNG)
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            handleFileUpload(e, (base64) => {
-                              setFormData(prev => ({
-                                ...prev,
-                                banking: {
-                                  ...(prev.banking || {}),
-                                  groomBank: {
-                                    ...(prev.banking?.groomBank || {}),
-                                    qrImage: base64
-                                  }
-                                }
-                              }));
-                              setSaveStatus('Đã tải lên ảnh tài khoản Chú Rể thành công!');
-                              setTimeout(() => setSaveStatus(''), 2500);
-                            });
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
+                          {groomQr ? (
+                            <div className="w-full bg-white p-3 rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col items-center">
+                              <div className="w-full max-h-52 overflow-hidden rounded-xl flex items-center justify-center bg-stone-50 mb-3 border border-stone-100">
+                                <img
+                                  src={groomQr}
+                                  alt="Ảnh số tài khoản Chú Rể"
+                                  className="w-full max-h-52 object-contain rounded-lg"
+                                />
+                              </div>
 
-                  {/* Text details for Groom */}
-                  <div className="md:col-span-7 space-y-3 text-xs">
-                    <div>
-                      <label className="block text-stone-700 font-semibold mb-1">
-                        Tên Ngân hàng:
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.banking?.groomBank?.bankName || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            banking: {
-                              ...(prev.banking || {}),
-                              groomBank: {
-                                ...(prev.banking?.groomBank || {}),
-                                bankName: val
-                              }
-                            }
-                          }));
-                        }}
-                        placeholder="MBBank (Quân Đội), Vietcombank..."
-                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-medium"
-                      />
-                    </div>
+                              <div className="flex items-center gap-2 w-full">
+                                <label className="flex-1 py-1.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-[#70561f] text-xs font-semibold text-center cursor-pointer transition-all">
+                                  <span>Đổi ảnh khác</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      handleFileUpload(e, (base64) => updateGroomQrImage(base64));
+                                    }}
+                                  />
+                                </label>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">
-                          Số tài khoản:
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.banking?.groomBank?.accountNo || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData(prev => ({
-                              ...prev,
-                              banking: {
-                                ...(prev.banking || {}),
-                                groomBank: {
-                                  ...(prev.banking?.groomBank || {}),
-                                  accountNo: val
-                                }
-                              }
-                            }));
-                          }}
-                          placeholder="99999988888"
-                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono font-bold text-[#70561f]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">
-                          Tên chủ tài khoản:
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.banking?.groomBank?.accountName || ''}
-                          onChange={(e) => {
-                            const val = e.target.value.toUpperCase();
-                            setFormData(prev => ({
-                              ...prev,
-                              banking: {
-                                ...(prev.banking || {}),
-                                groomBank: {
-                                  ...(prev.banking?.groomBank || {}),
-                                  accountName: val
-                                }
-                              }
-                            }));
-                          }}
-                          placeholder="HOANG DINH HIEU"
-                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-semibold uppercase"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-stone-700 font-semibold mb-1">
-                        Chi nhánh (tùy chọn):
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.banking?.groomBank?.branch || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            banking: {
-                              ...(prev.banking || {}),
-                              groomBank: {
-                                ...(prev.banking?.groomBank || {}),
-                                branch: val
-                              }
-                            }
-                          }));
-                        }}
-                        placeholder="Hà Nội"
-                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD 3: TÀI KHOẢN & ẢNH MÃ QR NGÂN HÀNG CỦA CÔ DÂU (NHÀ GÁI) */}
-              <div className="p-5 rounded-2xl bg-stone-50 border-2 border-rose-200/80 space-y-4">
-                <div className="flex items-center justify-between border-b border-rose-200 pb-2">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-rose-900 flex items-center gap-2">
-                    <span className="text-base">👰</span>
-                    <span>3. ẢNH SỐ TÀI KHOẢN & MÃ QR CÔ DÂU (HỌ NHÀ GÁI)</span>
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300">
-                    {formData.bride?.nickname || formData.bride?.name || 'Cô dâu'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-                  {/* Upload Image Box */}
-                  <div className="md:col-span-5 flex flex-col items-center">
-                    <label className="block text-stone-700 font-semibold text-xs mb-2 self-start">
-                      Ảnh số tài khoản / Mã QR Cô Dâu:
-                    </label>
-
-                    {formData.banking?.brideBank?.qrImage ? (
-                      <div className="w-full bg-white p-3 rounded-2xl border-2 border-rose-300 shadow-sm flex flex-col items-center">
-                        <div className="w-full max-h-52 overflow-hidden rounded-xl flex items-center justify-center bg-stone-50 mb-3 border border-stone-100">
-                          <img
-                            src={formData.banking.brideBank.qrImage}
-                            alt="Ảnh số tài khoản Cô Dâu"
-                            className="w-full max-h-52 object-contain rounded-lg"
-                          />
+                                <button
+                                  type="button"
+                                  onClick={() => updateGroomQrImage('')}
+                                  className="p-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 hover:text-rose-600 text-stone-500 border border-stone-200 transition-all"
+                                  title="Xóa ảnh này"
+                                >
+                                  <Trash2 className="w-4 h-4 text-rose-500" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="w-full cursor-pointer border-2 border-dashed border-amber-300 hover:border-[#70561f] rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-white hover:bg-amber-50/50 transition-all group">
+                              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                <QrCode className="w-6 h-6 text-[#70561f]" />
+                              </div>
+                              <span className="text-xs font-bold text-stone-800 group-hover:text-[#70561f]">
+                                Tải lên ảnh số tài khoản / QR Chú Rể
+                              </span>
+                              <span className="text-[11px] text-stone-500 mt-1">
+                                Hỗ trợ ảnh chụp màn hình ngân hàng, ảnh mã QR (JPG, PNG)
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  handleFileUpload(e, (base64) => updateGroomQrImage(base64));
+                                }}
+                              />
+                            </label>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-2 w-full">
-                          <label className="flex-1 py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-semibold text-center cursor-pointer transition-all">
-                            <span>Đổi ảnh khác</span>
+                        {/* Text details for Groom */}
+                        <div className="md:col-span-7 space-y-3 text-xs">
+                          <div>
+                            <label className="block text-stone-700 font-semibold mb-1">
+                              Tên Ngân hàng:
+                            </label>
                             <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                handleFileUpload(e, (base64) => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    banking: {
-                                      ...(prev.banking || {}),
-                                      brideBank: {
-                                        ...(prev.banking?.brideBank || {}),
-                                        qrImage: base64
-                                      }
-                                    }
-                                  }));
-                                  setSaveStatus('Đã cập nhật ảnh số tài khoản Cô Dâu!');
-                                  setTimeout(() => setSaveStatus(''), 2500);
-                                });
-                              }}
+                              type="text"
+                              value={formData.banking?.groomBank?.bankName || ''}
+                              onChange={(e) => syncBankingField('groomBank', 'bankName', e.target.value)}
+                              placeholder="MBBank (Quân Đội), Vietcombank, BIDV..."
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-medium"
                             />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-stone-700 font-semibold mb-1">
+                                Số tài khoản:
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.banking?.groomBank?.accountNo || ''}
+                                onChange={(e) => syncBankingField('groomBank', 'accountNo', e.target.value)}
+                                placeholder="1222041182"
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono font-bold text-[#70561f]"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-stone-700 font-semibold mb-1">
+                                Tên chủ tài khoản:
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.banking?.groomBank?.accountName || ''}
+                                onChange={(e) => syncBankingField('groomBank', 'accountName', e.target.value.toUpperCase())}
+                                placeholder="HOANG DINH HIEU"
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-semibold uppercase"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-stone-700 font-semibold mb-1">
+                              Chi nhánh (tùy chọn):
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.banking?.groomBank?.branch || ''}
+                              onChange={(e) => syncBankingField('groomBank', 'branch', e.target.value)}
+                              placeholder="Hà Nội"
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CARD 3: CÔ DÂU */}
+                    <div className="p-5 rounded-2xl bg-stone-50 border-2 border-rose-200/80 space-y-4">
+                      <div className="flex items-center justify-between border-b border-rose-200 pb-2">
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-rose-900 flex items-center gap-2">
+                          <span className="text-base">👰</span>
+                          <span>3. ẢNH SỐ TÀI KHOẢN & MÃ QR CÔ DÂU (HỌ NHÀ GÁI)</span>
+                        </h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300">
+                          {formData.bride?.nickname || formData.bride?.name || 'Cô dâu'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                        {/* Upload Image Box */}
+                        <div className="md:col-span-5 flex flex-col items-center">
+                          <label className="block text-stone-700 font-semibold text-xs mb-2 self-start">
+                            Ảnh số tài khoản / Mã QR Cô Dâu:
                           </label>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                banking: {
-                                  ...(prev.banking || {}),
-                                  brideBank: {
-                                    ...(prev.banking?.brideBank || {}),
-                                    qrImage: ''
-                                  }
-                                }
-                              }));
-                              setSaveStatus('Đã xóa ảnh tài khoản Cô Dâu!');
-                              setTimeout(() => setSaveStatus(''), 2000);
-                            }}
-                            className="p-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 hover:text-rose-600 text-stone-500 border border-stone-200 transition-all"
-                            title="Xóa ảnh này"
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-500" />
-                          </button>
+                          {brideQr ? (
+                            <div className="w-full bg-white p-3 rounded-2xl border-2 border-rose-300 shadow-sm flex flex-col items-center">
+                              <div className="w-full max-h-52 overflow-hidden rounded-xl flex items-center justify-center bg-stone-50 mb-3 border border-stone-100">
+                                <img
+                                  src={brideQr}
+                                  alt="Ảnh số tài khoản Cô Dâu"
+                                  className="w-full max-h-52 object-contain rounded-lg"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 w-full">
+                                <label className="flex-1 py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-semibold text-center cursor-pointer transition-all">
+                                  <span>Đổi ảnh khác</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      handleFileUpload(e, (base64) => updateBrideQrImage(base64));
+                                    }}
+                                  />
+                                </label>
+
+                                <button
+                                  type="button"
+                                  onClick={() => updateBrideQrImage('')}
+                                  className="p-1.5 rounded-xl bg-stone-100 hover:bg-rose-50 hover:text-rose-600 text-stone-500 border border-stone-200 transition-all"
+                                  title="Xóa ảnh này"
+                                >
+                                  <Trash2 className="w-4 h-4 text-rose-500" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="w-full cursor-pointer border-2 border-dashed border-rose-300 hover:border-rose-600 rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-white hover:bg-rose-50/50 transition-all group">
+                              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                <QrCode className="w-6 h-6 text-rose-600" />
+                              </div>
+                              <span className="text-xs font-bold text-stone-800 group-hover:text-rose-700">
+                                Tải lên ảnh số tài khoản / QR Cô Dâu
+                              </span>
+                              <span className="text-[11px] text-stone-500 mt-1">
+                                Hỗ trợ ảnh chụp màn hình ngân hàng, ảnh mã QR (JPG, PNG)
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  handleFileUpload(e, (base64) => updateBrideQrImage(base64));
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Text details for Bride */}
+                        <div className="md:col-span-7 space-y-3 text-xs">
+                          <div>
+                            <label className="block text-stone-700 font-semibold mb-1">
+                              Tên Ngân hàng:
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.banking?.brideBank?.bankName || ''}
+                              onChange={(e) => syncBankingField('brideBank', 'bankName', e.target.value)}
+                              placeholder="Vietcombank, MBBank..."
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-medium"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-stone-700 font-semibold mb-1">
+                                Số tài khoản:
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.banking?.brideBank?.accountNo || ''}
+                                onChange={(e) => syncBankingField('brideBank', 'accountNo', e.target.value)}
+                                placeholder="0831000007724"
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono font-bold text-rose-700"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-stone-700 font-semibold mb-1">
+                                Tên chủ tài khoản:
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.banking?.brideBank?.accountName || ''}
+                                onChange={(e) => syncBankingField('brideBank', 'accountName', e.target.value.toUpperCase())}
+                                placeholder="LE NHAT THANH THUY"
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-semibold uppercase"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-stone-700 font-semibold mb-1">
+                              Chi nhánh (tùy chọn):
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.banking?.brideBank?.branch || ''}
+                              onChange={(e) => syncBankingField('brideBank', 'branch', e.target.value)}
+                              placeholder="Hà Nội"
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
+                            />
+                          </div>
                         </div>
                       </div>
-                    ) : (
-                      <label className="w-full cursor-pointer border-2 border-dashed border-rose-300 hover:border-rose-600 rounded-2xl p-5 flex flex-col items-center justify-center text-center bg-white hover:bg-rose-50/50 transition-all group">
-                        <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                          <QrCode className="w-6 h-6 text-rose-600" />
-                        </div>
-                        <span className="text-xs font-bold text-stone-800 group-hover:text-rose-700">
-                          Tải lên ảnh số tài khoản / QR Cô Dâu
-                        </span>
-                        <span className="text-[11px] text-stone-500 mt-1">
-                          Hỗ trợ ảnh chụp màn hình ngân hàng, ảnh mã QR (JPG, PNG)
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            handleFileUpload(e, (base64) => {
-                              setFormData(prev => ({
-                                ...prev,
-                                banking: {
-                                  ...(prev.banking || {}),
-                                  brideBank: {
-                                    ...(prev.banking?.brideBank || {}),
-                                    qrImage: base64
-                                  }
-                                }
-                              }));
-                              setSaveStatus('Đã tải lên ảnh tài khoản Cô Dâu thành công!');
-                              setTimeout(() => setSaveStatus(''), 2500);
-                            });
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {/* Text details for Bride */}
-                  <div className="md:col-span-7 space-y-3 text-xs">
-                    <div>
-                      <label className="block text-stone-700 font-semibold mb-1">
-                        Tên Ngân hàng:
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.banking?.brideBank?.bankName || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            banking: {
-                              ...(prev.banking || {}),
-                              brideBank: {
-                                ...(prev.banking?.brideBank || {}),
-                                bankName: val
-                              }
-                            }
-                          }));
-                        }}
-                        placeholder="Techcombank, Vietinbank..."
-                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-medium"
-                      />
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">
-                          Số tài khoản:
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.banking?.brideBank?.accountNo || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormData(prev => ({
-                              ...prev,
-                              banking: {
-                                ...(prev.banking || {}),
-                                brideBank: {
-                                  ...(prev.banking?.brideBank || {}),
-                                  accountNo: val
-                                }
-                              }
-                            }));
-                          }}
-                          placeholder="19033336666"
-                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono font-bold text-rose-700"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">
-                          Tên chủ tài khoản:
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.banking?.brideBank?.accountName || ''}
-                          onChange={(e) => {
-                            const val = e.target.value.toUpperCase();
-                            setFormData(prev => ({
-                              ...prev,
-                              banking: {
-                                ...(prev.banking || {}),
-                                brideBank: {
-                                  ...(prev.banking?.brideBank || {}),
-                                  accountName: val
-                                }
-                              }
-                            }));
-                          }}
-                          placeholder="LE THANH THUY"
-                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-semibold uppercase"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-stone-700 font-semibold mb-1">
-                        Chi nhánh (tùy chọn):
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.banking?.brideBank?.branch || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            banking: {
-                              ...(prev.banking || {}),
-                              brideBank: {
-                                ...(prev.banking?.brideBank || {}),
-                                branch: val
-                              }
-                            }
-                          }));
-                        }}
-                        placeholder="Hà Nội"
-                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 

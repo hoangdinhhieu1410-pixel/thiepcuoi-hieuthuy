@@ -178,12 +178,8 @@ function createLightweightProfileCopy(profiles) {
           url: stripBigBase64(g.url, '/templates/007/images/gallery_1.jpg')
         }));
       }
-      if (p.banking?.groomBank?.qrImage) {
-        p.banking.groomBank.qrImage = stripBigBase64(p.banking.groomBank.qrImage, '');
-      }
-      if (p.banking?.brideBank?.qrImage) {
-        p.banking.brideBank.qrImage = stripBigBase64(p.banking.brideBank.qrImage, '');
-      }
+      // Preserve banking QR images so they are NEVER lost in offline storage or cache
+      // QR images are small (~40-90KB) and fit comfortably within localStorage quota
     });
     return copy;
   } catch (e) {

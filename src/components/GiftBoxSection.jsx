@@ -11,8 +11,9 @@ export function GiftBoxSection({ banking, groom, bride }) {
   const currentPersonName = activeTab === 'groom' ? groom?.name : bride?.name;
   const currentRole = activeTab === 'groom' ? 'Chú Rể' : 'Cô Dâu';
 
-  // Generate VietQR URL
-  const qrUrl = `https://img.vietqr.io/image/${currentBank.bankId}-${currentBank.accountNo}-compact2.png?amount=&addInfo=${encodeURIComponent(`Mung cuoi ${groom.nickname} ${bride.nickname}`)}&accountName=${encodeURIComponent(currentBank.accountName)}`;
+  // Prefer custom uploaded banking QR image, fallback to VietQR URL
+  const hasCustomImage = !!currentBank.qrImage;
+  const qrUrl = currentBank.qrImage || `https://img.vietqr.io/image/${currentBank.bankId}-${currentBank.accountNo}-compact2.png?amount=&addInfo=${encodeURIComponent(`Mung cuoi ${groom.nickname} ${bride.nickname}`)}&accountName=${encodeURIComponent(currentBank.accountName)}`;
 
   const copyToClipboard = (text, key) => {
     navigator.clipboard.writeText(text);

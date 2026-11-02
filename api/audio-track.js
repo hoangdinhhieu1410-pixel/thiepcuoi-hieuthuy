@@ -39,7 +39,7 @@ export const config = {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
 
   if (req.method === 'OPTIONS') {
@@ -47,6 +47,18 @@ export default async function handler(req, res) {
   }
 
   const redis = getRedis();
+
+  if (req.method === 'DELETE') {
+    try {
+      const { id } = req.query || {};
+      if (id) {
+        await redis.del(`audio_track:${id}`);
+      }
+      return res.status(200).json({ success: true, message: 'Đã xóa bài hát khỏi máy chủ' });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
 
   if (req.method === 'POST') {
     try {
@@ -63,8 +75,67 @@ export default async function handler(req, res) {
         try { body = JSON.parse(body); } catch { body = {}; }
       }
 
-      const { id, title, mimeType = 'audio/mpeg', data } = body || {};
-      if (!id || !data) {
+      const { id, title, mimeType = 'audio/mpeg', data, chunkIndex, totalChunks } = body || {};
+      if (!id) {
+        return res.status(400).json({ success: false, error: 'Thiếu mã bài hát (id)' });
+      }
+
+      // 1. Handle Chunked Upload (for files of any size without hitting Vercel 4.5MB limit)
+      if (typeof chunkIndex === 'number' && typeof totalChunks === 'number') {
+        if (!data) {
+          return res.status(400).json({ success: false, error: 'Thiếu dữ liệu chunk' });
+        }
+
+        // Store this chunk in Redis with 2 hours TTL
+        await redis.set(`audio_track_chunk:${id}:${chunkIndex}`, data, 'EX', 7200);
+
+        if (chunkIndex === totalChunks - 1) {
+          // All chunks uploaded! Retrieve all chunks in order and assemble
+          const chunkPromises = [];
+          for (let i = 0; i < totalChunks; i++) {
+            chunkPromises.push(redis.get(`audio_track_chunk:${id}:${i}`));
+          }
+          const chunks = await Promise.all(chunkPromises);
+          for (let i = 0; i < totalChunks; i++) {
+            if (!chunks[i]) {
+              return res.status(400).json({ success: false, error: `Thiếu phân đoạn ${i + 1}/${totalChunks}` });
+            }
+          }
+          const fullBase64 = chunks.join('');
+
+          // Save assembled track to permanent Redis key
+          await redis.set(`audio_track:${id}`, JSON.stringify({
+            id,
+            title: title || 'Nhạc cưới tùy chỉnh',
+            mimeType,
+            data: fullBase64,
+            updatedAt: Date.now()
+          }));
+
+          // Clean up chunk keys in background
+          for (let i = 0; i < totalChunks; i++) {
+            redis.del(`audio_track_chunk:${id}:${i}`).catch(() => {});
+          }
+
+          return res.status(200).json({
+            success: true,
+            url: `/api/audio-track?id=${id}`,
+            id,
+            title,
+            isComplete: true
+          });
+        } else {
+          return res.status(200).json({
+            success: true,
+            chunkReceived: chunkIndex,
+            totalChunks,
+            isComplete: false
+          });
+        }
+      }
+
+      // 2. Handle Single Payload Upload (for small audio files)
+      if (!data) {
         return res.status(400).json({ success: false, error: 'Thiếu dữ liệu âm thanh' });
       }
 
@@ -80,7 +151,9 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         url: `/api/audio-track?id=${id}`,
-        id
+        id,
+        title,
+        isComplete: true
       });
     } catch (err) {
       console.error('Save audio track error:', err);

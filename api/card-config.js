@@ -127,19 +127,15 @@ export default async function handler(req, res) {
       const cleanMusic = (m) => {
         if (!m) return m;
         const activeId = m.activeTrackId;
-        if (!m.customTrackUrl || m.customTrackUrl.startsWith('blob:')) {
-          if (activeId && BUNDLED_TRACK_IDS.has(activeId)) {
+        // Always ensure customTrackUrl matches the activeTrackId selected by the user
+        if (activeId) {
+          if (BUNDLED_TRACK_IDS.has(activeId)) {
             m.customTrackUrl = `/templates/007/tracks/${activeId}.m4a`;
-          } else if (activeId) {
-            m.customTrackUrl = `/api/audio-track?id=${activeId}`;
           } else {
-            m.customTrackUrl = '/templates/007/music.m4a';
+            m.customTrackUrl = `/api/audio-track?id=${activeId}`;
           }
-        } else if (m.customTrackUrl.includes('/templates/007/tracks/')) {
-          const match = m.customTrackUrl.match(/track-[0-9]+/);
-          if (match && !BUNDLED_TRACK_IDS.has(match[0])) {
-            m.customTrackUrl = `/api/audio-track?id=${match[0]}`;
-          }
+        } else if (!m.customTrackUrl || m.customTrackUrl.startsWith('blob:')) {
+          m.customTrackUrl = '/templates/007/music.m4a';
         }
 
         if (Array.isArray(m.presetTracks)) {
@@ -189,6 +185,55 @@ export default async function handler(req, res) {
       configToSave.updatedAt = Date.now();
       configToSave.lastSavedProfile = targetProfile;
       configToSave.lastSavedBy = userEmail || 'system';
+
+      // Ensure couple banking QR images are synced between both profiles so neither profile loses them
+      const sharedGroomQr = configToSave.groom?.banking?.groomBank?.qrImage || configToSave.bride?.banking?.groomBank?.qrImage;
+      const sharedBrideQr = configToSave.groom?.banking?.brideBank?.qrImage || configToSave.bride?.banking?.brideBank?.qrImage;
+      if (sharedGroomQr) {
+        if (!configToSave.groom) configToSave.groom = {};
+        if (!configToSave.groom.banking) configToSave.groom.banking = {};
+        if (!configToSave.groom.banking.groomBank) configToSave.groom.banking.groomBank = {};
+        configToSave.groom.banking.groomBank.qrImage = sharedGroomQr;
+        if (!configToSave.bride) configToSave.bride = {};
+        if (!configToSave.bride.banking) configToSave.bride.banking = {};
+        if (!configToSave.bride.banking.groomBank) configToSave.bride.banking.groomBank = {};
+        configToSave.bride.banking.groomBank.qrImage = sharedGroomQr;
+      }
+      if (sharedBrideQr) {
+        if (!configToSave.groom) configToSave.groom = {};
+        if (!configToSave.groom.banking) configToSave.groom.banking = {};
+        if (!configToSave.groom.banking.brideBank) configToSave.groom.banking.brideBank = {};
+        configToSave.groom.banking.brideBank.qrImage = sharedBrideQr;
+        if (!configToSave.bride) configToSave.bride = {};
+        if (!configToSave.bride.banking) configToSave.bride.banking = {};
+        if (!configToSave.bride.banking.brideBank) configToSave.bride.banking.brideBank = {};
+        configToSave.bride.banking.brideBank.qrImage = sharedBrideQr;
+      }
+
+      // Share custom uploaded music tracks between groom and bride preset lists so both profiles can choose from them
+      const groomCustom = (configToSave.groom?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));
+      const brideCustom = (configToSave.bride?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));
+      const allCustomMap = new Map();
+      [...groomCustom, ...brideCustom].forEach(t => {
+        if (t && t.id) allCustomMap.set(t.id, t);
+      });
+      if (allCustomMap.size > 0) {
+        const mergeCustom = (existingTracks = []) => {
+          const list = [...existingTracks];
+          allCustomMap.forEach(ct => {
+            if (!list.some(t => t.id === ct.id)) {
+              list.unshift(ct);
+            }
+          });
+          return list;
+        };
+        if (configToSave.groom?.music) {
+          configToSave.groom.music.presetTracks = mergeCustom(configToSave.groom.music.presetTracks);
+        }
+        if (configToSave.bride?.music) {
+          configToSave.bride.music.presetTracks = mergeCustom(configToSave.bride.music.presetTracks);
+        }
+      }
 
       if (configToSave.groom?.music) configToSave.groom.music = cleanMusic(configToSave.groom.music);
       if (configToSave.bride?.music) configToSave.bride.music = cleanMusic(configToSave.bride.music);

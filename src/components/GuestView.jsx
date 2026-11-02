@@ -380,15 +380,11 @@ export function GuestView({
     if (activeId && BUNDLED_TRACK_IDS.has(activeId)) {
       return `/templates/007/tracks/${activeId}.m4a`;
     }
-    if (music.customTrackUrl && !music.customTrackUrl.includes('/templates/007/tracks/') && music.customTrackUrl !== '/templates/007/music.m4a') {
-      return music.customTrackUrl;
-    }
-    const preset = music.presetTracks?.find(t => t.id === activeId);
-    if (preset?.url && !preset.url.includes('/templates/007/tracks/') && preset.url !== '/templates/007/music.m4a') {
-      return preset.url;
-    }
     if (activeId) {
       return `/api/audio-track?id=${activeId}`;
+    }
+    if (music.customTrackUrl && !music.customTrackUrl.includes('/templates/007/tracks/') && music.customTrackUrl !== '/templates/007/music.m4a') {
+      return music.customTrackUrl;
     }
     return '/templates/007/music.m4a';
   };
