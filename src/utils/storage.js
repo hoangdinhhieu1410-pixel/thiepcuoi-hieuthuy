@@ -265,7 +265,7 @@ export async function loadProfilesFromStorage() {
  * - Reduces 5-15MB phone camera photos down to crisp ~150-250KB JPEGs
  * - Prevents memory bloat, keeps browser animations silky smooth (60fps)
  */
-export function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, quality = 0.82) {
+export function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, quality = 0.78) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve(null);
 

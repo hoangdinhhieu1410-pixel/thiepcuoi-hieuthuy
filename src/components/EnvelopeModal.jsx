@@ -135,9 +135,22 @@ export function EnvelopeModal({
     );
   };
 
-  const coverPhoto = (c1.photo && !c1.photo.includes('/templates/007/images/hero_banner.jpg'))
+  const isCustomPhoto = (url) => {
+    return Boolean(
+      url &&
+      typeof url === 'string' &&
+      !url.includes('/templates/007/images/hero_banner.jpg') &&
+      !url.includes('/templates/007/images/cover_style3.jpg')
+    );
+  };
+
+  const coverPhoto = isCustomPhoto(c1.photo)
     ? c1.photo
-    : (c4.photo || safeData.heroBannerPhoto || safeData.gallery?.[0]?.url || '/templates/007/images/hero_banner.jpg');
+    : isCustomPhoto(c4.photo)
+    ? c4.photo
+    : isCustomPhoto(safeData.heroBannerPhoto)
+    ? safeData.heroBannerPhoto
+    : (safeData.gallery?.[0]?.url || c1.photo || '/templates/007/images/hero_banner.jpg');
 
   // 9 Distinct Opening Animation Classes based on animEffect (Slow & Emphasized ~1600ms - 2000ms)
   let openingEffectClasses = '';
@@ -306,7 +319,7 @@ export function EnvelopeModal({
           {/* Top Photo Section: Generous height with object-[center_12%] so couple's heads, faces, smiles and background scenery are 100% CLEAR */}
           <div className="relative h-[380px] sm:h-[440px] w-full overflow-hidden bg-stone-900">
             <img
-              src={c1.photo || coverPhoto}
+              src={coverPhoto}
               alt="Couple background"
               className="w-full h-full object-cover object-[center_12%] filter brightness-[0.97] contrast-[1.02] transition-transform duration-700"
             />
@@ -541,7 +554,7 @@ export function EnvelopeModal({
           >
             {/* Couple Full Background Photo with object-[center_12%] so heads, faces, smiles and landscape are completely clear */}
             <img
-              src={c3.photo || coverPhoto}
+              src={isCustomPhoto(c3.photo) ? c3.photo : coverPhoto}
               alt="Couple Portal"
               className="w-full h-full object-cover object-[center_12%] filter brightness-[0.98] group-hover:scale-105 transition-transform duration-700"
             />

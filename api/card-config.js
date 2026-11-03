@@ -105,7 +105,8 @@ export default async function handler(req, res) {
             if (user.status !== 'approved' || user.role === 'viewer') {
               return res.status(403).json({ success: false, error: 'Tài khoản của bạn chỉ có quyền xem, không được phép lưu thay đổi.' });
             }
-            const allowed = Array.isArray(user.allowedProfiles) && user.allowedProfiles.length > 0 ? user.allowedProfiles : ['groom', 'bride'];
+            const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+            const allowed = isAdmin ? ['groom', 'bride'] : (Array.isArray(user.allowedProfiles) && user.allowedProfiles.length > 0 ? user.allowedProfiles : ['groom', 'bride']);
             if (targetProfile === 'groom' && !allowed.includes('groom')) {
               return res.status(403).json({ success: false, error: 'Bạn không có quyền chỉnh sửa Mẫu 1 (Nhà Trai).' });
             }
@@ -225,6 +226,70 @@ export default async function handler(req, res) {
       if (sharedGiftSubtitle) {
         if (configToSave.groom) configToSave.groom.giftSubtitle = sharedGiftSubtitle;
         if (configToSave.bride) configToSave.bride.giftSubtitle = sharedGiftSubtitle;
+      }
+
+      // Helper to detect if a photo is custom (base64 or non-demo upload)
+      const isCustomPhoto = (url) => Boolean(
+        url &&
+        typeof url === 'string' &&
+        !url.includes('/templates/007/images/hero_banner.jpg') &&
+        !url.includes('/templates/007/images/timeline_bg.jpg') &&
+        !url.includes('/templates/007/images/footer_bg.jpg') &&
+        !url.includes('/templates/007/images/groom.jpg') &&
+        !url.includes('/templates/007/images/bride.jpg')
+      );
+
+      // 1. Sync heroBannerPhoto across profiles if one side has custom photo
+      const sharedHero = isCustomPhoto(configToSave.groom?.heroBannerPhoto)
+        ? configToSave.groom.heroBannerPhoto
+        : (isCustomPhoto(configToSave.bride?.heroBannerPhoto) ? configToSave.bride.heroBannerPhoto : null);
+      if (sharedHero) {
+        if (configToSave.groom && !isCustomPhoto(configToSave.groom.heroBannerPhoto)) configToSave.groom.heroBannerPhoto = sharedHero;
+        if (configToSave.bride && !isCustomPhoto(configToSave.bride.heroBannerPhoto)) configToSave.bride.heroBannerPhoto = sharedHero;
+      }
+
+      // 2. Sync timelineBgPhoto
+      const sharedTimeline = isCustomPhoto(configToSave.groom?.timelineBgPhoto)
+        ? configToSave.groom.timelineBgPhoto
+        : (isCustomPhoto(configToSave.bride?.timelineBgPhoto) ? configToSave.bride.timelineBgPhoto : null);
+      if (sharedTimeline) {
+        if (configToSave.groom && !isCustomPhoto(configToSave.groom.timelineBgPhoto)) configToSave.groom.timelineBgPhoto = sharedTimeline;
+        if (configToSave.bride && !isCustomPhoto(configToSave.bride.timelineBgPhoto)) configToSave.bride.timelineBgPhoto = sharedTimeline;
+      }
+
+      // 3. Sync footerBgPhoto
+      const sharedFooter = isCustomPhoto(configToSave.groom?.footerBgPhoto)
+        ? configToSave.groom.footerBgPhoto
+        : (isCustomPhoto(configToSave.bride?.footerBgPhoto) ? configToSave.bride.footerBgPhoto : null);
+      if (sharedFooter) {
+        if (configToSave.groom && !isCustomPhoto(configToSave.groom.footerBgPhoto)) configToSave.groom.footerBgPhoto = sharedFooter;
+        if (configToSave.bride && !isCustomPhoto(configToSave.bride.footerBgPhoto)) configToSave.bride.footerBgPhoto = sharedFooter;
+      }
+
+      // 4. Sync groom & bride avatars
+      const sharedGroomAvatar = isCustomPhoto(configToSave.groom?.groom?.avatar)
+        ? configToSave.groom.groom.avatar
+        : (isCustomPhoto(configToSave.bride?.groom?.avatar) ? configToSave.bride.groom.avatar : null);
+      if (sharedGroomAvatar) {
+        if (configToSave.groom?.groom && !isCustomPhoto(configToSave.groom.groom.avatar)) configToSave.groom.groom.avatar = sharedGroomAvatar;
+        if (configToSave.bride?.groom && !isCustomPhoto(configToSave.bride.groom.avatar)) configToSave.bride.groom.avatar = sharedGroomAvatar;
+      }
+
+      const sharedBrideAvatar = isCustomPhoto(configToSave.groom?.bride?.avatar)
+        ? configToSave.groom.bride.avatar
+        : (isCustomPhoto(configToSave.bride?.bride?.avatar) ? configToSave.bride.bride.avatar : null);
+      if (sharedBrideAvatar) {
+        if (configToSave.groom?.bride && !isCustomPhoto(configToSave.groom.bride.avatar)) configToSave.groom.bride.avatar = sharedBrideAvatar;
+        if (configToSave.bride?.bride && !isCustomPhoto(configToSave.bride.bride.avatar)) configToSave.bride.bride.avatar = sharedBrideAvatar;
+      }
+
+      // 5. Sync couple gallery (Our Memories)
+      const groomHasGallery = Array.isArray(configToSave.groom?.gallery) && configToSave.groom.gallery.length > 0;
+      const brideHasGallery = Array.isArray(configToSave.bride?.gallery) && configToSave.bride.gallery.length > 0;
+      if (groomHasGallery && !brideHasGallery) {
+        if (configToSave.bride) configToSave.bride.gallery = configToSave.groom.gallery;
+      } else if (!groomHasGallery && brideHasGallery) {
+        if (configToSave.groom) configToSave.groom.gallery = configToSave.bride.gallery;
       }
 
       // Share custom uploaded music tracks between groom and bride preset lists so both profiles can choose from them

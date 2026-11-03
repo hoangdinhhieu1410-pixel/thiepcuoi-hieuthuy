@@ -960,6 +960,7 @@ export function StudioEditor({
   // Update Cover text / property
   const updateCoverField = (styleId, field, value) => {
     setPreviewEnvelopeOpen(false);
+    userHasEdited.current = true;
     setFormData(prev => {
       const updated = { ...prev };
       if (!updated.coverConfig) updated.coverConfig = {};
@@ -973,16 +974,32 @@ export function StudioEditor({
         updated.coverConfig[styleId] = { ...defaultCover };
       }
       updated.coverConfig[styleId][field] = value;
+      setAllProfiles(prevAll => {
+        const updatedAll = {
+          ...prevAll,
+          activeProfile: currentProfileKey,
+          [currentProfileKey]: updated
+        };
+        if (field === 'photo') {
+          if (onSaveProfile) {
+            onSaveProfile(currentProfileKey, updated);
+          } else if (onSaveAllProfiles) {
+            onSaveAllProfiles(updatedAll);
+          }
+        }
+        return updatedAll;
+      });
       return updated;
     });
   };
 
-  // Upload Photo for Cover (Mẫu 1 & Mẫu 3)
+  // Upload Photo for Cover (Mẫu 1, Mẫu 3, Mẫu 4)
   const handleCoverPhotoUpload = (styleId, e) => {
     setPreviewEnvelopeOpen(false);
+    userHasEdited.current = true;
     handleFileUpload(e, (base64) => {
       updateCoverField(styleId, 'photo', base64);
-      setSaveStatus('Đã cập nhật ảnh bìa mới thành công!');
+      setSaveStatus('Đã cập nhật và lưu ảnh bìa mới thành công!');
       setTimeout(() => setSaveStatus(''), 3000);
     });
   };
@@ -1001,11 +1018,28 @@ export function StudioEditor({
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       setAllProfiles(prevAll => {
-        const updatedAll = {
+        let updatedAll = {
           ...prevAll,
           activeProfile: currentProfileKey,
           [currentProfileKey]: updated
         };
+        const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
+        if (field === 'gallery' && updatedAll[otherKey]) {
+          updatedAll[otherKey] = {
+            ...updatedAll[otherKey],
+            gallery: value
+          };
+        }
+        const sharedFields = ['heroBannerPhoto', 'timelineBgPhoto', 'footerBgPhoto'];
+        if (sharedFields.includes(field) && updatedAll[otherKey]) {
+          const otherVal = updatedAll[otherKey]?.[field];
+          if (!otherVal || otherVal.includes('/templates/007/images/')) {
+            updatedAll[otherKey] = {
+              ...updatedAll[otherKey],
+              [field]: value
+            };
+          }
+        }
         if (onSaveProfile) {
           onSaveProfile(currentProfileKey, updated);
         } else if (onSaveAllProfiles) {
@@ -7690,6 +7724,40 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             onChange={(e) => updateCoverField('style4', 'ribbonColor', e.target.value)}
                             className="w-28 px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-mono uppercase"
                           />
+                        </div>
+                      </div>
+
+                      <div className="sm:col-span-2 pt-2 border-t border-stone-200">
+                        <label className="block text-stone-700 font-semibold mb-1">
+                          Ảnh hé lộ lót dưới cánh mở (Mẫu 4 - Save our date):
+                        </label>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="px-3.5 py-2 rounded-xl bg-amber-800 hover:bg-amber-900 text-white font-semibold cursor-pointer shadow-xs flex items-center gap-1.5 text-xs transition-all">
+                            <Upload className="w-3.5 h-3.5 text-amber-200" />
+                            <span>Tải ảnh bìa Mẫu 4 mới từ máy</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleCoverPhotoUpload('style4', e)}
+                            />
+                          </label>
+                          {formData.coverConfig?.style4?.photo && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateCoverField('style4', 'photo', '');
+                                setSaveStatus('Đã chuyển về dùng ảnh mở đầu thiệp!');
+                                setTimeout(() => setSaveStatus(''), 2500);
+                              }}
+                              className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs transition-colors"
+                            >
+                              Xóa ảnh riêng (Dùng ảnh mở đầu thiệp)
+                            </button>
+                          )}
+                          <span className="text-[11px] text-stone-500">
+                            {formData.coverConfig?.style4?.photo ? '✓ Đang dùng ảnh bìa riêng' : '(Tự động dùng Ảnh Mở Đầu Thiệp / Hero Banner Photo)'}
+                          </span>
                         </div>
                       </div>
                     </div>
