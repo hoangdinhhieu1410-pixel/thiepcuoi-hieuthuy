@@ -228,103 +228,11 @@ export default async function handler(req, res) {
         if (configToSave.bride) configToSave.bride.giftSubtitle = sharedGiftSubtitle;
       }
 
-      // Helper to detect if a photo is custom (base64 or non-demo upload)
-      const isCustomPhoto = (url) => Boolean(
-        url &&
-        typeof url === 'string' &&
-        !url.includes('/templates/007/images/hero_banner.jpg') &&
-        !url.includes('/templates/007/images/timeline_bg.jpg') &&
-        !url.includes('/templates/007/images/footer_bg.jpg') &&
-        !url.includes('/templates/007/images/groom.jpg') &&
-        !url.includes('/templates/007/images/bride.jpg') &&
-        !url.includes('/templates/007/images/og_banner.jpg') &&
-        !url.includes('/templates/007/images/cover_style3.jpg')
-      );
-
-      // 1. Sync heroBannerPhoto across profiles if one side has custom photo
-      const sharedHero = isCustomPhoto(configToSave.groom?.heroBannerPhoto)
-        ? configToSave.groom.heroBannerPhoto
-        : (isCustomPhoto(configToSave.bride?.heroBannerPhoto) ? configToSave.bride.heroBannerPhoto : null);
-      if (sharedHero) {
-        if (configToSave.groom && !isCustomPhoto(configToSave.groom.heroBannerPhoto)) configToSave.groom.heroBannerPhoto = sharedHero;
-        if (configToSave.bride && !isCustomPhoto(configToSave.bride.heroBannerPhoto)) configToSave.bride.heroBannerPhoto = sharedHero;
-      }
-
-      // 2. Sync timelineBgPhoto
-      const sharedTimeline = isCustomPhoto(configToSave.groom?.timelineBgPhoto)
-        ? configToSave.groom.timelineBgPhoto
-        : (isCustomPhoto(configToSave.bride?.timelineBgPhoto) ? configToSave.bride.timelineBgPhoto : null);
-      if (sharedTimeline) {
-        if (configToSave.groom && !isCustomPhoto(configToSave.groom.timelineBgPhoto)) configToSave.groom.timelineBgPhoto = sharedTimeline;
-        if (configToSave.bride && !isCustomPhoto(configToSave.bride.timelineBgPhoto)) configToSave.bride.timelineBgPhoto = sharedTimeline;
-      }
-
-      // 3. Sync footerBgPhoto
-      const sharedFooter = isCustomPhoto(configToSave.groom?.footerBgPhoto)
-        ? configToSave.groom.footerBgPhoto
-        : (isCustomPhoto(configToSave.bride?.footerBgPhoto) ? configToSave.bride.footerBgPhoto : null);
-      if (sharedFooter) {
-        if (configToSave.groom && !isCustomPhoto(configToSave.groom.footerBgPhoto)) configToSave.groom.footerBgPhoto = sharedFooter;
-        if (configToSave.bride && !isCustomPhoto(configToSave.bride.footerBgPhoto)) configToSave.bride.footerBgPhoto = sharedFooter;
-      }
-
-      // 4. Sync groom & bride avatars
-      const sharedGroomAvatar = isCustomPhoto(configToSave.groom?.groom?.avatar)
-        ? configToSave.groom.groom.avatar
-        : (isCustomPhoto(configToSave.bride?.groom?.avatar) ? configToSave.bride.groom.avatar : null);
-      if (sharedGroomAvatar) {
-        if (configToSave.groom?.groom && !isCustomPhoto(configToSave.groom.groom.avatar)) configToSave.groom.groom.avatar = sharedGroomAvatar;
-        if (configToSave.bride?.groom && !isCustomPhoto(configToSave.bride.groom.avatar)) configToSave.bride.groom.avatar = sharedGroomAvatar;
-      }
-
-      const sharedBrideAvatar = isCustomPhoto(configToSave.groom?.bride?.avatar)
-        ? configToSave.groom.bride.avatar
-        : (isCustomPhoto(configToSave.bride?.bride?.avatar) ? configToSave.bride.bride.avatar : null);
-      if (sharedBrideAvatar) {
-        if (configToSave.groom?.bride && !isCustomPhoto(configToSave.groom.bride.avatar)) configToSave.groom.bride.avatar = sharedBrideAvatar;
-        if (configToSave.bride?.bride && !isCustomPhoto(configToSave.bride.bride.avatar)) configToSave.bride.bride.avatar = sharedBrideAvatar;
-      }
-
-      // 5. Sync couple gallery (Our Memories) - Always synchronize couple wedding album so both sides see new photos
-      const activeGallery = (targetProfile === 'bride' ? newBride?.gallery : newGroom?.gallery) || newGroom?.gallery || newBride?.gallery;
-      if (Array.isArray(activeGallery) && activeGallery.length > 0) {
-        if (configToSave.groom) configToSave.groom.gallery = activeGallery;
-        if (configToSave.bride) configToSave.bride.gallery = activeGallery;
-      } else {
-        const groomHasCustom = (configToSave.groom?.gallery || []).some(p => p?.url && !p.url.includes('/templates/007/images/'));
-        const brideHasCustom = (configToSave.bride?.gallery || []).some(p => p?.url && !p.url.includes('/templates/007/images/'));
-        if (groomHasCustom && !brideHasCustom) {
-          if (configToSave.bride) configToSave.bride.gallery = configToSave.groom.gallery;
-        } else if (!groomHasCustom && brideHasCustom) {
-          if (configToSave.groom) configToSave.groom.gallery = configToSave.bride.gallery;
-        }
-      }
-
-      // 6. Sync custom cover photos across profiles so both profiles can use them
-      ['style1', 'style3', 'style4'].forEach(styleKey => {
-        const groomCoverPhoto = configToSave.groom?.coverConfig?.[styleKey]?.photo;
-        const brideCoverPhoto = configToSave.bride?.coverConfig?.[styleKey]?.photo;
-        const sharedCoverPhoto = isCustomPhoto(groomCoverPhoto) ? groomCoverPhoto : (isCustomPhoto(brideCoverPhoto) ? brideCoverPhoto : null);
-        if (sharedCoverPhoto) {
-          if (configToSave.groom?.coverConfig?.[styleKey] && !isCustomPhoto(configToSave.groom.coverConfig[styleKey].photo)) {
-            configToSave.groom.coverConfig[styleKey].photo = sharedCoverPhoto;
-          }
-          if (configToSave.bride?.coverConfig?.[styleKey] && !isCustomPhoto(configToSave.bride.coverConfig[styleKey].photo)) {
-            configToSave.bride.coverConfig[styleKey].photo = sharedCoverPhoto;
-          }
-        }
-      });
-
-      // 7. Sync custom Zalo/Facebook thumbnail across profiles if one side uploaded custom image
-      const sharedThumbnail = isCustomPhoto(configToSave.groom?.socialShare?.thumbnail)
-        ? configToSave.groom.socialShare.thumbnail
-        : (isCustomPhoto(configToSave.bride?.socialShare?.thumbnail) ? configToSave.bride.socialShare.thumbnail : null);
-      if (sharedThumbnail) {
-        if (configToSave.groom && !configToSave.groom.socialShare) configToSave.groom.socialShare = {};
-        if (configToSave.bride && !configToSave.bride.socialShare) configToSave.bride.socialShare = {};
-        if (!isCustomPhoto(configToSave.groom.socialShare.thumbnail)) configToSave.groom.socialShare.thumbnail = sharedThumbnail;
-        if (!isCustomPhoto(configToSave.bride.socialShare.thumbnail)) configToSave.bride.socialShare.thumbnail = sharedThumbnail;
-      }
+      // TUYỆT ĐỐI ĐỘC LẬP TÁCH BẠCH GIỮA NHÀ TRAI & NHÀ GÁI:
+      // Toàn bộ album ảnh cưới (gallery), ảnh mở đầu (heroBannerPhoto), ảnh timeline,
+      // ảnh chân thiệp (footerBgPhoto), ảnh đại diện (avatar), ảnh bìa (coverConfig),
+      // ảnh Zalo thumbnail (socialShare) và hiệu ứng chuyển cảnh của Nhà Trai và Nhà Gái
+      // là HOÀN TOÀN RIÊNG BIỆT. Mọi chỉnh sửa ở bên này không ảnh hưởng đến bên kia.
 
       // Share custom uploaded music tracks between groom and bride preset lists so both profiles can choose from them
       const groomCustom = (configToSave.groom?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));

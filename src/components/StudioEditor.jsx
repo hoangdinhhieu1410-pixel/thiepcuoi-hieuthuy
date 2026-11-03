@@ -1012,34 +1012,17 @@ export function StudioEditor({
   const [previewGiftModal, setPreviewGiftModal] = useState(false);
   const audioPreviewRef = useRef(null);
 
-  // Helper to update media field (Album ảnh, hình nền...) hoàn toàn độc lập cho từng mẫu thiệp
+  // Helper to update media field (Album ảnh, hình nền...) HOÀN TOÀN ĐỘC LẬP TÁCH BẠCH cho từng mẫu thiệp (Nhà Trai & Nhà Gái riêng biệt 100%)
   const updateMediaField = (field, value) => {
     userHasEdited.current = true;
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       setAllProfiles(prevAll => {
-        let updatedAll = {
+        const updatedAll = {
           ...prevAll,
           activeProfile: currentProfileKey,
           [currentProfileKey]: updated
         };
-        const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
-        if (field === 'gallery' && updatedAll[otherKey]) {
-          updatedAll[otherKey] = {
-            ...updatedAll[otherKey],
-            gallery: value
-          };
-        }
-        const sharedFields = ['heroBannerPhoto', 'timelineBgPhoto', 'footerBgPhoto'];
-        if (sharedFields.includes(field) && updatedAll[otherKey]) {
-          const otherVal = updatedAll[otherKey]?.[field];
-          if (!otherVal || otherVal.includes('/templates/007/images/')) {
-            updatedAll[otherKey] = {
-              ...updatedAll[otherKey],
-              [field]: value
-            };
-          }
-        }
         if (onSaveProfile) {
           onSaveProfile(currentProfileKey, updated);
         } else if (onSaveAllProfiles) {
@@ -1051,7 +1034,7 @@ export function StudioEditor({
     });
   };
 
-  // Helper to update social share config (Zalo / Facebook / Messenger preview) with immediate cloud sync
+  // Helper to update social share config (Zalo / Facebook / Messenger preview) riêng biệt cho từng mẫu thiệp
   const updateSocialField = (field, value, shouldAutoSave = false) => {
     userHasEdited.current = true;
     setFormData(prev => {
@@ -1063,15 +1046,15 @@ export function StudioEditor({
           activeProfile: currentProfileKey,
           [currentProfileKey]: updated
         };
+        // Chỉ chia sẻ customDomain nếu đổi link tên miền, tuyệt đối không can thiệp thumbnail/tiêu đề của bên còn lại
         const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
-        if (updatedAll[otherKey]) {
+        if (field === 'customDomain' && updatedAll[otherKey]) {
           const otherSocial = updatedAll[otherKey].socialShare || {};
           updatedAll[otherKey] = {
             ...updatedAll[otherKey],
             socialShare: {
               ...otherSocial,
-              customDomain: field === 'customDomain' ? value : otherSocial.customDomain,
-              thumbnail: field === 'thumbnail' ? value : otherSocial.thumbnail
+              customDomain: value
             }
           };
         }

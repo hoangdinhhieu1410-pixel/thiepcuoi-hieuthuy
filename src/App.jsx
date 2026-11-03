@@ -557,55 +557,8 @@ export function App() {
               rawBride.banking.brideBank.qrImage = sharedBrideQr;
             }
 
-            const isCustomMedia = (url) => Boolean(
-              url &&
-              typeof url === 'string' &&
-              !url.includes('/templates/007/images/hero_banner.jpg') &&
-              !url.includes('/templates/007/images/timeline_bg.jpg') &&
-              !url.includes('/templates/007/images/footer_bg.jpg') &&
-              !url.includes('/templates/007/images/groom.jpg') &&
-              !url.includes('/templates/007/images/bride.jpg')
-            );
-
-            // Mutual Couple Media Sync so both sides show the couple's wedding photos
-            const sharedHero = isCustomMedia(rawGroom.heroBannerPhoto) ? rawGroom.heroBannerPhoto : (isCustomMedia(rawBride.heroBannerPhoto) ? rawBride.heroBannerPhoto : null);
-            if (sharedHero) {
-              if (!isCustomMedia(rawGroom.heroBannerPhoto)) rawGroom.heroBannerPhoto = sharedHero;
-              if (!isCustomMedia(rawBride.heroBannerPhoto)) rawBride.heroBannerPhoto = sharedHero;
-            }
-
-            const sharedTimeline = isCustomMedia(rawGroom.timelineBgPhoto) ? rawGroom.timelineBgPhoto : (isCustomMedia(rawBride.timelineBgPhoto) ? rawBride.timelineBgPhoto : null);
-            if (sharedTimeline) {
-              if (!isCustomMedia(rawGroom.timelineBgPhoto)) rawGroom.timelineBgPhoto = sharedTimeline;
-              if (!isCustomMedia(rawBride.timelineBgPhoto)) rawBride.timelineBgPhoto = sharedTimeline;
-            }
-
-            const sharedFooter = isCustomMedia(rawGroom.footerBgPhoto) ? rawGroom.footerBgPhoto : (isCustomMedia(rawBride.footerBgPhoto) ? rawBride.footerBgPhoto : null);
-            if (sharedFooter) {
-              if (!isCustomMedia(rawGroom.footerBgPhoto)) rawGroom.footerBgPhoto = sharedFooter;
-              if (!isCustomMedia(rawBride.footerBgPhoto)) rawBride.footerBgPhoto = sharedFooter;
-            }
-
-            const sharedGroomAvatar = isCustomMedia(rawGroom.groom?.avatar) ? rawGroom.groom.avatar : (isCustomMedia(rawBride.groom?.avatar) ? rawBride.groom.avatar : null);
-            if (sharedGroomAvatar) {
-              if (rawGroom.groom && !isCustomMedia(rawGroom.groom.avatar)) rawGroom.groom.avatar = sharedGroomAvatar;
-              if (rawBride.groom && !isCustomMedia(rawBride.groom.avatar)) rawBride.groom.avatar = sharedGroomAvatar;
-            }
-
-            const sharedBrideAvatar = isCustomMedia(rawGroom.bride?.avatar) ? rawGroom.bride.avatar : (isCustomMedia(rawBride.bride?.avatar) ? rawBride.bride.avatar : null);
-            if (sharedBrideAvatar) {
-              if (rawGroom.bride && !isCustomMedia(rawGroom.bride.avatar)) rawGroom.bride.avatar = sharedBrideAvatar;
-              if (rawBride.bride && !isCustomMedia(rawBride.bride.avatar)) rawBride.bride.avatar = sharedBrideAvatar;
-            }
-
-            const groomHasGallery = Array.isArray(rawGroom.gallery) && rawGroom.gallery.length > 0;
-            const brideHasGallery = Array.isArray(rawBride.gallery) && rawBride.gallery.length > 0;
-            if (groomHasGallery && !brideHasGallery) {
-              rawBride.gallery = rawGroom.gallery;
-            } else if (!groomHasGallery && brideHasGallery) {
-              rawGroom.gallery = rawBride.gallery;
-            }
-
+            // TUYỆT ĐỐI ĐỘC LẬP TÁCH BẠCH GIỮA NHÀ TRAI & NHÀ GÁI:
+            // Giữ nguyên 100% album ảnh (gallery), ảnh heroBanner, timeline, footer, avatar và hiệu ứng riêng biệt
             setProfiles(prev => ({
               activeProfile: cloudConfig.activeProfile || prev?.activeProfile || 'groom',
               groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...rawGroom }, DEFAULT_WEDDING_DATA),
