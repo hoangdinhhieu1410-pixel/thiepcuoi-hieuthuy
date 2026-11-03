@@ -1001,7 +1001,7 @@ export function StudioEditor({
       updateCoverField(styleId, 'photo', base64);
       setSaveStatus('Đã cập nhật và lưu ảnh bìa mới thành công!');
       setTimeout(() => setSaveStatus(''), 3000);
-    });
+    }, 1080, 1350, 0.76);
   };
 
   const [saveStatus, setSaveStatus] = useState('');
@@ -1044,6 +1044,43 @@ export function StudioEditor({
           onSaveProfile(currentProfileKey, updated);
         } else if (onSaveAllProfiles) {
           onSaveAllProfiles(updatedAll);
+        }
+        return updatedAll;
+      });
+      return updated;
+    });
+  };
+
+  // Helper to update social share config (Zalo / Facebook / Messenger preview) with immediate cloud sync
+  const updateSocialField = (field, value, shouldAutoSave = false) => {
+    userHasEdited.current = true;
+    setFormData(prev => {
+      const updatedSocial = { ...(prev.socialShare || {}), [field]: value };
+      const updated = { ...prev, socialShare: updatedSocial };
+      setAllProfiles(prevAll => {
+        let updatedAll = {
+          ...prevAll,
+          activeProfile: currentProfileKey,
+          [currentProfileKey]: updated
+        };
+        const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
+        if (updatedAll[otherKey]) {
+          const otherSocial = updatedAll[otherKey].socialShare || {};
+          updatedAll[otherKey] = {
+            ...updatedAll[otherKey],
+            socialShare: {
+              ...otherSocial,
+              customDomain: field === 'customDomain' ? value : otherSocial.customDomain,
+              thumbnail: field === 'thumbnail' ? value : otherSocial.thumbnail
+            }
+          };
+        }
+        if (shouldAutoSave) {
+          if (onSaveProfile) {
+            onSaveProfile(currentProfileKey, updated);
+          } else if (onSaveAllProfiles) {
+            onSaveAllProfiles(updatedAll);
+          }
         }
         return updatedAll;
       });
@@ -1448,7 +1485,7 @@ export function StudioEditor({
   });
 
   // Convert and compress uploaded image file to optimized Base64
-  const handleFileUpload = async (e, callback, maxWidth = 1600, maxHeight = 1600, quality = 0.82) => {
+  const handleFileUpload = async (e, callback, maxWidth = 1200, maxHeight = 1400, quality = 0.76) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSaveStatus('⏳ Đang tối ưu và nén ảnh sắc nét...');
@@ -1902,6 +1939,9 @@ export function StudioEditor({
     if (sal && sal !== 'Trân trọng kính mời') {
       params.set('salutation', sal);
     }
+    // Bust social media crawlers cache (Zalo, Messenger) so previews always display newest photo
+    const cacheKey = allProfiles?.updatedAt || Date.now();
+    params.set('v', String(cacheKey));
 
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
@@ -4631,7 +4671,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         const newPhotos = [];
                         for (const file of files) {
                           try {
-                            const compressed = await compressImageFile(file, 1600, 1600, 0.82);
+                            const compressed = await compressImageFile(file, 1080, 1080, 0.74);
                             newPhotos.push({
                               id: 'photo-' + Date.now() + Math.random(),
                               url: compressed,
@@ -5957,10 +5997,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="url"
                       value={formData.socialShare?.customDomain || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        socialShare: { ...formData.socialShare, customDomain: e.target.value }
-                      })}
+                      onChange={(e) => updateSocialField('customDomain', e.target.value)}
                       placeholder="VD: https://thiepcuoi-hieuthuy.vercel.app hoặc domain riêng..."
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
                     />
@@ -5976,10 +6013,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.socialShare?.title || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        socialShare: { ...formData.socialShare, title: e.target.value }
-                      })}
+                      onChange={(e) => updateSocialField('title', e.target.value)}
                       placeholder="VD: Thư mời cưới Thanh Thúy ♥ Đình Hiếu"
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
                     />
@@ -5992,10 +6026,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <textarea
                       rows={3}
                       value={formData.socialShare?.description || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        socialShare: { ...formData.socialShare, description: e.target.value }
-                      })}
+                      onChange={(e) => updateSocialField('description', e.target.value)}
                       placeholder="VD: Sự hiện diện của quý khách là niềm vinh dự của gia đình chúng tôi"
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
                     />
@@ -6009,26 +6040,27 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       <input
                         type="text"
                         value={formData.socialShare?.thumbnail || ''}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          socialShare: { ...formData.socialShare, thumbnail: e.target.value }
-                        })}
+                        onChange={(e) => updateSocialField('thumbnail', e.target.value)}
                         className="flex-1 px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs truncate"
                       />
-                      <label className="px-3 py-2 rounded-xl bg-stone-900 text-white cursor-pointer hover:bg-stone-800 flex items-center gap-1 text-xs shrink-0">
+                      <label className="px-3 py-2 rounded-xl bg-stone-900 text-white cursor-pointer hover:bg-stone-800 flex items-center gap-1 text-xs shrink-0 shadow-sm transition-all">
                         <Upload className="w-3.5 h-3.5 text-amber-300" />
                         <span>Tải ảnh</span>
                         <input
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileUpload(e, (b64) => setFormData({
-                            ...formData,
-                            socialShare: { ...formData.socialShare, thumbnail: b64 }
-                          }))}
+                          onChange={(e) => handleFileUpload(e, (b64) => {
+                            updateSocialField('thumbnail', b64, true);
+                            setSaveStatus('✅ Đã lưu và đồng bộ ảnh đại diện Zalo / FB thành công!');
+                            setTimeout(() => setSaveStatus(''), 3000);
+                          }, 1080, 1080, 0.76)}
                         />
                       </label>
                     </div>
+                    <p className="text-[11px] text-stone-500 mt-1">
+                      💡 Ảnh sẽ tự động tối ưu & tạo link ảnh binary cho Zalo/Facebook bot hiển thị thẻ rich preview sắc nét nhất.
+                    </p>
                   </div>
                 </div>
 
@@ -6074,13 +6106,14 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       type="button"
                       onClick={async () => {
                         await handleSaveCurrent();
-                        const sampleUrl = formData.socialShare?.customDomain 
+                        const rawSample = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau?to=Mẹ+Nga`
                               : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re?to=Anh+Nam`)
                           : (currentProfileKey === 'bride'
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau?to=Mẹ+Nga`
                               : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re?to=Anh+Nam`);
+                        const sampleUrl = rawSample + (rawSample.includes('?') ? '&' : '?') + 'v=' + Date.now();
                         navigator.clipboard.writeText(sampleUrl);
                         setCopiedLink('preview-sample');
                         setTimeout(() => setCopiedLink(''), 2500);
@@ -6104,13 +6137,14 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                       type="button"
                       onClick={async () => {
                         await handleSaveCurrent();
-                        const generalUrl = formData.socialShare?.customDomain 
+                        const rawGeneral = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau`
                               : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re`)
                           : (currentProfileKey === 'bride'
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
                               : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`);
+                        const generalUrl = rawGeneral + (rawGeneral.includes('?') ? '&' : '?') + 'v=' + Date.now();
                         navigator.clipboard.writeText(generalUrl);
                         setCopiedLink('preview-card');
                         setTimeout(() => setCopiedLink(''), 2500);
@@ -6477,7 +6511,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           <img
                             src={formData.coverConfig?.style1?.photo || formData.heroBannerPhoto || '/templates/007/images/hero_banner.jpg'}
                             alt=""
-                            className="w-full h-full object-cover object-[center_20%] filter brightness-[0.92] group-hover:scale-105 transition-transform duration-500"
+                            style={{ objectPosition: formData.coverConfig?.style1?.photoPosition || 'center 26%' }}
+                            className="w-full h-full object-cover filter brightness-[0.92] group-hover:scale-105 transition-transform duration-500"
                           />
                           <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/60 to-transparent"></div>
                         </div>
@@ -7372,6 +7407,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           <img
                             src={formData.coverConfig?.style1?.photo || formData.heroBannerPhoto || '/templates/007/images/hero_banner.jpg'}
                             alt="Ảnh bìa mẫu 1"
+                            style={{ objectPosition: formData.coverConfig?.style1?.photoPosition || 'center 26%' }}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -7399,6 +7435,35 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           <p className="text-[11px] text-stone-500">
                             Khuyên dùng ảnh cưới chụp dọc (tỷ lệ 3:4 hoặc 9:16) để bìa hiển thị đẹp nhất.
                           </p>
+                          <div className="pt-1.5">
+                            <span className="block text-[11px] font-semibold text-stone-700 mb-1.5">
+                              🎯 Căn chỉnh góc nhìn ảnh bìa:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[
+                                { id: 'center 26%', label: '👤 Cận cảnh khuôn mặt (Đầu & Ngực)' },
+                                { id: 'center 38%', label: '👫 Căn giữa (Nửa người & Toàn thân)' },
+                                { id: 'center center', label: '📐 Chính giữa ảnh' },
+                              ].map(pos => {
+                                const currentPos = formData.coverConfig?.style1?.photoPosition || 'center 26%';
+                                const isPosActive = currentPos === pos.id;
+                                return (
+                                  <button
+                                    key={pos.id}
+                                    type="button"
+                                    onClick={() => updateCoverField('style1', 'photoPosition', pos.id)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                                      isPosActive
+                                        ? 'bg-[#70561f] text-white shadow-xs font-bold'
+                                        : 'bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200'
+                                    }`}
+                                  >
+                                    {pos.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

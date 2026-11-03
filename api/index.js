@@ -102,12 +102,28 @@ export default async function handler(req, res) {
   // Exact configured values (Priority strictly follows what user configured in Studio)
   let title = (social.title && social.title.trim()) ? social.title.trim() : defaultTitle;
   let description = (social.description && social.description.trim()) ? social.description.trim() : defaultDesc;
-  let ogImage = (social.thumbnail && social.thumbnail.trim()) ? social.thumbnail.trim() : defaultImage;
+  const rawThumbnail = (social.thumbnail && social.thumbnail.trim()) ? social.thumbnail.trim() : '';
+  const baseUrl = 'https://thiepcuoi-hieuthuy-web.vercel.app';
+  const cacheBuster = config?.updatedAt || Date.now();
 
-  // Ensure ogImage is an absolute URL for social crawlers (Zalo, Facebook require absolute URLs)
-  if (ogImage && !ogImage.startsWith('http://') && !ogImage.startsWith('https://')) {
-    const base = 'https://thiepcuoi-hieuthuy-web.vercel.app';
-    ogImage = `${base}${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+  let ogImage = '';
+  if (rawThumbnail.startsWith('data:image/')) {
+    // Dynamically stream binary JPEG/PNG for Zalo & Facebook crawlers
+    ogImage = `${baseUrl}/api/og-image?side=${isBride ? 'bride' : 'groom'}&v=${cacheBuster}`;
+  } else if (rawThumbnail.startsWith('http://') || rawThumbnail.startsWith('https://')) {
+    ogImage = rawThumbnail;
+  } else if (rawThumbnail.startsWith('/')) {
+    ogImage = `${baseUrl}${rawThumbnail}`;
+  } else if (rawThumbnail) {
+    ogImage = `${baseUrl}/${rawThumbnail}`;
+  } else {
+    // If no custom thumbnail, check heroBannerPhoto
+    const heroPhoto = isBride ? brideProfile.heroBannerPhoto : groomProfile.heroBannerPhoto;
+    if (heroPhoto && heroPhoto.startsWith('data:image/')) {
+      ogImage = `${baseUrl}/api/og-image?side=${isBride ? 'bride' : 'groom'}&v=${cacheBuster}`;
+    } else {
+      ogImage = defaultImage;
+    }
   }
 
   // Read HTML file (app.html or index.html)

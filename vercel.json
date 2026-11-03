@@ -22,6 +22,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/og-image",
+      "destination": "/api/og-image.js"
+    },
+    {
       "source": "/api/auth-users",
       "destination": "/api/auth-users.js"
     },

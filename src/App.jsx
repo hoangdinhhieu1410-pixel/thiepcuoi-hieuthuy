@@ -736,6 +736,13 @@ export function App() {
           userEmail: currentUser?.email
         })
       });
+      if (!res.ok) {
+        if (res.status === 413) {
+          alert('⚠️ Dung lượng dữ liệu thiệp (ảnh/album) vượt quá giới hạn đám mây. Vui lòng tải ảnh qua Studio để hệ thống tự động nén sắc nét và tối ưu dung lượng siêu nhẹ!');
+        }
+        console.error('Cloud save failed with status:', res.status);
+        return null;
+      }
       const data = await res.json();
       if (data?.updatedAt) {
         lastCloudUpdatedAt.current = data.updatedAt;
@@ -777,6 +784,13 @@ export function App() {
           userEmail: currentUser?.email
         })
       });
+      if (!res.ok) {
+        if (res.status === 413) {
+          alert('⚠️ Dung lượng dữ liệu thiệp (ảnh/album) vượt quá giới hạn đám mây. Vui lòng tải ảnh qua Studio để hệ thống tự động nén sắc nét và tối ưu dung lượng siêu nhẹ!');
+        }
+        console.error('Cloud save failed with status:', res.status);
+        return null;
+      }
       const data = await res.json();
       if (data?.updatedAt) {
         lastCloudUpdatedAt.current = data.updatedAt;

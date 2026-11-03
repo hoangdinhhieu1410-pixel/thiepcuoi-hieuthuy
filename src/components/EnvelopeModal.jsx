@@ -144,10 +144,14 @@ export function EnvelopeModal({
     );
   };
 
-  const coverPhoto = isCustomPhoto(c1.photo)
+  const stylePhoto = activeStyle === 'style1' ? c1.photo :
+                     activeStyle === 'style3' ? c3.photo :
+                     activeStyle === 'style4' ? c4.photo : null;
+
+  const coverPhoto = isCustomPhoto(stylePhoto)
+    ? stylePhoto
+    : isCustomPhoto(c1.photo)
     ? c1.photo
-    : isCustomPhoto(c4.photo)
-    ? c4.photo
     : isCustomPhoto(safeData.heroBannerPhoto)
     ? safeData.heroBannerPhoto
     : (safeData.gallery?.[0]?.url || c1.photo || '/templates/007/images/hero_banner.jpg');
@@ -316,12 +320,13 @@ export function EnvelopeModal({
           style={{ backgroundColor: style1Bg }}
           className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-stone-800 text-center animate-fade-in transition-colors duration-500 flex flex-col justify-between"
         >
-          {/* Top Photo Section: Generous height with object-[center_12%] so couple's heads, faces, smiles and background scenery are 100% CLEAR */}
-          <div className="relative h-[380px] sm:h-[440px] w-full overflow-hidden bg-stone-900">
+          {/* Top Photo Section: Elegant portrait framing with close-up focus on couple's faces, smiles and upper body */}
+          <div className="relative h-[330px] sm:h-[390px] w-full overflow-hidden bg-stone-900">
             <img
               src={coverPhoto}
               alt="Couple background"
-              className="w-full h-full object-cover object-[center_12%] filter brightness-[0.97] contrast-[1.02] transition-transform duration-700"
+              style={{ objectPosition: c1.photoPosition || 'center 26%' }}
+              className="w-full h-full object-cover filter brightness-[0.98] contrast-[1.02] transition-transform duration-700"
             />
             {/* Subtle soft gradient at very bottom edge only */}
             <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
