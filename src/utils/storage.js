@@ -338,3 +338,87 @@ export function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, quali
     img.src = objectUrl;
   });
 }
+
+/**
+ * Create OpenGraph / Zalo / Facebook 1.91:1 (1200x630) Banner
+ * - If photo is portrait or square (ratio < 1.85):
+ *   Generates 1200x630 canvas with blurred ambient background and centered full uncropped photo.
+ *   Guarantees 0% cropping on Zalo/Facebook: faces, heads, suits, dresses are 100% visible!
+ * - If photo is already wide landscape (ratio >= 1.85):
+ *   Resizes to 1200x630 cleanly.
+ */
+export function createOgBannerImageFile(file, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      try {
+        URL.revokeObjectURL(objectUrl);
+        const targetW = 1200;
+        const targetH = 630;
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        const ratio = img.width / img.height;
+
+        if (ratio < 1.85) {
+          // Portrait or square photo:
+          // 1. Draw blurred ambient background filling 1200x630
+          const bgScale = Math.max(targetW / img.width, targetH / img.height);
+          const bgW = img.width * bgScale;
+          const bgH = img.height * bgScale;
+          const bgX = (targetW - bgW) / 2;
+          const bgY = (targetH - bgH) / 2;
+
+          ctx.save();
+          if (typeof ctx.filter === 'string') {
+            ctx.filter = 'blur(28px) brightness(0.88)';
+          }
+          ctx.drawImage(img, bgX - 20, bgY - 20, bgW + 40, bgH + 40);
+          ctx.restore();
+
+          // Soft ambient tint overlay
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+          ctx.fillRect(0, 0, targetW, targetH);
+
+          // 2. Draw centered uncropped original photo with subtle drop shadow
+          const fgH = targetH;
+          const fgW = Math.round(targetH * ratio);
+          const fgX = Math.round((targetW - fgW) / 2);
+
+          ctx.save();
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+          ctx.shadowBlur = 24;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 4;
+          ctx.drawImage(img, fgX, 0, fgW, fgH);
+          ctx.restore();
+        } else {
+          // Already wide landscape
+          ctx.drawImage(img, 0, 0, targetW, targetH);
+        }
+
+        const bannerBase64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(bannerBase64);
+      } catch (err) {
+        console.warn('Canvas OG banner creation error, fallback to compress:', err);
+        compressImageFile(file, 1200, 630, quality).then(resolve).catch(reject);
+      }
+    };
+
+    img.onerror = (err) => {
+      try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+      reject(err);
+    };
+
+    img.src = objectUrl;
+  });
+}
+

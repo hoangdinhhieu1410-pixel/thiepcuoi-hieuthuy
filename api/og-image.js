@@ -48,19 +48,15 @@ export default async function handler(req, res) {
 
     const config = JSON.parse(raw);
     const profile = side === 'bride' ? config.bride : config.groom;
-    const otherProfile = side === 'bride' ? config.groom : config.bride;
 
-    // Priority for thumbnail:
+    // Priority for thumbnail (strictly separated between Nhà Trai and Nhà Gái):
     // 1. Configured socialShare.thumbnail on active profile
-    // 2. Configured socialShare.thumbnail on other profile
-    // 3. heroBannerPhoto on active profile
-    // 4. coverConfig.style1.photo
-    // 5. Default demo banner
+    // 2. heroBannerPhoto on active profile
+    // 3. coverConfig.style1.photo on active profile
+    // 4. Default demo banner
     let imageSrc = profile?.socialShare?.thumbnail ||
-                   otherProfile?.socialShare?.thumbnail ||
                    profile?.heroBannerPhoto ||
                    profile?.coverConfig?.style1?.photo ||
-                   otherProfile?.heroBannerPhoto ||
                    '/templates/007/images/og_banner.jpg';
 
     if (typeof imageSrc !== 'string' || !imageSrc.trim()) {

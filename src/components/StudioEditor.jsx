@@ -11,7 +11,7 @@ import {
 import { GuestView } from './GuestView';
 import { WeddingGiftModal } from './WeddingGiftModal';
 import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from '../data/defaultData';
-import { compressImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate, getLiveSyncChannel } from '../utils/storage';
+import { compressImageFile, createOgBannerImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate, getLiveSyncChannel } from '../utils/storage';
 import { UserApprovalManager } from './UserApprovalManager';
 
 export const GUEST_GROUP_CONFIG = {
@@ -6033,16 +6033,29 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileUpload(e, (b64) => {
-                            updateSocialField('thumbnail', b64, true);
-                            setSaveStatus('✅ Đã lưu và đồng bộ ảnh đại diện Zalo / FB thành công!');
-                            setTimeout(() => setSaveStatus(''), 3000);
-                          }, 1080, 1080, 0.76)}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setSaveStatus('⏳ Đang tạo banner Zalo/FB chuẩn 1.91:1 chống lẹm đầu...');
+                            try {
+                              const bannerB64 = await createOgBannerImageFile(file, 0.82);
+                              if (bannerB64) {
+                                updateSocialField('thumbnail', bannerB64, true);
+                                setSaveStatus('✅ Đã lưu và đồng bộ ảnh đại diện Zalo / FB chuẩn 1.91:1 sắc nét!');
+                                setTimeout(() => setSaveStatus(''), 3000);
+                              }
+                            } catch (err) {
+                              console.warn('Banner creation fallback:', err);
+                              handleFileUpload(e, (b64) => {
+                                updateSocialField('thumbnail', b64, true);
+                              }, 1200, 630, 0.8);
+                            }
+                          }}
                         />
                       </label>
                     </div>
                     <p className="text-[11px] text-stone-500 mt-1">
-                      💡 Ảnh sẽ tự động tối ưu & tạo link ảnh binary cho Zalo/Facebook bot hiển thị thẻ rich preview sắc nét nhất.
+                      💡 Tự động định dạng tỷ lệ 1.91:1 (1200x630) với viền mờ nghệ thuật: hiển thị trọn vẹn 100% người từ đầu đến chân khi gửi link Zalo / Messenger, tuyệt đối không bị lẹm đầu.
                     </p>
                   </div>
                 </div>
@@ -6065,11 +6078,11 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re?to=Anh+Nam`)}
                     </div>
 
-                    <div className="aspect-[1.91/1] w-full bg-stone-900 overflow-hidden flex items-center justify-center">
+                    <div className="aspect-[1.91/1] w-full bg-stone-900 overflow-hidden flex items-center justify-center relative">
                       <img
                         src={formData.socialShare?.thumbnail || (currentProfileKey === 'bride' ? formData.bride?.heroImage : formData.groom?.heroImage) || '/templates/007/images/og_banner.jpg'}
                         alt="OG Preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
 
