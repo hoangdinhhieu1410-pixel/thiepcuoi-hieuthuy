@@ -1034,30 +1034,18 @@ export function StudioEditor({
     });
   };
 
-  // Helper to update social share config (Zalo / Facebook / Messenger preview) riêng biệt cho từng mẫu thiệp
+  // Helper to update social share config (Zalo / Facebook / Messenger preview) riêng biệt 100% cho từng mẫu thiệp
   const updateSocialField = (field, value, shouldAutoSave = false) => {
     userHasEdited.current = true;
     setFormData(prev => {
       const updatedSocial = { ...(prev.socialShare || {}), [field]: value };
       const updated = { ...prev, socialShare: updatedSocial };
       setAllProfiles(prevAll => {
-        let updatedAll = {
+        const updatedAll = {
           ...prevAll,
           activeProfile: currentProfileKey,
           [currentProfileKey]: updated
         };
-        // Chỉ chia sẻ customDomain nếu đổi link tên miền, tuyệt đối không can thiệp thumbnail/tiêu đề của bên còn lại
-        const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
-        if (field === 'customDomain' && updatedAll[otherKey]) {
-          const otherSocial = updatedAll[otherKey].socialShare || {};
-          updatedAll[otherKey] = {
-            ...updatedAll[otherKey],
-            socialShare: {
-              ...otherSocial,
-              customDomain: value
-            }
-          };
-        }
         if (shouldAutoSave) {
           if (onSaveProfile) {
             onSaveProfile(currentProfileKey, updated);
@@ -1071,28 +1059,16 @@ export function StudioEditor({
     });
   };
 
-  // Universal field updater for text, settings, and options with allProfiles & auto-save sync
-  const updateGeneralField = (field, value, isSharedCouple = false) => {
+  // Universal field updater for text, settings, and options riêng biệt 100% cho từng mẫu thiệp
+  const updateGeneralField = (field, value) => {
     userHasEdited.current = true;
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      setAllProfiles(prevAll => {
-        let updatedAll = {
-          ...prevAll,
-          activeProfile: currentProfileKey,
-          [currentProfileKey]: updated
-        };
-        if (isSharedCouple) {
-          const otherKey = currentProfileKey === 'groom' ? 'bride' : 'groom';
-          if (updatedAll[otherKey]) {
-            updatedAll[otherKey] = {
-              ...updatedAll[otherKey],
-              [field]: value
-            };
-          }
-        }
-        return updatedAll;
-      });
+      setAllProfiles(prevAll => ({
+        ...prevAll,
+        activeProfile: currentProfileKey,
+        [currentProfileKey]: updated
+      }));
       return updated;
     });
   };
@@ -1643,23 +1619,11 @@ export function StudioEditor({
         music: updatedMusic
       };
 
-      // Also share uploaded track with other profile preset tracks
-      const otherSide = currentProfileKey === 'groom' ? 'bride' : 'groom';
-      const otherData = allProfiles?.[otherSide] || {};
-      const otherPresetTracks = otherData.music?.presetTracks || [];
-      const otherUpdatedTracks = [newTrack, ...otherPresetTracks.filter(t => t.id !== trackId)];
-
+      // HOÀN TOÀN ĐỘC LẬP: Nhạc nền và danh sách bài hát lưu riêng biệt cho profile đang chọn
       const updatedAll = {
         ...allProfiles,
         activeProfile: currentProfileKey,
-        [currentProfileKey]: updatedFormData,
-        [otherSide]: {
-          ...otherData,
-          music: {
-            ...(otherData.music || {}),
-            presetTracks: otherUpdatedTracks
-          }
-        }
+        [currentProfileKey]: updatedFormData
       };
 
       userHasEdited.current = true;
@@ -1670,8 +1634,7 @@ export function StudioEditor({
       // 5. Immediately persist to storage & cloud
       if (onSaveProfile) {
         await onSaveProfile(currentProfileKey, updatedFormData);
-      }
-      if (onSaveAllProfiles) {
+      } else if (onSaveAllProfiles) {
         await onSaveAllProfiles(updatedAll);
       }
       broadcastProfileUpdate(updatedAll, 'studio_music_changed');
@@ -1729,21 +1692,11 @@ export function StudioEditor({
       }
     };
 
-    const otherSide = currentProfileKey === 'groom' ? 'bride' : 'groom';
-    const otherData = allProfiles?.[otherSide] || {};
-    const otherPresetTracks = (otherData.music?.presetTracks || []).filter(t => t.id !== trackId);
-
+    // HOÀN TOÀN ĐỘC LẬP: Chỉ xóa trên mẫu thiệp hiện tại
     const updatedAll = {
       ...allProfiles,
       activeProfile: currentProfileKey,
-      [currentProfileKey]: updatedForm,
-      [otherSide]: {
-        ...otherData,
-        music: {
-          ...(otherData.music || {}),
-          presetTracks: otherPresetTracks
-        }
-      }
+      [currentProfileKey]: updatedForm
     };
 
     userHasEdited.current = true;
@@ -1753,8 +1706,7 @@ export function StudioEditor({
 
     if (onSaveProfile) {
       await onSaveProfile(currentProfileKey, updatedForm);
-    }
-    if (onSaveAllProfiles) {
+    } else if (onSaveAllProfiles) {
       await onSaveAllProfiles(updatedAll);
     }
 
@@ -3105,7 +3057,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.giftHeading || 'Hộp mừng cưới'}
-                      onChange={(e) => updateGeneralField('giftHeading', e.target.value, true)}
+                      onChange={(e) => updateGeneralField('giftHeading', e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                     />
                   </div>
@@ -5342,7 +5294,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.giftHeading || 'Hộp mừng cưới'}
-                      onChange={(e) => updateGeneralField('giftHeading', e.target.value, true)}
+                      onChange={(e) => updateGeneralField('giftHeading', e.target.value)}
                       placeholder="Hộp mừng cưới"
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-bold text-stone-900"
                     />
@@ -5355,7 +5307,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <input
                       type="text"
                       value={formData.giftButtonLabel || 'Mở Hộp Mừng Cưới'}
-                      onChange={(e) => updateGeneralField('giftButtonLabel', e.target.value, true)}
+                      onChange={(e) => updateGeneralField('giftButtonLabel', e.target.value)}
                       placeholder="Mở Hộp Mừng Cưới"
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs font-semibold text-stone-900"
                     />
@@ -5369,7 +5321,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   <textarea
                     rows={2}
                     value={formData.giftSubtitle || 'Cảm ơn tình cảm chân quý của mọi người đã dành cho chúng mình!'}
-                    onChange={(e) => updateGeneralField('giftSubtitle', e.target.value, true)}
+                    onChange={(e) => updateGeneralField('giftSubtitle', e.target.value)}
                     placeholder="Cảm ơn tình cảm chân quý của mọi người đã dành cho chúng mình!"
                     className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-xs"
                   />
@@ -5378,10 +5330,11 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
               {/* CARD 2: TÀI KHOẢN & ẢNH MÃ QR NGÂN HÀNG CỦA CHÚ RỂ (NHÀ TRAI) */}
               {(() => {
-                const groomQr = formData.banking?.groomBank?.qrImage || allProfiles?.groom?.banking?.groomBank?.qrImage || allProfiles?.bride?.banking?.groomBank?.qrImage || '';
-                const brideQr = formData.banking?.brideBank?.qrImage || allProfiles?.bride?.banking?.brideBank?.qrImage || allProfiles?.groom?.banking?.brideBank?.qrImage || '';
+                const groomQr = formData.banking?.groomBank?.qrImage || '';
+                const brideQr = formData.banking?.brideBank?.qrImage || '';
 
                 const syncBankingField = (bankSide, field, value) => {
+                  userHasEdited.current = true;
                   setFormData(prev => {
                     const currentBankObj = prev.banking?.[bankSide] || {};
                     const updatedBanking = {
@@ -5394,32 +5347,15 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     const updatedForm = { ...prev, banking: updatedBanking };
                     setAllProfiles(prevAll => ({
                       ...prevAll,
-                      groom: {
-                        ...(prevAll?.groom || {}),
-                        banking: {
-                          ...(prevAll?.groom?.banking || {}),
-                          [bankSide]: {
-                            ...(prevAll?.groom?.banking?.[bankSide] || {}),
-                            [field]: value
-                          }
-                        }
-                      },
-                      bride: {
-                        ...(prevAll?.bride || {}),
-                        banking: {
-                          ...(prevAll?.bride?.banking || {}),
-                          [bankSide]: {
-                            ...(prevAll?.bride?.banking?.[bankSide] || {}),
-                            [field]: value
-                          }
-                        }
-                      }
+                      activeProfile: currentProfileKey,
+                      [currentProfileKey]: updatedForm
                     }));
                     return updatedForm;
                   });
                 };
 
                 const updateGroomQrImage = (base64) => {
+                  userHasEdited.current = true;
                   setFormData(prev => {
                     const updatedForm = {
                       ...prev,
@@ -5433,38 +5369,20 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     };
                     const updatedAll = {
                       ...allProfiles,
-                      groom: {
-                        ...(allProfiles?.groom || {}),
-                        banking: {
-                          ...(allProfiles?.groom?.banking || {}),
-                          groomBank: {
-                            ...(allProfiles?.groom?.banking?.groomBank || {}),
-                            qrImage: base64
-                          }
-                        }
-                      },
-                      bride: {
-                        ...(allProfiles?.bride || {}),
-                        banking: {
-                          ...(allProfiles?.bride?.banking || {}),
-                          groomBank: {
-                            ...(allProfiles?.bride?.banking?.groomBank || {}),
-                            qrImage: base64
-                          }
-                        }
-                      }
+                      activeProfile: currentProfileKey,
+                      [currentProfileKey]: updatedForm
                     };
                     setAllProfiles(updatedAll);
                     setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
                     if (onSaveProfile) onSaveProfile(currentProfileKey, updatedForm);
-                    if (onSaveAllProfiles) onSaveAllProfiles(updatedAll);
                     return updatedForm;
                   });
-                  setSaveStatus(base64 ? '🎉 Đã cập nhật ảnh tài khoản Chú Rể và đồng bộ cả 2 mẫu!' : 'Đã xóa ảnh tài khoản Chú Rể!');
+                  setSaveStatus(base64 ? '🎉 Đã cập nhật ảnh tài khoản Chú Rể!' : 'Đã xóa ảnh tài khoản Chú Rể!');
                   setTimeout(() => setSaveStatus(''), 3000);
                 };
 
                 const updateBrideQrImage = (base64) => {
+                  userHasEdited.current = true;
                   setFormData(prev => {
                     const updatedForm = {
                       ...prev,
@@ -5478,34 +5396,15 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     };
                     const updatedAll = {
                       ...allProfiles,
-                      groom: {
-                        ...(allProfiles?.groom || {}),
-                        banking: {
-                          ...(allProfiles?.groom?.banking || {}),
-                          brideBank: {
-                            ...(allProfiles?.groom?.banking?.brideBank || {}),
-                            qrImage: base64
-                          }
-                        }
-                      },
-                      bride: {
-                        ...(allProfiles?.bride || {}),
-                        banking: {
-                          ...(allProfiles?.bride?.banking || {}),
-                          brideBank: {
-                            ...(allProfiles?.bride?.banking?.brideBank || {}),
-                            qrImage: base64
-                          }
-                        }
-                      }
+                      activeProfile: currentProfileKey,
+                      [currentProfileKey]: updatedForm
                     };
                     setAllProfiles(updatedAll);
                     setLastSavedData(JSON.parse(JSON.stringify(updatedForm)));
                     if (onSaveProfile) onSaveProfile(currentProfileKey, updatedForm);
-                    if (onSaveAllProfiles) onSaveAllProfiles(updatedAll);
                     return updatedForm;
                   });
-                  setSaveStatus(base64 ? '🎉 Đã cập nhật ảnh tài khoản Cô Dâu và đồng bộ cả 2 mẫu!' : 'Đã xóa ảnh tài khoản Cô Dâu!');
+                  setSaveStatus(base64 ? '🎉 Đã cập nhật ảnh tài khoản Cô Dâu!' : 'Đã xóa ảnh tài khoản Cô Dâu!');
                   setTimeout(() => setSaveStatus(''), 3000);
                 };
 

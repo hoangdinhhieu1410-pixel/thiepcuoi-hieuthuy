@@ -535,30 +535,12 @@ export function App() {
           if (cloudTime >= (lastCloudUpdatedAt.current || 0) || !lastCloudUpdatedAt.current) {
             lastCloudUpdatedAt.current = cloudTime;
 
-            // Mutual QR fallback: Ensure banking QR images are NEVER blank if present in either profile
+            // TUYỆT ĐỐI ĐỘC LẬP TÁCH BẠCH 100% GIỮA NHÀ TRAI & NHÀ GÁI:
+            // Toàn bộ thông tin văn bản, cặp đôi, phụ mẫu, sự kiện, ngân hàng (QR/STK),
+            // album ảnh, ảnh bìa, nhạc nền, quà mừng cưới, cấu hình Zalo/FB... hoàn toàn riêng biệt.
             const rawGroom = cloudConfig.groom || {};
             const rawBride = cloudConfig.bride || {};
-            const sharedGroomQr = rawGroom.banking?.groomBank?.qrImage || rawBride.banking?.groomBank?.qrImage || '';
-            const sharedBrideQr = rawGroom.banking?.brideBank?.qrImage || rawBride.banking?.brideBank?.qrImage || '';
-            if (sharedGroomQr) {
-              if (!rawGroom.banking) rawGroom.banking = {};
-              if (!rawGroom.banking.groomBank) rawGroom.banking.groomBank = {};
-              rawGroom.banking.groomBank.qrImage = sharedGroomQr;
-              if (!rawBride.banking) rawBride.banking = {};
-              if (!rawBride.banking.groomBank) rawBride.banking.groomBank = {};
-              rawBride.banking.groomBank.qrImage = sharedGroomQr;
-            }
-            if (sharedBrideQr) {
-              if (!rawGroom.banking) rawGroom.banking = {};
-              if (!rawGroom.banking.brideBank) rawGroom.banking.brideBank = {};
-              rawGroom.banking.brideBank.qrImage = sharedBrideQr;
-              if (!rawBride.banking) rawBride.banking = {};
-              if (!rawBride.banking.brideBank) rawBride.banking.brideBank = {};
-              rawBride.banking.brideBank.qrImage = sharedBrideQr;
-            }
 
-            // TUYỆT ĐỐI ĐỘC LẬP TÁCH BẠCH GIỮA NHÀ TRAI & NHÀ GÁI:
-            // Giữ nguyên 100% album ảnh (gallery), ảnh heroBanner, timeline, footer, avatar và hiệu ứng riêng biệt
             setProfiles(prev => ({
               activeProfile: cloudConfig.activeProfile || prev?.activeProfile || 'groom',
               groom: sanitizeProfile({ ...DEFAULT_WEDDING_DATA, ...rawGroom }, DEFAULT_WEDDING_DATA),

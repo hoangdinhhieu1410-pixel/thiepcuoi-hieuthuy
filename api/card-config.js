@@ -187,77 +187,14 @@ export default async function handler(req, res) {
       configToSave.lastSavedProfile = targetProfile;
       configToSave.lastSavedBy = userEmail || 'system';
 
-      // Ensure couple banking QR images are synced between both profiles so neither profile loses them
-      const sharedGroomQr = configToSave.groom?.banking?.groomBank?.qrImage || configToSave.bride?.banking?.groomBank?.qrImage;
-      const sharedBrideQr = configToSave.groom?.banking?.brideBank?.qrImage || configToSave.bride?.banking?.brideBank?.qrImage;
-      if (sharedGroomQr) {
-        if (!configToSave.groom) configToSave.groom = {};
-        if (!configToSave.groom.banking) configToSave.groom.banking = {};
-        if (!configToSave.groom.banking.groomBank) configToSave.groom.banking.groomBank = {};
-        configToSave.groom.banking.groomBank.qrImage = sharedGroomQr;
-        if (!configToSave.bride) configToSave.bride = {};
-        if (!configToSave.bride.banking) configToSave.bride.banking = {};
-        if (!configToSave.bride.banking.groomBank) configToSave.bride.banking.groomBank = {};
-        configToSave.bride.banking.groomBank.qrImage = sharedGroomQr;
-      }
-      if (sharedBrideQr) {
-        if (!configToSave.groom) configToSave.groom = {};
-        if (!configToSave.groom.banking) configToSave.groom.banking = {};
-        if (!configToSave.groom.banking.brideBank) configToSave.groom.banking.brideBank = {};
-        configToSave.groom.banking.brideBank.qrImage = sharedBrideQr;
-        if (!configToSave.bride) configToSave.bride = {};
-        if (!configToSave.bride.banking) configToSave.bride.banking = {};
-        if (!configToSave.bride.banking.brideBank) configToSave.bride.banking.brideBank = {};
-        configToSave.bride.banking.brideBank.qrImage = sharedBrideQr;
-      }
-
-      // Ensure couple gift text is synchronized between both profiles so neither profile loses it
-      const sharedGiftHeading = configToSave.groom?.giftHeading || configToSave.bride?.giftHeading;
-      if (sharedGiftHeading) {
-        if (configToSave.groom) configToSave.groom.giftHeading = sharedGiftHeading;
-        if (configToSave.bride) configToSave.bride.giftHeading = sharedGiftHeading;
-      }
-      const sharedGiftButtonLabel = configToSave.groom?.giftButtonLabel || configToSave.bride?.giftButtonLabel;
-      if (sharedGiftButtonLabel) {
-        if (configToSave.groom) configToSave.groom.giftButtonLabel = sharedGiftButtonLabel;
-        if (configToSave.bride) configToSave.bride.giftButtonLabel = sharedGiftButtonLabel;
-      }
-      const sharedGiftSubtitle = configToSave.groom?.giftSubtitle || configToSave.bride?.giftSubtitle;
-      if (sharedGiftSubtitle) {
-        if (configToSave.groom) configToSave.groom.giftSubtitle = sharedGiftSubtitle;
-        if (configToSave.bride) configToSave.bride.giftSubtitle = sharedGiftSubtitle;
-      }
-
-      // TUYỆT ĐỐI ĐỘC LẬP TÁCH BẠCH GIỮA NHÀ TRAI & NHÀ GÁI:
-      // Toàn bộ album ảnh cưới (gallery), ảnh mở đầu (heroBannerPhoto), ảnh timeline,
-      // ảnh chân thiệp (footerBgPhoto), ảnh đại diện (avatar), ảnh bìa (coverConfig),
-      // ảnh Zalo thumbnail (socialShare) và hiệu ứng chuyển cảnh của Nhà Trai và Nhà Gái
-      // là HOÀN TOÀN RIÊNG BIỆT. Mọi chỉnh sửa ở bên này không ảnh hưởng đến bên kia.
-
-      // Share custom uploaded music tracks between groom and bride preset lists so both profiles can choose from them
-      const groomCustom = (configToSave.groom?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));
-      const brideCustom = (configToSave.bride?.music?.presetTracks || []).filter(t => t.isCustom || !BUNDLED_TRACK_IDS.has(t.id));
-      const allCustomMap = new Map();
-      [...groomCustom, ...brideCustom].forEach(t => {
-        if (t && t.id) allCustomMap.set(t.id, t);
-      });
-      if (allCustomMap.size > 0) {
-        const mergeCustom = (existingTracks = []) => {
-          const list = [...existingTracks];
-          allCustomMap.forEach(ct => {
-            if (!list.some(t => t.id === ct.id)) {
-              list.unshift(ct);
-            }
-          });
-          return list;
-        };
-        if (configToSave.groom?.music) {
-          configToSave.groom.music.presetTracks = mergeCustom(configToSave.groom.music.presetTracks);
-        }
-        if (configToSave.bride?.music) {
-          configToSave.bride.music.presetTracks = mergeCustom(configToSave.bride.music.presetTracks);
-        }
-      }
+      // TUYỆT ĐỐI ĐỘC LẬP TÁCH BẠCH 100% GIỮA NHÀ TRAI & NHÀ GÁI (TOÀN BỘ CÁC MỤC MENU):
+      // - Toàn bộ thông tin văn bản, tiêu đề, lời mời, sự kiện, cặp đôi, phụ mẫu
+      // - Toàn bộ thông tin quà mừng cưới, lời cảm ơn, số tài khoản, mã QR ngân hàng
+      // - Toàn bộ album ảnh cưới (gallery), ảnh mở đầu (heroBannerPhoto), ảnh timeline,
+      //   ảnh chân thiệp (footerBgPhoto), ảnh đại diện (avatar), ảnh bìa (coverConfig),
+      //   ảnh Zalo thumbnail (socialShare) và hiệu ứng chuyển cảnh
+      // - Toàn bộ danh sách nhạc nền, bài hát được chọn
+      // Của Nhà Trai và Nhà Gái là HOÀN TOÀN ĐỘC LẬP, không đồng bộ hay can thiệp lẫn nhau.
 
       if (configToSave.groom?.music) configToSave.groom.music = cleanMusic(configToSave.groom.music);
       if (configToSave.bride?.music) configToSave.bride.music = cleanMusic(configToSave.bride.music);
