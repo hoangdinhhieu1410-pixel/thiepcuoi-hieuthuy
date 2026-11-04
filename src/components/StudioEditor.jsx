@@ -1874,9 +1874,6 @@ export function StudioEditor({
     if (sal && sal !== 'Trân trọng kính mời') {
       params.set('salutation', sal);
     }
-    // Bust social media crawlers cache (Zalo, Messenger) so previews always display newest photo
-    const cacheKey = allProfiles?.updatedAt || Date.now();
-    params.set('v', String(cacheKey));
 
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
@@ -1962,7 +1959,31 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
   };
 
   const getGuestZaloMessage = (guest) => getGuestInvitationTemplate(guest);
-  const getGuestMessengerMessage = (guest) => getGuestInvitationTemplate(guest);
+
+  // Lời mời tối ưu riêng cho Facebook Messenger: Bố cục tinh gọn, đặt link riêng biệt để bot Messenger tự động hiển thị Rich Card (Ảnh + Tiêu đề + Mô tả)
+  const getGuestMessengerMessage = (guest) => {
+    const link = getGuestLink(guest);
+    const salutation = (guest?.salutation || 'Trân trọng kính mời').trim();
+    const guestName = (guest?.name || 'Quý Khách').trim();
+    const isBride = (currentProfileKey === 'bride' || guest?.side === 'bride' || guest?.invitedSide === 'Nhà Gái');
+    const groomName = (formData.groom?.nickname || formData.groom?.name || 'Đình Hiếu').trim();
+    const brideName = (formData.bride?.nickname || formData.bride?.name || 'Thanh Thúy').trim();
+    const coupleText = (isBride ? `${brideName} & ${groomName}` : `${groomName} & ${brideName}`).trim();
+    const weddingDate = (formData.eventDateText || formData.saveTheDateDay || '29.11.2026').trim();
+    const ceremonyType = (isBride ? 'lễ Vu Quy' : 'lễ Thành Hôn').trim();
+
+    const plain = `💌 THƯ MỜI CƯỚI: ${coupleText}
+${salutation}: *${guestName}* 🌸
+Kính mời bạn đến tham dự ${ceremonyType} ngày ${weddingDate} và bấm vào thiệp cưới dưới đây để xem chi tiết:
+${link}`;
+
+    const html = `<p>💌 <strong>THƯ MỜI CƯỚI: ${coupleText}</strong><br/>
+${salutation}: <strong>${guestName}</strong> 🌸<br/>
+Kính mời bạn đến tham dự ${ceremonyType} ngày ${weddingDate} và bấm vào thiệp cưới dưới đây để xem chi tiết:<br/>
+<a href="${link}">${link}</a></p>`;
+
+    return { plain, html };
+  };
 
   // Copy full Zalo message (Chạy trực tiếp đồng bộ trong user-gesture để Safari/Chrome điện thoại không chặn)
   const copyGuestZaloMessage = (guest) => {
@@ -6008,14 +6029,13 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <button
                       type="button"
                       onClick={() => {
-                        const rawSample = formData.socialShare?.customDomain 
+                        const sampleUrl = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau?to=Mẹ+Nga`
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re?to=Anh+Nam`)
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/?to=Anh+Nam`)
                           : (currentProfileKey === 'bride'
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau?to=Mẹ+Nga`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re?to=Anh+Nam`);
-                        const sampleUrl = rawSample + (rawSample.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/?to=Anh+Nam`);
                         copyToClipboardSafe(sampleUrl);
                         setCopiedLink('preview-sample');
                         setSaveStatus('✅ Đã sao chép link gửi thử kèm tên khách!');
@@ -6043,14 +6063,13 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                     <button
                       type="button"
                       onClick={() => {
-                        const rawGeneral = formData.socialShare?.customDomain 
+                        const generalUrl = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau`
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re`)
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/`)
                           : (currentProfileKey === 'bride'
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`);
-                        const generalUrl = rawGeneral + (rawGeneral.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/`);
                         copyToClipboardSafe(generalUrl);
                         setCopiedLink('preview-card');
                         setSaveStatus('✅ Đã sao chép link thiệp chung!');
@@ -6082,10 +6101,10 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                         formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau` 
-                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/chu-re`)
+                              : `${formData.socialShare.customDomain.replace(/\/+$/, '')}/`)
                           : (currentProfileKey === 'bride'
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
-                              : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`)
+                              : `https://thiepcuoi-hieuthuy-web.vercel.app/`)
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"

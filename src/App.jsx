@@ -248,18 +248,34 @@ export function App() {
   const [viewMode, setViewMode] = useState(() => {
     try {
       const params = getAppParams();
-      // Link gửi riêng cho khách mời (có to=..., guest=..., name=..., hoặc view=guest): HIỂN THỊ THIỆP GUEST
-      if (params.get('to') || params.get('guest') || params.get('name') || params.get('view') === 'guest' || params.get('view') === 'card') {
-        return 'guest';
+      const pathname = (window.location.pathname || '').toLowerCase();
+
+      // 1. Explicit request to enter Studio editor via parameters or path
+      if (
+        params.get('studio') === 'true' ||
+        params.get('mode') === 'studio' ||
+        params.get('view') === 'studio' ||
+        params.get('edit') === 'true' ||
+        params.get('admin') === 'true' ||
+        pathname === '/studio' ||
+        pathname.startsWith('/studio/') ||
+        pathname === '/admin' ||
+        pathname.startsWith('/admin/')
+      ) {
+        return 'studio';
       }
-      if (params.get('guest_mode') === 'true') {
-        return 'guest';
+
+      // 2. If user already logged in and previously selected studio in this session
+      const isSessionStudio = sessionStorage.getItem('active_view_mode') === 'studio';
+      if (isSessionStudio && !params.get('view')) {
+        return 'studio';
       }
-      // Mặc định cho chủ nhân khi vào trang chủ chính (cả localhost và https://thiepcuoi-hieuthuy-web.vercel.app/):
-      // LUÔN MỞ NGAY GIAO DIỆN CHỈNH SỬA STUDIO ĐỂ THAO TÁC SỬA THIỆP
-      return 'studio';
+
+      // 3. For all other visitors, guest links, Messenger links, Zalo links, root URL (/), /chu-re, /co-dau:
+      // ALWAYS DEFAULT TO GUEST VIEW (THIỆP CƯỚI TRỰC TUYẾN DÀNH CHO KHÁCH MỜI)
+      return 'guest';
     } catch (e) {
-      return 'studio';
+      return 'guest';
     }
   });
   const [guestName, setGuestName] = useState(() => {
@@ -858,7 +874,10 @@ export function App() {
           onSaveProfile={handleSaveProfile}
           onSaveAllProfiles={handleSaveAllProfiles}
           onSwitchProfile={handleSwitchProfile}
-          onCloseStudio={() => setViewMode('guest')}
+          onCloseStudio={() => {
+            sessionStorage.removeItem('active_view_mode');
+            setViewMode('guest');
+          }}
           currentUser={currentUser}
           onLogout={handleLogout}
         />
@@ -872,6 +891,7 @@ export function App() {
           initialEnvelopeOpen={initialEnvelopeOpen}
           onAddWish={handleAddWish}
           onOpenStudio={() => {
+            sessionStorage.setItem('active_view_mode', 'studio');
             if (!currentUser || currentUser.status !== 'approved') {
               setViewMode('studio');
             } else {

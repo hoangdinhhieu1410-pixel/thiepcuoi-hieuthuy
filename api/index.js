@@ -158,12 +158,16 @@ export default async function handler(req, res) {
   const safeImage = escapeAttr(ogImage);
 
   // Canonical URL & OpenGraph og:url:
-  // Using stable canonical paths (/co-dau for Bride, / for Groom) allows Meta (Facebook, Messenger)
-  // and Zalo to index and cache the rich preview cards permanently. All personalized guest links
-  // map directly to these canonical identities so Messenger immediately expands the rich preview card.
+  // Stable canonical path (/co-dau for Bride, / for Groom) gives search engines a clean root.
+  // Dynamic og:url preserves ?to=guest so clicking the card in Messenger takes the guest straight to their personalized invitation!
   const baseCanonical = 'https://thiepcuoi-hieuthuy-web.vercel.app';
   const canonicalUrl = isBride ? `${baseCanonical}/co-dau` : `${baseCanonical}/`;
   const safeCanonicalUrl = escapeAttr(canonicalUrl);
+
+  const targetOgUrl = guestName 
+    ? (isBride ? `${baseCanonical}/co-dau?to=${encodeURIComponent(guestName)}` : `${baseCanonical}/?to=${encodeURIComponent(guestName)}`)
+    : canonicalUrl;
+  const safeOgUrl = escapeAttr(targetOgUrl);
 
   // Replace Title tag & Meta description
   html = html.replace(/<title>[^<]*<\/title>/gi, `<title>${safeTitle}</title>`);
@@ -191,7 +195,7 @@ export default async function handler(req, res) {
   html = html.replace(/<meta property="og:image:width"[^>]*>/gi, `<meta property="og:image:width" content="1200" />`);
   html = html.replace(/<meta property="og:image:height"[^>]*>/gi, `<meta property="og:image:height" content="630" />`);
   html = html.replace(/<meta property="og:image:type"[^>]*>/gi, `<meta property="og:image:type" content="image/jpeg" />`);
-  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeCanonicalUrl}" />`);
+  html = html.replace(/<meta property="og:url"[^>]*>/gi, `<meta property="og:url" content="${safeOgUrl}" />`);
   html = html.replace(/<meta property="og:site_name"[^>]*>/gi, `<meta property="og:site_name" content="Thiệp Cưới Online" />`);
   html = html.replace(/<meta property="og:locale"[^>]*>/gi, `<meta property="og:locale" content="vi_VN" />`);
   html = html.replace(/<meta property="fb:app_id"[^>]*>/gi, '');
