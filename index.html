@@ -41,18 +41,35 @@
   <body class="bg-stone-100 text-stone-800 antialiased selection:bg-rose-200 selection:text-rose-900 overflow-x-hidden">
     <div id="root"></div>
     <script>
+      // Capture script loading errors on window with useCapture: true
       window.addEventListener('error', function(e) {
+        var target = e.target || {};
+        var isScriptOrCss = target.tagName === 'SCRIPT' || target.tagName === 'LINK';
+        var msg = String(e.message || '');
+        var isChunkOrMime = msg.indexOf('MIME') !== -1 || msg.indexOf('dynamically imported') !== -1 || msg.indexOf('ChunkLoadError') !== -1 || msg.indexOf('Failed to fetch') !== -1;
+        
+        if (isScriptOrCss || isChunkOrMime) {
+          var retryKey = 'agy_last_reload';
+          var lastReload = sessionStorage.getItem(retryKey);
+          var now = Date.now();
+          if (!lastReload || (now - parseInt(lastReload, 10)) > 15000) {
+            sessionStorage.setItem(retryKey, String(now));
+            window.location.reload();
+            return;
+          }
+        }
+
         var root = document.getElementById('root');
         if (root && root.innerHTML.trim() === '') {
-          root.innerHTML = '<div style="min-height:100vh;background:#1c1917;color:#f5f5f4;display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;text-align:center;">' +
-            '<div style="max-width:440px;background:#292524;padding:24px;border-radius:24px;border:1px solid #44403c;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">' +
-            '<div style="font-size:36px;margin-bottom:12px;">⚠️</div>' +
-            '<h2 style="font-size:18px;margin-bottom:8px;color:#fff;font-weight:bold;">Đang nạp lại trang thiệp cưới</h2>' +
-            '<p style="font-size:12px;color:#d6d3d1;margin-bottom:16px;">' + (e.message || 'Trình duyệt đang đồng bộ tệp mã nguồn mới...') + '</p>' +
-            '<button onclick="localStorage.clear();window.location.reload();" style="padding:10px 20px;background:#d97706;color:#fff;border:none;border-radius:12px;font-weight:bold;cursor:pointer;">Khôi phục & Tải lại ngay</button>' +
+          root.innerHTML = '<div style="min-height:100vh;background:#fafaf9;color:#292524;display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;text-align:center;">' +
+            '<div style="max-width:380px;background:#ffffff;padding:24px;border-radius:20px;border:1px solid #e7e5e4;box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);">' +
+            '<div style="font-size:36px;margin-bottom:12px;">💌</div>' +
+            '<h2 style="font-size:17px;margin-bottom:8px;color:#1c1917;font-weight:bold;">Đang nạp thiệp cưới</h2>' +
+            '<p style="font-size:13px;color:#78716c;margin-bottom:16px;">Vui lòng bấm nút bên dưới nếu thiệp chưa hiển thị</p>' +
+            '<button onclick="sessionStorage.clear();window.location.reload();" style="padding:10px 24px;background:#be123c;color:#fff;border:none;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;">Xem Thiệp Cưới Ngay</button>' +
             '</div></div>';
         }
-      });
+      }, true);
     </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>

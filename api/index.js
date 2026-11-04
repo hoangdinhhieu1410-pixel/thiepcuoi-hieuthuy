@@ -48,6 +48,52 @@ export default async function handler(req, res) {
     return res.status(200).send("User-agent: *\nAllow: /\n");
   }
 
+  // Handle static assets (/assets/*, /templates/*, favicon, etc.) with correct MIME types & immutable cache
+  const cleanUrl = (req.url || '').split('?')[0];
+  if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('/templates/') || cleanUrl === '/favicon.ico') {
+    const candidatePaths = [
+      path.join(process.cwd(), 'dist', cleanUrl),
+      path.join(process.cwd(), 'public', cleanUrl),
+      path.join(process.cwd(), cleanUrl)
+    ];
+    let foundPath = null;
+    for (const p of candidatePaths) {
+      try {
+        if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+          foundPath = p;
+          break;
+        }
+      } catch (e) {}
+    }
+    if (foundPath) {
+      const ext = path.extname(foundPath).toLowerCase();
+      const mimeTypes = {
+        '.js': 'application/javascript; charset=utf-8',
+        '.mjs': 'application/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.svg': 'image/svg+xml',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+        '.gif': 'image/gif',
+        '.ico': 'image/x-icon',
+        '.woff2': 'font/woff2',
+        '.woff': 'font/woff',
+        '.ttf': 'font/ttf',
+        '.otf': 'font/otf',
+        '.mp3': 'audio/mpeg'
+      };
+      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      if (req.method === 'HEAD') {
+        return res.status(200).end();
+      }
+      return res.status(200).send(fs.readFileSync(foundPath));
+    }
+  }
+
   // Robust query & pathname extraction (checks both req.query and req.url searchParams)
   let query = { ...(req.query || {}) };
   let pathname = '/';
@@ -214,10 +260,11 @@ export default async function handler(req, res) {
   if (isCrawler) {
     // Social crawlers (Facebook Messenger, Zalo, Twitter): Must provide long-lived public cache so Facebook crawler accepts and stores rich link card
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400');
-  } else if (forceFresh) {
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
   } else {
-    res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, must-revalidate');
+    // Real visitors / guests: NEVER cache HTML on Edge CDN so users always get fresh HTML referencing exact bundle hashes
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, s-maxage=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
   }
 
   // Fast response for HEAD requests (after headers are set)
