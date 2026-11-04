@@ -6422,7 +6422,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           <img
                             src={formData.coverConfig?.style1?.photo || formData.heroBannerPhoto || '/templates/007/images/hero_banner.jpg'}
                             alt=""
-                            style={{ objectPosition: formData.coverConfig?.style1?.photoPosition || 'center 26%' }}
+                            style={{ objectPosition: formData.coverConfig?.style1?.photoPosition || 'center top' }}
                             className="w-full h-full object-cover filter brightness-[0.92] group-hover:scale-105 transition-transform duration-500"
                           />
                           <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/60 to-transparent"></div>
@@ -7318,7 +7318,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                           <img
                             src={formData.coverConfig?.style1?.photo || formData.heroBannerPhoto || '/templates/007/images/hero_banner.jpg'}
                             alt="Ảnh bìa mẫu 1"
-                            style={{ objectPosition: formData.coverConfig?.style1?.photoPosition || 'center 26%' }}
+                            style={{ objectPosition: formData.coverConfig?.style1?.photoPosition || 'center top' }}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -7352,11 +7352,12 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                             </span>
                             <div className="flex flex-wrap gap-1.5">
                               {[
-                                { id: 'center 26%', label: '👤 Cận cảnh khuôn mặt (Đầu & Ngực)' },
-                                { id: 'center 38%', label: '👫 Căn giữa (Nửa người & Toàn thân)' },
+                                { id: 'center top', label: '🌟 Chuẩn: Thấy trọn đầu & thân (Không lẹm đầu)' },
+                                { id: 'center 10%', label: '👤 Cận cảnh khuôn mặt & ngực' },
+                                { id: 'center 20%', label: '👫 Căn nửa người' },
                                 { id: 'center center', label: '📐 Chính giữa ảnh' },
                               ].map(pos => {
-                                const currentPos = formData.coverConfig?.style1?.photoPosition || 'center 26%';
+                                const currentPos = formData.coverConfig?.style1?.photoPosition || 'center top';
                                 const isPosActive = currentPos === pos.id;
                                 return (
                                   <button

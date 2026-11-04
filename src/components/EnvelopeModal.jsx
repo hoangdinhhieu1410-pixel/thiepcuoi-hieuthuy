@@ -197,7 +197,7 @@ export function EnvelopeModal({
 
   const containerClasses = isInline
     ? `w-full flex items-center justify-center p-1 sm:p-2 transition-all relative ${openingEffectClasses}`
-    : `${isAbsolute ? 'absolute' : 'fixed'} inset-0 z-40 flex items-center justify-center p-3 sm:p-4 bg-stone-900/85 backdrop-blur-md transition-all ${openingEffectClasses}`;
+    : `${isAbsolute ? 'absolute' : 'fixed'} inset-0 z-40 flex items-center justify-center p-2 sm:p-4 bg-stone-900/85 backdrop-blur-md transition-all overflow-y-auto overflow-x-hidden ${openingEffectClasses}`;
 
   const effectNames = {
     vip: 'VIP: Bìa Sáp Tách Cánh Mở Sang 2 Bên (Như Video)',
@@ -318,14 +318,14 @@ export function EnvelopeModal({
       {activeStyle === 'style1' && (
         <div
           style={{ backgroundColor: style1Bg }}
-          className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-stone-800 text-center animate-fade-in transition-colors duration-500 flex flex-col justify-between"
+          className="relative w-full max-w-sm sm:max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-stone-800 text-center animate-fade-in transition-colors duration-500 flex flex-col justify-between my-auto"
         >
-          {/* Top Photo Section: Elegant portrait framing with close-up focus on couple's faces, smiles and upper body */}
-          <div className="relative h-[330px] sm:h-[390px] w-full overflow-hidden bg-stone-900">
+          {/* Top Photo Section: Elegant portrait framing with generous headroom & upper body visibility */}
+          <div className="relative h-[390px] sm:h-[450px] w-full overflow-hidden bg-stone-900">
             <img
               src={coverPhoto}
               alt="Couple background"
-              style={{ objectPosition: c1.photoPosition || 'center 26%' }}
+              style={{ objectPosition: c1.photoPosition || 'center top' }}
               className="w-full h-full object-cover filter brightness-[0.98] contrast-[1.02] transition-transform duration-700"
             />
             {/* Subtle soft gradient at very bottom edge only */}
@@ -333,10 +333,10 @@ export function EnvelopeModal({
           </div>
 
           {/* Arched-top White Card (Chuẩn theo Ảnh 4) */}
-          <div className="relative -mt-8 mx-3 sm:mx-4 mb-3 bg-white rounded-t-[36px] rounded-b-[24px] px-5 py-4 shadow-2xl border-[1.5px] border-[#c4a97d] flex flex-col items-center">
+          <div className="relative -mt-6 mx-3 sm:mx-4 mb-3 bg-white rounded-t-[32px] rounded-b-[24px] px-4 py-3 sm:px-5 sm:py-4 shadow-2xl border-[1.5px] border-[#c4a97d] flex flex-col items-center">
             {/* Gold Wax Seal Medallion with Heart at Apex */}
             <div
-              className={`relative -mt-10 mb-1 w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-gradient-to-br from-[#ffd875] via-[#d4af67] to-[#784f18] p-1 shadow-[0_8px_20px_rgba(0,0,0,0.35)] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform ${
+              className={`relative -mt-8 mb-1 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#ffd875] via-[#d4af67] to-[#784f18] p-1 shadow-[0_8px_20px_rgba(0,0,0,0.35)] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform ${
                 isOpening && animEffect === 'waxFlap' ? 'scale-125 -translate-y-4 rotate-12 transition-all duration-500' : ''
               }`}
               onClick={handleOpenClick}
@@ -348,27 +348,27 @@ export function EnvelopeModal({
             </div>
 
             {/* Subtitle with Sparkles (Ảnh 4 - Khoảng cách thoáng đãng, sang trọng) */}
-            <p className="font-avo text-[10px] sm:text-[11px] uppercase tracking-[0.25em] text-[#8a7251] font-semibold mt-2 sm:mt-2.5 mb-3.5 sm:mb-4.5">
+            <p className="font-avo text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-[#8a7251] font-semibold mt-1 mb-2">
               ✦ {c1.subTitle || 'THE WEDDING OF'} ✦
             </p>
 
             {/* Couple Names: Motherland Signature Calligraphy (Chuẩn 100% Ảnh 4 & 5 - Không dính chữ) */}
-            <div className="flex flex-col items-center justify-center mt-1 mb-2.5 sm:mb-3 select-none w-full px-2">
-              <span className="font-motherland text-3xl sm:text-[38px] text-[#78350f] leading-normal pt-1.5 sm:pt-2 whitespace-nowrap tracking-wide drop-shadow-xs">
+            <div className="flex flex-col items-center justify-center my-0.5 select-none w-full px-2">
+              <span className="font-motherland text-2xl sm:text-[34px] text-[#78350f] leading-normal pt-1 whitespace-nowrap tracking-wide drop-shadow-xs">
                 {style1Person1}
               </span>
-              <div className="flex items-center justify-center gap-3 my-2 sm:my-2.5">
+              <div className="flex items-center justify-center gap-3 my-1 sm:my-1.5">
                 <span className="w-10 sm:w-14 h-[1px] bg-gradient-to-r from-transparent via-[#c4983f] to-[#e5bc64]"></span>
-                <span className="font-serif-elegant italic text-sm text-amber-700 font-bold">&</span>
+                <span className="font-serif-elegant italic text-xs sm:text-sm text-amber-700 font-bold">&</span>
                 <span className="w-10 sm:w-14 h-[1px] bg-gradient-to-l from-transparent via-[#c4983f] to-[#e5bc64]"></span>
               </div>
-              <span className="font-motherland text-3xl sm:text-[38px] text-[#78350f] leading-normal pb-1 sm:pb-1.5 whitespace-nowrap tracking-wide drop-shadow-xs">
+              <span className="font-motherland text-2xl sm:text-[34px] text-[#78350f] leading-normal pb-0.5 whitespace-nowrap tracking-wide drop-shadow-xs">
                 {style1Person2}
               </span>
             </div>
 
             {/* Date with Rings Icon (Ảnh 4) */}
-            <div className="flex items-center justify-center gap-2.5 my-2 sm:my-2.5 text-stone-600">
+            <div className="flex items-center justify-center gap-2.5 my-1.5 text-stone-600">
               <span className="text-stone-400 text-xs">— ⚭ —</span>
               <span className="font-avo font-semibold text-stone-800 tracking-widest text-xs sm:text-sm whitespace-nowrap">
                 {getCleanDate(c1.date)}
@@ -377,11 +377,11 @@ export function EnvelopeModal({
             </div>
 
             {/* Salutation & Guest Name in Champagne Pill Box (Ảnh 4 - Viết liền 1 dòng, chuẩn chính tả) */}
-            <div className="w-full text-center mt-2 mb-2 px-1">
+            <div className="w-full text-center mt-1.5 mb-1.5 px-1">
               <p className="font-avo text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-[#8a7251] font-semibold mb-1">
                 {salutation || c1.greetingLabel || 'TRÂN TRỌNG KÍNH MỜI'}
               </p>
-              <div className="inline-block px-5 py-1.5 rounded-full bg-[#fef9ec] border border-[#f3dfa8] shadow-xs max-w-full">
+              <div className="inline-block px-5 py-1 rounded-full bg-[#fef9ec] border border-[#f3dfa8] shadow-xs max-w-full">
                 <span className="text-xs sm:text-sm font-avo font-semibold text-[#6d3514] block whitespace-nowrap overflow-hidden text-ellipsis">
                   {displayGuest}
                 </span>
@@ -389,12 +389,12 @@ export function EnvelopeModal({
             </div>
 
             {/* Dotted divider line */}
-            <div className="w-full my-2 border-t border-dotted border-stone-200"></div>
+            <div className="w-full my-1.5 border-t border-dotted border-stone-200"></div>
 
             {/* Button: Xem thiệp ngay */}
             <button
               onClick={handleOpenClick}
-              className="py-2 px-8 rounded-lg bg-white border border-[#d6cfc7] shadow-[0_4px_0_#8b7355] hover:shadow-[0_2px_0_#8b7355] hover:translate-y-[2px] transition-all text-[#333] font-avo text-xs sm:text-sm font-medium inline-flex items-center justify-center cursor-pointer my-1"
+              className="py-2 px-8 rounded-lg bg-white border border-[#d6cfc7] shadow-[0_4px_0_#8b7355] hover:shadow-[0_2px_0_#8b7355] hover:translate-y-[2px] transition-all text-[#333] font-avo text-xs sm:text-sm font-medium inline-flex items-center justify-center cursor-pointer my-1 active:scale-95"
             >
               <span>{c1.buttonText || 'Xem thiệp ngay'}</span>
             </button>
@@ -557,11 +557,12 @@ export function EnvelopeModal({
           <div
             className="relative z-10 w-full max-w-[280px] sm:max-w-[310px] h-[340px] sm:h-[390px] rounded-t-full rounded-b-2xl border-[3px] border-[#eddab0] shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden mx-auto my-2.5 group"
           >
-            {/* Couple Full Background Photo with object-[center_12%] so heads, faces, smiles and landscape are completely clear */}
+            {/* Couple Full Background Photo with objectPosition center top so heads, faces, smiles and landscape are completely clear */}
             <img
               src={isCustomPhoto(c3.photo) ? c3.photo : coverPhoto}
               alt="Couple Portal"
-              className="w-full h-full object-cover object-[center_12%] filter brightness-[0.98] group-hover:scale-105 transition-transform duration-700"
+              style={{ objectPosition: c3.photoPosition || 'center top' }}
+              className="w-full h-full object-cover filter brightness-[0.98] group-hover:scale-105 transition-transform duration-700"
             />
             
             {/* Concentric Gold Hairline Arch Frame */}
@@ -624,6 +625,7 @@ export function EnvelopeModal({
             <img
               src={coverPhoto}
               alt="Wedding Preview"
+              style={{ objectPosition: c4.photoPosition || 'center top' }}
               className={`w-full h-full object-cover transition-transform duration-[2000ms] ease-out ${
                 isOpening ? 'scale-100 brightness-100' : 'scale-105 brightness-95'
               }`}
