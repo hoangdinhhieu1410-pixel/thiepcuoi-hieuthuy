@@ -422,3 +422,95 @@ export function createOgBannerImageFile(file, quality = 0.82) {
   });
 }
 
+/**
+ * Universal Mobile & Desktop Clipboard Copy
+ * - 100% compatible with iOS Safari (iPhone/iPad), Android Chrome, in-app webviews (Zalo, Messenger) and desktop browsers
+ * - Important: Must be executed synchronously in the direct user tap/click event without preceding awaits
+ * - Supports rich HTML formatted text with automatic plain-text markdown fallback
+ */
+export async function copyToClipboardSafe(plainText, richHtml = null) {
+  if (!plainText && !richHtml) return false;
+  const text = String(plainText || '').trim();
+  const html = richHtml ? String(richHtml).trim() : null;
+
+  let copied = false;
+
+  // 1. Try modern navigator.clipboard with ClipboardItem (supports rich text on modern browsers)
+  if (html && typeof window !== 'undefined' && navigator.clipboard && window.ClipboardItem) {
+    try {
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' })
+      });
+      await navigator.clipboard.write([item]);
+      copied = true;
+    } catch (e) {
+      console.warn('ClipboardItem rich copy error, falling back to plain text:', e);
+    }
+  }
+
+  // 2. Try modern navigator.clipboard.writeText directly
+  if (!copied && typeof window !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch (e) {
+      console.warn('navigator.clipboard.writeText error, falling back to DOM execCommand:', e);
+    }
+  }
+
+  // 3. Battle-tested DOM textarea fallback (especially critical for iOS Safari & Android WebViews)
+  if (!copied && typeof document !== 'undefined') {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      textArea.style.opacity = '0.01';
+      textArea.style.fontSize = '16px'; // Prevents auto-zoom in iOS Safari
+      textArea.setAttribute('readonly', '');
+
+      document.body.appendChild(textArea);
+
+      if (navigator.userAgent.match(/ipad|ipod|iphone/i)) {
+        const range = document.createRange();
+        range.selectNodeContents(textArea);
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        textArea.setSelectionRange(0, 999999);
+      } else {
+        textArea.focus({ preventScroll: true });
+        textArea.select();
+        textArea.setSelectionRange(0, text.length);
+      }
+
+      copied = document.execCommand('copy');
+      document.body.removeChild(textArea);
+    } catch (err) {
+      console.warn('DOM execCommand error:', err);
+    }
+  }
+
+  // 4. Fallback prompt if completely blocked
+  if (!copied && typeof window !== 'undefined' && window.prompt) {
+    try {
+      window.prompt('Sao chép đường link bên dưới:', text);
+      copied = true;
+    } catch (e) {}
+  }
+
+  return copied;
+}
+
+

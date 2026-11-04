@@ -11,7 +11,7 @@ import {
 import { GuestView } from './GuestView';
 import { WeddingGiftModal } from './WeddingGiftModal';
 import { DEFAULT_WEDDING_DATA, DEFAULT_BRIDE_WEDDING_DATA } from '../data/defaultData';
-import { compressImageFile, createOgBannerImageFile, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate, getLiveSyncChannel } from '../utils/storage';
+import { compressImageFile, createOgBannerImageFile, copyToClipboardSafe, saveAudioTrackBlob, getAudioTrackUrl, deleteAudioTrackBlob, broadcastProfileUpdate, getLiveSyncChannel } from '../utils/storage';
 import { UserApprovalManager } from './UserApprovalManager';
 
 export const GUEST_GROUP_CONFIG = {
@@ -492,8 +492,8 @@ export function StudioEditor({
       const sideStr = isBride ? '[Họ Nhà Gái]' : '[Họ Nhà Trai]';
       return `${idx + 1}. ${w.name} ${sideStr} (${w.createdAt || ''}):\n   "${w.message}"`;
     }).join('\n\n');
-    navigator.clipboard.writeText(text);
-    setSaveStatus('Đã sao chép toàn bộ lời chúc vào bộ nhớ đệm!');
+    copyToClipboardSafe(text);
+    setSaveStatus('✅ Đã sao chép toàn bộ lời chúc vào bộ nhớ đệm!');
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
@@ -1885,50 +1885,9 @@ export function StudioEditor({
   const [copiedZaloId, setCopiedZaloId] = useState('');
   const [copiedMessengerId, setCopiedMessengerId] = useState('');
 
-  // Helper copy to clipboard with both Rich HTML and Plain text markdown
+  // Helper copy to clipboard with both Rich HTML and Plain text markdown (Universal Mobile & Desktop)
   const copyRichAndPlainText = async (plainText, htmlText) => {
-    let copied = false;
-    // Method 1: Modern async ClipboardItem with text/html and text/plain
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        const item = new ClipboardItem({
-          'text/html': new Blob([htmlText], { type: 'text/html' }),
-          'text/plain': new Blob([plainText], { type: 'text/plain' })
-        });
-        await navigator.clipboard.write([item]);
-        copied = true;
-      } catch (e) {
-        console.warn('ClipboardItem write failed, trying fallback listener:', e);
-      }
-    }
-
-    // Method 2: Synchronous copy event listener fallback (standard for Windows rich clipboard CF_HTML)
-    if (!copied) {
-      try {
-        const onCopy = (e) => {
-          e.clipboardData.setData('text/html', htmlText);
-          e.clipboardData.setData('text/plain', plainText);
-          e.preventDefault();
-        };
-        document.addEventListener('copy', onCopy);
-        copied = document.execCommand('copy');
-        document.removeEventListener('copy', onCopy);
-      } catch (e2) {
-        console.warn('execCommand copy failed:', e2);
-      }
-    }
-
-    // Method 3: Direct writeText as final fallback
-    if (!copied) {
-      try {
-        await navigator.clipboard.writeText(plainText);
-        copied = true;
-      } catch (e3) {
-        console.error('navigator.clipboard.writeText failed:', e3);
-      }
-    }
-
-    return copied;
+    return await copyToClipboardSafe(plainText, htmlText);
   };
 
   // Format full formal invitation message matching EXACT user sample (Nhà Trai & Nhà Gái)
@@ -2005,31 +1964,44 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
   const getGuestZaloMessage = (guest) => getGuestInvitationTemplate(guest);
   const getGuestMessengerMessage = (guest) => getGuestInvitationTemplate(guest);
 
-  // Copy full Zalo message
-  const copyGuestZaloMessage = async (guest) => {
-    await handleSaveCurrent();
+  // Copy full Zalo message (Chạy trực tiếp đồng bộ trong user-gesture để Safari/Chrome điện thoại không chặn)
+  const copyGuestZaloMessage = (guest) => {
     const msg = getGuestZaloMessage(guest);
-    await copyRichAndPlainText(msg.plain, msg.html);
+    copyToClipboardSafe(msg.plain, msg.html);
     setCopiedZaloId(guest.id);
-    setTimeout(() => setCopiedZaloId(''), 3000);
+    setSaveStatus(`✅ Đã sao chép lời mời Zalo của "${guest.name}"!`);
+    setTimeout(() => {
+      setCopiedZaloId('');
+      setSaveStatus('');
+    }, 3000);
+    // Lưu ngầm lên đám mây mà không chặn quyền clipboard của điện thoại
+    handleSaveCurrent().catch(e => console.warn('Background save on copy Zalo:', e));
   };
 
-  // Copy full Messenger message
-  const copyGuestMessengerMessage = async (guest) => {
-    await handleSaveCurrent();
+  // Copy full Messenger message (Chạy trực tiếp đồng bộ trong user-gesture)
+  const copyGuestMessengerMessage = (guest) => {
     const msg = getGuestMessengerMessage(guest);
-    await copyRichAndPlainText(msg.plain, msg.html);
+    copyToClipboardSafe(msg.plain, msg.html);
     setCopiedMessengerId(guest.id);
-    setTimeout(() => setCopiedMessengerId(''), 3000);
+    setSaveStatus(`✅ Đã sao chép lời mời Messenger của "${guest.name}"!`);
+    setTimeout(() => {
+      setCopiedMessengerId('');
+      setSaveStatus('');
+    }, 3000);
+    handleSaveCurrent().catch(e => console.warn('Background save on copy Messenger:', e));
   };
 
-  // Copy Guest Link
-  const copyGuestLink = async (guest) => {
-    await handleSaveCurrent();
+  // Copy Guest Link (Chạy trực tiếp đồng bộ trong user-gesture để Safari/Chrome điện thoại không chặn)
+  const copyGuestLink = (guest) => {
     const link = getGuestLink(guest);
-    navigator.clipboard.writeText(link);
+    copyToClipboardSafe(link);
     setCopiedLink(guest.id);
-    setTimeout(() => setCopiedLink(''), 2500);
+    setSaveStatus(`✅ Đã sao chép link mời của "${guest.name}"!`);
+    setTimeout(() => {
+      setCopiedLink('');
+      setSaveStatus('');
+    }, 2500);
+    handleSaveCurrent().catch(e => console.warn('Background save on copy link:', e));
   };
 
   // Add Guest (Tách biệt tuyệt đối theo Mẫu 1 Nhà Trai / Mẫu 2 Nhà Gái)
@@ -2317,136 +2289,172 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
         {/* LEFT COLUMN: TABS + FORM */}
         <div className={`flex-1 min-w-0 w-full grid grid-cols-1 ${showPreview ? 'lg:grid-cols-12' : 'lg:grid-cols-12'} gap-5`}>
           
-          {/* SIDEBAR TABS WITH HAND DRAG-AND-DROP REORDERING */}
-          <aside className={`${showPreview ? 'lg:col-span-4 xl:col-span-3.5 2xl:col-span-3' : 'lg:col-span-3.5 2xl:col-span-3'} bg-white rounded-3xl p-2.5 sm:p-3 shadow-md border border-stone-200/80 h-fit space-y-1`}>
-            {/* Drag hint header */}
-            <div className="flex items-center justify-between px-2.5 py-1 mb-1 border-b border-stone-100 text-[11px] text-stone-400">
-              <span className="flex items-center gap-1 font-semibold text-stone-500">
-                <span className="text-xs">🖐️</span>
-                <span>Kéo thả để sắp xếp</span>
-              </span>
-              <button
-                type="button"
-                onClick={handleResetTabOrder}
-                className="text-[10px] text-stone-400 hover:text-[#70561f] hover:underline cursor-pointer"
-                title="Khôi phục thứ tự các menu về mặc định"
-              >
-                Đặt lại
-              </button>
-            </div>
+          {(() => {
+            const allTabsDefinitions = [
+              { id: 'textcontent', label: 'Sửa Dòng Chữ (Ảnh 1,2,3)', icon: Type, highlight: true },
+              { id: 'guests', label: 'Quản Lý Khách & Link Riêng', icon: Users, badge: currentSideGuests.length },
+              { id: 'wishes', label: 'Tổng Hợp Lời Chúc', icon: MessageSquareHeart, badge: allUniqueWishes?.length },
+              { id: 'couple', label: 'Cặp Đôi & Phụ Mẫu', icon: Heart },
+              { id: 'events', label: 'Sự Kiện & Bản Đồ Đi Lại', icon: Calendar, badge: formData.events?.length },
+              { id: 'gallery', label: 'Album Ảnh & Hiệu Ứng', icon: Camera, badge: formData.gallery?.length },
+              { id: 'gift', label: 'Mừng Cưới & Hộp Quà', icon: Gift },
+              { id: 'music', label: 'Nhạc Nền Thiệp Cưới', icon: Music },
+              { id: 'social', label: 'Cấu Hình Link Zalo & FB', icon: Share2 },
+              { id: 'templates', label: 'Chọn Mẫu Bìa Phong Bì', icon: Palette },
+              { id: 'cloud', label: 'Đa Đám Mây & Sao Lưu', icon: Database, badge: 'Supabase', highlight: true },
+              { id: 'export', label: 'Xuất Bản & File Độc Lập', icon: Download },
+              ...(isSuperAdmin ? [
+                { id: 'approval', label: 'Phê Duyệt Phân Quyền', icon: ShieldCheck, highlight: true, badge: '👑 Admin' }
+              ] : []),
+            ];
 
-            {(() => {
-              const allTabsDefinitions = [
-                { id: 'textcontent', label: 'Sửa Dòng Chữ (Ảnh 1,2,3)', icon: Type, highlight: true },
-                { id: 'guests', label: 'Quản Lý Khách & Link Riêng', icon: Users, badge: currentSideGuests.length },
-                { id: 'wishes', label: 'Tổng Hợp Lời Chúc', icon: MessageSquareHeart, badge: allUniqueWishes?.length },
-                { id: 'couple', label: 'Cặp Đôi & Phụ Mẫu', icon: Heart },
-                { id: 'events', label: 'Sự Kiện & Bản Đồ Đi Lại', icon: Calendar, badge: formData.events?.length },
-                { id: 'gallery', label: 'Album Ảnh & Hiệu Ứng', icon: Camera, badge: formData.gallery?.length },
-                { id: 'gift', label: 'Mừng Cưới & Hộp Quà', icon: Gift },
-                { id: 'music', label: 'Nhạc Nền Thiệp Cưới', icon: Music },
-                { id: 'social', label: 'Cấu Hình Link Zalo & FB', icon: Share2 },
-                { id: 'templates', label: 'Chọn Mẫu Bìa Phong Bì', icon: Palette },
-                { id: 'cloud', label: 'Đa Đám Mây & Sao Lưu', icon: Database, badge: 'Supabase', highlight: true },
-                { id: 'export', label: 'Xuất Bản & File Độc Lập', icon: Download },
-                ...(isSuperAdmin ? [
-                  { id: 'approval', label: 'Phê Duyệt Phân Quyền', icon: ShieldCheck, highlight: true, badge: '👑 Admin' }
-                ] : []),
-              ];
+            const tabsToRender = tabOrder
+              .map(id => allTabsDefinitions.find(t => t.id === id))
+              .filter(Boolean);
 
-              const tabsToRender = tabOrder
-                .map(id => allTabsDefinitions.find(t => t.id === id))
-                .filter(Boolean);
+            allTabsDefinitions.forEach(t => {
+              if (!tabsToRender.some(tr => tr.id === t.id)) {
+                tabsToRender.push(t);
+              }
+            });
 
-              // Ensure missing tabs are included
-              allTabsDefinitions.forEach(t => {
-                if (!tabsToRender.some(tr => tr.id === t.id)) {
-                  tabsToRender.push(t);
-                }
-              });
-
-              return tabsToRender.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                const isDragging = draggedTabId === tab.id;
-                const isDragOver = dragOverTabId === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    draggable={true}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', tab.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                      setDraggedTabId(tab.id);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragOverTabId !== tab.id) setDragOverTabId(tab.id);
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverTabId === tab.id) setDragOverTabId(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (!draggedTabId || draggedTabId === tab.id) return;
-                      const currentIds = tabsToRender.map(t => t.id);
-                      const fromIdx = currentIds.indexOf(draggedTabId);
-                      const toIdx = currentIds.indexOf(tab.id);
-                      if (fromIdx !== -1 && toIdx !== -1) {
-                        const updated = [...currentIds];
-                        updated.splice(fromIdx, 1);
-                        updated.splice(toIdx, 0, draggedTabId);
-                        setTabOrder(updated);
-                        localStorage.setItem('wedding_studio_tabs_order', JSON.stringify(updated));
-                      }
-                      setDraggedTabId(null);
-                      setDragOverTabId(null);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedTabId(null);
-                      setDragOverTabId(null);
-                    }}
-                    onClick={() => {
-                      setActiveTab(tab.id);
-                      if (tab.id === 'templates') {
-                        setPreviewEnvelopeOpen(false);
-                      }
-                    }}
-                    className={`w-full flex items-center justify-between px-2.5 sm:px-3 py-2.5 rounded-2xl text-xs sm:text-[13px] font-medium transition-all cursor-grab active:cursor-grabbing select-none ${
-                      isActive
-                        ? 'bg-[#70561f] text-white shadow-md font-semibold'
-                        : 'text-stone-700 hover:bg-stone-50 hover:text-stone-900'
-                    } ${isDragging ? 'opacity-40 scale-98 border-2 border-dashed border-[#70561f]' : ''} ${
-                      isDragOver ? 'ring-2 ring-amber-500 bg-amber-50/70' : ''
-                    }`}
-                    title="Bấm để mở sửa • Bấm giữ và kéo thả bằng bàn tay để đổi thứ tự"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                      <GripVertical
-                        className={`w-3.5 h-3.5 shrink-0 transition-opacity cursor-grab active:cursor-grabbing ${
-                          isActive ? 'text-amber-200/70 hover:text-white' : 'text-stone-300 hover:text-stone-600'
+            return (
+              <>
+                {/* THANH ĐIỀU HƯỚNG TAB NGANG CHO ĐIỆN THOẠI (HIỂN THỊ TRÊN MÀN HÌNH NHỎ < LG) */}
+                <div className="lg:hidden w-full bg-white rounded-2xl p-1.5 shadow-sm border border-stone-200/80 overflow-x-auto no-scrollbar flex items-center gap-1.5 sticky top-[95px] sm:top-[68px] z-20 backdrop-blur-md bg-white/95">
+                  {tabsToRender.map((t) => {
+                    const Icon = t.icon;
+                    const isActive = activeTab === t.id;
+                    return (
+                      <button
+                        key={'m-tab-' + t.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(t.id);
+                          if (t.id === 'templates') setPreviewEnvelopeOpen(false);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#70561f] text-white shadow-xs font-bold'
+                            : 'bg-stone-50 text-stone-700 hover:bg-stone-100 border border-stone-200/60'
                         }`}
-                      />
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-300' : (tab.highlight ? 'text-amber-600' : 'text-stone-400')}`} />
-                      <span className={`truncate whitespace-nowrap leading-none tracking-tight ${tab.highlight && !isActive ? 'text-[#70561f] font-bold' : ''}`}>
-                        {tab.label}
-                      </span>
-                    </div>
+                      >
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-amber-300' : 'text-stone-500'}`} />
+                        <span>{t.label}</span>
+                        {t.badge !== undefined && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-0.5 ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'
+                          }`}>
+                            {t.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                    {tab.badge !== undefined && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ml-1.5 leading-none ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
-                      }`}>
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              });
-            })()}
-          </aside>
+                {/* SIDEBAR TABS CHO MÁY TÍNH (HIỂN THỊ TRÊN MÀN HÌNH LỚN >= LG) */}
+                <aside className={`hidden lg:block ${showPreview ? 'lg:col-span-4 xl:col-span-3.5 2xl:col-span-3' : 'lg:col-span-3.5 2xl:col-span-3'} bg-white rounded-3xl p-2.5 sm:p-3 shadow-md border border-stone-200/80 h-fit space-y-1`}>
+                  {/* Drag hint header */}
+                  <div className="flex items-center justify-between px-2.5 py-1 mb-1 border-b border-stone-100 text-[11px] text-stone-400">
+                    <span className="flex items-center gap-1 font-semibold text-stone-500">
+                      <span className="text-xs">🖐️</span>
+                      <span>Kéo thả để sắp xếp</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResetTabOrder}
+                      className="text-[10px] text-stone-400 hover:text-[#70561f] hover:underline cursor-pointer"
+                      title="Khôi phục thứ tự các menu về mặc định"
+                    >
+                      Đặt lại
+                    </button>
+                  </div>
+
+                  {tabsToRender.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    const isDragging = draggedTabId === tab.id;
+                    const isDragOver = dragOverTabId === tab.id;
+
+                    return (
+                      <button
+                        key={tab.id}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', tab.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          setDraggedTabId(tab.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverTabId !== tab.id) setDragOverTabId(tab.id);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverTabId === tab.id) setDragOverTabId(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!draggedTabId || draggedTabId === tab.id) return;
+                          const currentIds = tabsToRender.map(t => t.id);
+                          const fromIdx = currentIds.indexOf(draggedTabId);
+                          const toIdx = currentIds.indexOf(tab.id);
+                          if (fromIdx !== -1 && toIdx !== -1) {
+                            const updated = [...currentIds];
+                            updated.splice(fromIdx, 1);
+                            updated.splice(toIdx, 0, draggedTabId);
+                            setTabOrder(updated);
+                            localStorage.setItem('wedding_studio_tabs_order', JSON.stringify(updated));
+                          }
+                          setDraggedTabId(null);
+                          setDragOverTabId(null);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedTabId(null);
+                          setDragOverTabId(null);
+                        }}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          if (tab.id === 'templates') {
+                            setPreviewEnvelopeOpen(false);
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 sm:px-3 py-2.5 rounded-2xl text-xs sm:text-[13px] font-medium transition-all cursor-grab active:cursor-grabbing select-none ${
+                          isActive
+                            ? 'bg-[#70561f] text-white shadow-md font-semibold'
+                            : 'text-stone-700 hover:bg-stone-50 hover:text-stone-900'
+                        } ${isDragging ? 'opacity-40 scale-98 border-2 border-dashed border-[#70561f]' : ''} ${
+                          isDragOver ? 'ring-2 ring-amber-500 bg-amber-50/70' : ''
+                        }`}
+                        title="Bấm để mở sửa • Bấm giữ và kéo thả bằng bàn tay để đổi thứ tự"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                          <GripVertical
+                            className={`w-3.5 h-3.5 shrink-0 transition-opacity cursor-grab active:cursor-grabbing ${
+                              isActive ? 'text-amber-200/70 hover:text-white' : 'text-stone-300 hover:text-stone-600'
+                            }`}
+                          />
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-300' : (tab.highlight ? 'text-amber-600' : 'text-stone-400')}`} />
+                          <span className={`truncate whitespace-nowrap leading-none tracking-tight ${tab.highlight && !isActive ? 'text-[#70561f] font-bold' : ''}`}>
+                            {tab.label}
+                          </span>
+                        </div>
+
+                        {tab.badge !== undefined && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ml-1.5 leading-none ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
+                          }`}>
+                            {tab.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </aside>
+              </>
+            );
+          })()}
 
           {/* TAB CONTENT AREA */}
           <main className={`${showPreview ? 'lg:col-span-8 xl:col-span-8.5 2xl:col-span-9' : 'lg:col-span-8.5 2xl:col-span-9'} bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-md border border-stone-200/80`}>
@@ -3902,8 +3910,8 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(`"${wish.message}" - ${wish.name}`);
-                                  setSaveStatus('Đã sao chép lời chúc!');
+                                  copyToClipboardSafe(`"${wish.message}" - ${wish.name}`);
+                                  setSaveStatus('✅ Đã sao chép lời chúc!');
                                   setTimeout(() => setSaveStatus(''), 2000);
                                 }}
                                 className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors"
@@ -5999,8 +6007,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-2 max-w-sm mx-auto pt-1">
                     <button
                       type="button"
-                      onClick={async () => {
-                        await handleSaveCurrent();
+                      onClick={() => {
                         const rawSample = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau?to=Mẹ+Nga`
@@ -6009,9 +6016,14 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau?to=Mẹ+Nga`
                               : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re?to=Anh+Nam`);
                         const sampleUrl = rawSample + (rawSample.includes('?') ? '&' : '?') + 'v=' + Date.now();
-                        navigator.clipboard.writeText(sampleUrl);
+                        copyToClipboardSafe(sampleUrl);
                         setCopiedLink('preview-sample');
-                        setTimeout(() => setCopiedLink(''), 2500);
+                        setSaveStatus('✅ Đã sao chép link gửi thử kèm tên khách!');
+                        setTimeout(() => {
+                          setCopiedLink('');
+                          setSaveStatus('');
+                        }, 2500);
+                        handleSaveCurrent().catch(e => console.warn(e));
                       }}
                       className="w-full sm:w-auto flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
                     >
@@ -6030,8 +6042,7 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
 
                     <button
                       type="button"
-                      onClick={async () => {
-                        await handleSaveCurrent();
+                      onClick={() => {
                         const rawGeneral = formData.socialShare?.customDomain 
                           ? (currentProfileKey === 'bride' 
                               ? `${formData.socialShare.customDomain.replace(/\/+$/, '')}/co-dau`
@@ -6040,9 +6051,14 @@ Sự hiện diện của <strong style="font-weight: 700;">${guestName}</strong>
                               ? `https://thiepcuoi-hieuthuy-web.vercel.app/co-dau`
                               : `https://thiepcuoi-hieuthuy-web.vercel.app/chu-re`);
                         const generalUrl = rawGeneral + (rawGeneral.includes('?') ? '&' : '?') + 'v=' + Date.now();
-                        navigator.clipboard.writeText(generalUrl);
+                        copyToClipboardSafe(generalUrl);
                         setCopiedLink('preview-card');
-                        setTimeout(() => setCopiedLink(''), 2500);
+                        setSaveStatus('✅ Đã sao chép link thiệp chung!');
+                        setTimeout(() => {
+                          setCopiedLink('');
+                          setSaveStatus('');
+                        }, 2500);
+                        handleSaveCurrent().catch(e => console.warn(e));
                       }}
                       className="w-full sm:w-auto flex-1 py-2 px-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
                     >

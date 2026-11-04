@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, QrCode } from 'lucide-react';
+import { copyToClipboardSafe } from '../utils/storage';
 
 export function WeddingGiftModal({ isOpen, onClose, banking, groom, bride, isAbsolute = false }) {
   const [activeTab, setActiveTab] = useState('groom');
@@ -17,7 +18,7 @@ export function WeddingGiftModal({ isOpen, onClose, banking, groom, bride, isAbs
 
   const copySTK = () => {
     if (currentBank?.accountNo) {
-      navigator.clipboard.writeText(currentBank.accountNo);
+      copyToClipboardSafe(currentBank.accountNo);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
