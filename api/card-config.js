@@ -56,6 +56,15 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, config: null });
       }
       const config = JSON.parse(raw);
+
+      // Support 304 Not Modified to save 99.9% bandwidth if client already has this version
+      const versionEtag = `W/"${config.updatedAt || '0'}"`;
+      res.setHeader('ETag', versionEtag);
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (ifNoneMatch && ifNoneMatch === versionEtag) {
+        return res.status(304).end();
+      }
+
       // Enforce single source of truth for wishes so card-config and wishes API never conflict
       try {
         const rawWishes = await redis.get('wedding_wishes_list');

@@ -292,14 +292,10 @@ export function StudioEditor({
   useEffect(() => {
     fetchCloudWishes(false);
 
-    // Fast polling every 2.5s for instant sync
-    const interval = setInterval(() => fetchCloudWishes(false), 2500);
+    // Polling every 60s (or on focus) to conserve bandwidth
+    const interval = setInterval(() => fetchCloudWishes(false), 60000);
     const handleFocus = () => fetchCloudWishes(false);
     window.addEventListener('focus', handleFocus);
-    const handleVis = () => {
-      if (document.visibilityState === 'visible') fetchCloudWishes(false);
-    };
-    document.addEventListener('visibilitychange', handleVis);
 
     let handleChannel = null;
     try {
@@ -317,7 +313,6 @@ export function StudioEditor({
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVis);
       try {
         const channel = getLiveSyncChannel();
         if (channel && handleChannel) channel.removeEventListener('message', handleChannel);

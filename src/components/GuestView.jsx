@@ -483,14 +483,10 @@ export function GuestView({
 
     syncWishes();
 
-    // Fast polling every 2.5s for instant sync across devices
-    const interval = setInterval(syncWishes, 2500);
+    // Gentle polling every 60s (or on tab focus) to conserve bandwidth
+    const interval = setInterval(syncWishes, 60000);
     const handleFocus = () => syncWishes();
     window.addEventListener('focus', handleFocus);
-    const handleVis = () => {
-      if (document.visibilityState === 'visible') syncWishes();
-    };
-    document.addEventListener('visibilitychange', handleVis);
 
     // Instant 0.001s cross-tab sync via BroadcastChannel
     let handleChannel = null;
@@ -518,7 +514,6 @@ export function GuestView({
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVis);
       try {
         const channel = getLiveSyncChannel();
         if (channel && handleChannel) channel.removeEventListener('message', handleChannel);

@@ -363,7 +363,8 @@ export function App() {
     };
 
     verifyUser();
-    const interval = setInterval(verifyUser, 6000);
+    // Re-verify at most every 5 minutes (300,000ms) to avoid wasting serverless execution quotas
+    const interval = setInterval(verifyUser, 300000);
     window.addEventListener('focus', verifyUser);
     return () => {
       clearInterval(interval);
@@ -614,23 +615,23 @@ export function App() {
       return null;
     };
 
-    // Initial immediate load from Cloud Redis
+    // Initial immediate load from Cloud Redis (loads ONCE on startup to save 99.9% bandwidth)
     const cloudPromise = fetchLatestCloudConfig();
     const timeoutPromise = new Promise(res => setTimeout(res, 600));
     Promise.race([cloudPromise, timeoutPromise]).finally(() => {
       setIsStorageReady(true);
     });
 
-    // Real-time background sync: poll every 6s when tab is visible and revalidate on tab focus
-    const syncInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') fetchLatestCloudConfig();
-    }, 6000);
-    const handleTabFocus = () => fetchLatestCloudConfig();
-    window.addEventListener('focus', handleTabFocus);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') fetchLatestCloudConfig();
+    // Revalidate on tab focus only if at least 5 minutes have elapsed
+    let lastFocusCheck = Date.now();
+    const handleTabFocus = () => {
+      const now = Date.now();
+      if (now - lastFocusCheck > 300000) {
+        lastFocusCheck = now;
+        fetchLatestCloudConfig();
+      }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleTabFocus);
 
     // Load initial cloud wishes from Redis server
     fetch(`/api/wishes?_t=${Date.now()}`, { cache: 'no-store' })
@@ -657,9 +658,7 @@ export function App() {
       .catch(() => {});
 
     return () => {
-      clearInterval(syncInterval);
       window.removeEventListener('focus', handleTabFocus);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

@@ -42,8 +42,8 @@ export function UserApprovalManager({ currentUser }) {
 
   useEffect(() => {
     fetchUsers();
-    // Auto refresh every 10 seconds to detect new pending approval requests
-    const interval = setInterval(fetchUsers, 10000);
+    // Auto refresh every 60 seconds (or on reload) to detect new pending approval requests
+    const interval = setInterval(fetchUsers, 60000);
     return () => clearInterval(interval);
   }, []);
 
