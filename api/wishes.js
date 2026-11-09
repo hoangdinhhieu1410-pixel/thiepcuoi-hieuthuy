@@ -118,6 +118,8 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      // Cache wishes on Edge CDN for 30s to prevent spamming serverless invocations
+      res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=60');
       const raw = await redis.get(REDIS_KEY);
       let wishes = [];
       if (raw) {

@@ -535,15 +535,32 @@ export function App() {
     }
 
     // Function to fetch the absolute latest card configuration from Cloud Redis
-    const fetchLatestCloudConfig = async () => {
+    const fetchLatestCloudConfig = async (forceFullDownload = false) => {
       try {
-        const res = await fetch(`/api/card-config?_t=${Date.now()}`, {
-          cache: 'no-store',
+        // Ultra-lightweight version check (~30 bytes):
+        // If we already have data loaded in memory or IndexedDB, check if cloud version actually changed first!
+        if (!forceFullDownload && lastCloudUpdatedAt.current && lastCloudUpdatedAt.current > 0) {
+          try {
+            const vRes = await fetch('/api/card-config?action=version');
+            if (vRes.ok) {
+              const vData = await vRes.json();
+              if (vData?.success && vData.updatedAt && vData.updatedAt <= lastCloudUpdatedAt.current) {
+                // Config on server is identical to local data! Skip 6MB download entirely (saving 99.9% bandwidth)!
+                return null;
+              }
+            }
+          } catch (eVer) {}
+        }
+
+        const res = await fetch('/api/card-config', {
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
+            'If-None-Match': `W/"${lastCloudUpdatedAt.current || 0}"`
           }
         });
+        if (res.status === 304) {
+          // Server returned 304 Not Modified! 0 bytes downloaded!
+          return null;
+        }
         const d = await res.json();
         if (d?.success && d?.config?.groom && d?.config?.bride) {
           hasReceivedCloudData.current = true;

@@ -51,6 +51,29 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      let action = req.query?.action;
+      try {
+        const parsed = new URL(req.url, 'http://localhost');
+        if (!action) action = parsed.searchParams.get('action');
+      } catch (e) {}
+
+      // Ultra-lightweight version check endpoint (~30 bytes):
+      // Allows clients with cached data to verify updates without downloading 6MB!
+      if (action === 'version') {
+        const raw = await redis.get(REDIS_KEY);
+        if (!raw) {
+          res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60');
+          return res.status(200).json({ success: true, updatedAt: 0 });
+        }
+        try {
+          const cfg = JSON.parse(raw);
+          res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60');
+          return res.status(200).json({ success: true, updatedAt: cfg.updatedAt || 0 });
+        } catch {
+          return res.status(200).json({ success: true, updatedAt: 0 });
+        }
+      }
+
       const raw = await redis.get(REDIS_KEY);
       if (!raw) {
         return res.status(200).json({ success: true, config: null });
@@ -64,6 +87,11 @@ export default async function handler(req, res) {
       if (ifNoneMatch && ifNoneMatch === versionEtag) {
         return res.status(304).end();
       }
+
+      // Edge CDN Caching (s-maxage=300):
+      // Allows Vercel Edge CDN to cache responses for 5 minutes, routing traffic through
+      // Fast Data Transfer (100GB limit) instead of burning Fast Origin Transfer (10GB limit)!
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400');
 
       // Enforce single source of truth for wishes so card-config and wishes API never conflict
       try {

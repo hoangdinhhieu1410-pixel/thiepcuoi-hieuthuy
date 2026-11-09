@@ -292,8 +292,7 @@ export function StudioEditor({
   useEffect(() => {
     fetchCloudWishes(false);
 
-    // Polling every 60s (or on focus) to conserve bandwidth
-    const interval = setInterval(() => fetchCloudWishes(false), 60000);
+    // Sync on mount and focus (instant updates are handled via BroadcastChannel)
     const handleFocus = () => fetchCloudWishes(false);
     window.addEventListener('focus', handleFocus);
 
@@ -311,7 +310,6 @@ export function StudioEditor({
     } catch (e) {}
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       try {
         const channel = getLiveSyncChannel();

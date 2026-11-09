@@ -483,8 +483,7 @@ export function GuestView({
 
     syncWishes();
 
-    // Gentle polling every 60s (or on tab focus) to conserve bandwidth
-    const interval = setInterval(syncWishes, 60000);
+    // Re-check on tab focus (no background interval running to prevent bandwidth waste)
     const handleFocus = () => syncWishes();
     window.addEventListener('focus', handleFocus);
 
@@ -512,7 +511,6 @@ export function GuestView({
     } catch (e) {}
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       try {
         const channel = getLiveSyncChannel();
